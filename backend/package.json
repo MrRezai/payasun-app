@@ -1,7 +1,7 @@
 {
   "name": "payasun-backend",
   "version": "1.0.0",
-  "description": "Payasun Marketplace Backend — Phase 1",
+  "description": "Payasun Backend — Phase 1",
   "private": true,
   "license": "UNLICENSED",
   "scripts": {

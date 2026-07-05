@@ -1,5 +1,5 @@
 /**
- * Defines the user roles available in the Payasun marketplace.
+ * Defines the user roles available in the Payasun.
  * Each user is assigned exactly one role upon OTP verification.
  */
 export enum Role {

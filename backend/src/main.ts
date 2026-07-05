@@ -34,9 +34,9 @@ async function bootstrap(): Promise<void> {
 
   // ── Swagger UI Setup ───────────────────────────────────────────
   const swaggerConfig = new DocumentBuilder()
-    .setTitle('Payasun Marketplace API')
+    .setTitle('Payasun API')
     .setDescription(
-      '## Payasun — Dynamic Marketplace Platform\n\n' +
+      '## Payasun — Dynamic Platform\n\n' +
       'RESTful API for connecting **Employers** with professional **Welders**.\n\n' +
       '### Phase 1 Features\n' +
       '- **OTP Authentication** via MeliPayamak SMS gateway\n' +

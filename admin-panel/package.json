@@ -1,7 +1,7 @@
 {
   "name": "payasun-admin-panel",
   "version": "1.0.0",
-  "description": "Payasun Marketplace — Admin Panel (React)",
+  "description": "Payasun — Admin Panel (React)",
   "private": true,
   "scripts": {
     "dev": "vite",

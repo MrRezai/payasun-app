@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # ══════════════════════════════════════════════════════════════════════
-#  Payasun Marketplace — Platform Management Dashboard
+#  Payasun — Platform Management Dashboard
 #  Version: 2.0.0
 #
 #  An interactive TUI management tool for the Payasun backend platform
