@@ -1,0 +1,86 @@
+# ══════════════════════════════════════════════════════════
+# Payasun Monorepo — Root .gitignore
+# Covers: NestJS, Flutter, React/Vite, and general IDE files
+# ══════════════════════════════════════════════════════════
+
+# ─── Environment & Secrets ────────────────────────────────
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+
+# ─── OS Files ─────────────────────────────────────────────
+.DS_Store
+Thumbs.db
+Desktop.ini
+*.swp
+*.swo
+*~
+
+# ─── IDE & Editors ────────────────────────────────────────
+.idea/
+.vscode/
+*.sublime-project
+*.sublime-workspace
+*.code-workspace
+
+# ══════════════════════════════════════════════════════════
+# NestJS / Node.js  (backend/)
+# ══════════════════════════════════════════════════════════
+node_modules/
+dist/
+build/
+*.tsbuildinfo
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+.npm
+.yarn/
+.pnp.*
+coverage/
+.nyc_output/
+
+# ══════════════════════════════════════════════════════════
+# Flutter / Dart  (mobile-app/)
+# ══════════════════════════════════════════════════════════
+.dart_tool/
+.flutter-plugins
+.flutter-plugins-dependencies
+.packages
+.pub-cache/
+.pub/
+build/
+*.iml
+*.lock
+!pubspec.lock
+android/.gradle/
+android/local.properties
+android/**/GeneratedPluginRegistrant.*
+ios/Flutter/Generated.xcconfig
+ios/Flutter/flutter_export_environment.sh
+ios/Runner/GeneratedPluginRegistrant.*
+ios/Pods/
+ios/.symlinks/
+macos/Flutter/GeneratedPluginRegistrant.swift
+macos/Pods/
+linux/flutter/
+windows/flutter/
+
+# ══════════════════════════════════════════════════════════
+# React / Vite  (admin-panel/)
+# ══════════════════════════════════════════════════════════
+# node_modules/ and dist/ already covered above
+
+# ══════════════════════════════════════════════════════════
+# Logs & Misc
+# ══════════════════════════════════════════════════════════
+logs/
+*.log
+*.pid
+*.seed
+*.pid.lock
+.cache/
+tmp/
+temp/
