@@ -179,10 +179,11 @@ show_menu() {
     echo -e "  ${GREEN}[4]${NC}  🔄  Restart Backend Application"
     echo -e "  ${GREEN}[5]${NC}  ⚙️   Reconfigure Environment (.env)"
     echo -e "  ${GREEN}[6]${NC}  🛠️   Diagnose & Fix Database Connection"
-    echo -e "  ${RED}[7]${NC}  🚪  Exit Dashboard"
+    echo -e "  ${GREEN}[7]${NC}  🚀  Git Pull, Rebuild Backend & PM2 Restart"
+    echo -e "  ${RED}[8]${NC}  🚪  Exit Dashboard"
     echo ""
     divider
-    echo -en "  ${CYAN}▶${NC}  Enter your choice [1-7]: "
+    echo -en "  ${CYAN}▶${NC}  Enter your choice [1-8]: "
 }
 
 
@@ -1226,6 +1227,141 @@ except: print('unknown')
     pause_continue
 }
 
+# ─── Sub-function: Git Pull, Rebuild & PM2 Restart ──────────────────
+update_and_rebuild_backend() {
+    header "GIT PULL & BACKEND REBUILD"
+
+    # Check if git is installed and it is a git repository
+    if ! cmd_exists git; then
+        error "Git is not installed on this system."
+        pause_continue
+        return 1
+    fi
+
+    if [ ! -d "${SCRIPT_DIR}/.git" ]; then
+        error "This directory is not a Git repository. Cannot perform git pull."
+        pause_continue
+        return 1
+    fi
+
+    info "Checking for local changes..."
+    local local_changes
+    local_changes=$(git status --porcelain 2>/dev/null | grep -v '^??' || echo "")
+
+    local stashed=false
+
+    if [ -n "$local_changes" ]; then
+        warn "Local changes detected in tracked files of the repository:"
+        echo -e "${DIM}${local_changes}${NC}"
+        echo ""
+        warn "To avoid merge conflicts during git pull, you can:"
+        echo -e "  ${GREEN}[1]${NC}  Stash changes (save local changes, pull, and try to restore them)"
+        echo -e "  ${GREEN}[2]${NC}  Discard changes (delete all local modifications, then pull)"
+        echo -e "  ${GREEN}[3]${NC}  Skip stash/discard and try pulling directly (may fail)"
+        echo -e "  ${RED}[4]${NC}  Abort update"
+        echo ""
+        echo -en "  ${CYAN}▶${NC}  Enter choice [1-4]: "
+        local git_choice
+        read -r git_choice
+        case "$git_choice" in
+            1)
+                info "Stashing local changes..."
+                git stash
+                stashed=true
+                ;;
+            2)
+                if confirm "Are you sure you want to discard all local changes?"; then
+                    info "Discarding local changes..."
+                    git reset --hard HEAD
+                    git clean -df
+                else
+                    warn "Aborted update."
+                    pause_continue
+                    return 1
+                fi
+                ;;
+            3)
+                info "Attempting direct pull..."
+                ;;
+            *)
+                warn "Aborted update."
+                pause_continue
+                return 1
+                ;;
+        esac
+    fi
+
+    info "Pulling latest code from Git..."
+    local pull_output
+    pull_output=$(git pull 2>&1)
+    local pull_status=$?
+
+    if [ $pull_status -ne 0 ]; then
+        error "Git pull failed:"
+        echo -e "${RED}${pull_output}${NC}"
+        if [ "$stashed" = "true" ]; then
+            info "Restoring stashed changes..."
+            git stash pop &>/dev/null
+        fi
+        pause_continue
+        return 1
+    fi
+
+    success "Git pull completed successfully."
+    echo -e "${DIM}${pull_output}${NC}"
+
+    if [ "$stashed" = "true" ]; then
+        info "Restoring stashed changes..."
+        local stash_pop_output
+        stash_pop_output=$(git stash pop 2>&1)
+        if [ $? -eq 0 ]; then
+            success "Stashed changes restored successfully."
+        else
+            warn "Conflicts occurred while restoring stashed changes:"
+            echo -e "${YELLOW}${stash_pop_output}${NC}"
+            warn "Please resolve conflicts manually."
+        fi
+    fi
+
+    # Rebuild and restart backend
+    if confirm "Do you want to rebuild node modules and build the backend now?"; then
+        info "Installing backend dependencies..."
+        (cd "${BACKEND_DIR}" && npm install)
+        if [ $? -ne 0 ]; then
+            error "Dependency installation failed."
+            pause_continue
+            return 1
+        fi
+        success "Backend dependencies installed."
+
+        info "Compiling NestJS application..."
+        (cd "${BACKEND_DIR}" && npm run build)
+        if [ $? -ne 0 ]; then
+            error "Backend build failed."
+            pause_continue
+            return 1
+        fi
+        success "Backend compiled successfully."
+
+        # Check if PM2 is running the backend
+        info "Restarting process in PM2..."
+        local app_registered
+        app_registered=$(pm2 jlist 2>/dev/null | grep -o "\"name\":\"${PM2_APP_NAME}\"" || echo "")
+        if [ -n "$app_registered" ]; then
+            pm2 restart "${PM2_APP_NAME}"
+            success "PM2 app '${PM2_APP_NAME}' restarted."
+        else
+            warn "App '${PM2_APP_NAME}' not found in PM2 list."
+            if confirm "Start the application in PM2 now?"; then
+                (cd "${BACKEND_DIR}" && pm2 start dist/main.js --name "${PM2_APP_NAME}")
+                success "Application started in PM2."
+            fi
+        fi
+    fi
+
+    pause_continue
+}
+
 # ─── Sub-function: Reset PostgreSQL user password ────────────────────
 fix_pg_password() {
     local username="$1"
@@ -1360,7 +1496,8 @@ main() {
             4) restart_backend ;;
             5) reconfigure_env ;;
             6) diagnose_database ;;
-            7)
+            7) update_and_rebuild_backend ;;
+            8)
                 echo ""
                 echo -e "  ${GREEN}${BOLD}Goodbye! 👋${NC}"
                 echo -e "  ${DIM}Joftojoor Platform Management Dashboard v${VERSION}${NC}"
@@ -1368,7 +1505,7 @@ main() {
                 exit 0
                 ;;
             *)
-                warn "Invalid option. Please enter a number between 1 and 7."
+                warn "Invalid option. Please enter a number between 1 and 8."
                 sleep 1
                 ;;
         esac
