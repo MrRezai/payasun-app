@@ -34,25 +34,26 @@ async function bootstrap(): Promise<void> {
 
   // ── Swagger UI Setup ───────────────────────────────────────────
   const swaggerConfig = new DocumentBuilder()
-    .setTitle('Payasun API')
+    .setTitle('Joftojoor API')
     .setDescription(
-      '## Payasun — Dynamic Platform\n\n' +
+      '## Joftojoor — Dynamic Platform\n\n' +
       'RESTful API for connecting **Employers** with professional **Welders**.\n\n' +
-      '### Phase 1 Features\n' +
+      '### Phase 2 Features\n' +
       '- **OTP Authentication** via MeliPayamak SMS gateway\n' +
       '- **JWT Bearer** token-based authorization\n' +
       '- **Profile Management** for Employers and Welders\n' +
-      '- **Auto-Pricing Configuration** for Welder service lists\n\n' +
+      '- **Auto-Pricing Configuration** for Welder service lists\n' +
+      '- **Inquiry & Blueprint Estimation** flow\n\n' +
       '### Authentication Flow\n' +
       '1. `POST /auth/send-otp` — Request an OTP code\n' +
       '2. `POST /auth/verify-otp` — Verify OTP and receive JWT\n' +
       '3. Use the JWT token in the `Authorization: Bearer <token>` header\n',
     )
-    .setVersion('1.0.0')
+    .setVersion('2.0.0')
     .setContact(
-      'Payasun Team',
-      'https://payasun.ir',
-      'support@payasun.ir',
+      'Joftojoor Team',
+      'https://joftojoor.ir',
+      'support@joftojoor.ir',
     )
     .addBearerAuth(
       {
@@ -67,11 +68,12 @@ async function bootstrap(): Promise<void> {
     )
     .addTag('Authentication', 'OTP-based registration and login endpoints')
     .addTag('Profile', 'User profile management endpoints (JWT required)')
+    .addTag('Inquiry', 'Inquiry creation, blueprint upload, and estimation management')
     .build();
 
   const document = SwaggerModule.createDocument(app, swaggerConfig);
   SwaggerModule.setup('api/docs', app, document, {
-    customSiteTitle: 'Payasun API Documentation',
+    customSiteTitle: 'Joftojoor API Documentation',
     customCss: `
       .swagger-ui .topbar { background-color: #1a1a2e; }
       .swagger-ui .topbar .link { content: none; }

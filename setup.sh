@@ -1,9 +1,9 @@
 #!/usr/bin/env bash
 # ══════════════════════════════════════════════════════════════════════
-#  Payasun — Platform Management Dashboard
+#  Joftojoor — Platform Management Dashboard
 #  Version: 2.0.0
 #
-#  An interactive TUI management tool for the Payasun backend platform
+#  An interactive TUI management tool for the Joftojoor backend platform
 #  running on Ubuntu servers. Provides ongoing system management
 #  capabilities beyond first-time installation.
 #
@@ -34,7 +34,7 @@ ENV_FILE="${BACKEND_DIR}/.env"
 REQUIRED_NODE_MAJOR=20
 NGINX_SITES_AVAILABLE="/etc/nginx/sites-available"
 NGINX_SITES_ENABLED="/etc/nginx/sites-enabled"
-PM2_APP_NAME="payasun-backend"
+PM2_APP_NAME="joftojoor-backend"
 VERSION="2.0.0"
 
 # ─── Color Codes ──────────────────────────────────────────────────────
@@ -162,8 +162,8 @@ show_banner() {
     echo ""
     echo -e "  ${MAGENTA}${BOLD}╔══════════════════════════════════════════════════════════╗${NC}"
     echo -e "  ${MAGENTA}${BOLD}║${NC}                                                          ${MAGENTA}${BOLD}║${NC}"
-    echo -e "  ${MAGENTA}${BOLD}║${NC}   ${WHITE}${BOLD}🔧  PAYASUN PLATFORM MANAGEMENT DASHBOARD${NC}              ${MAGENTA}${BOLD}║${NC}"
-    echo -e "  ${MAGENTA}${BOLD}║${NC}   ${DIM}Interactive server management for Payasun backend${NC}      ${MAGENTA}${BOLD}║${NC}"
+    echo -e "  ${MAGENTA}${BOLD}║${NC}   ${WHITE}${BOLD}🔧  JOFTOJOOR PLATFORM MANAGEMENT DASHBOARD${NC}            ${MAGENTA}${BOLD}║${NC}"
+    echo -e "  ${MAGENTA}${BOLD}║${NC}   ${DIM}Interactive server management for Joftojoor backend${NC}    ${MAGENTA}${BOLD}║${NC}"
     echo -e "  ${MAGENTA}${BOLD}║${NC}   ${DIM}Version ${VERSION}${NC}                                          ${MAGENTA}${BOLD}║${NC}"
     echo -e "  ${MAGENTA}${BOLD}║${NC}                                                          ${MAGENTA}${BOLD}║${NC}"
     echo -e "  ${MAGENTA}${BOLD}╚══════════════════════════════════════════════════════════╝${NC}"
@@ -388,7 +388,7 @@ configure_nginx() {
 
     # ── Step 3: Ask for domain name ──────────────────────────────────
     local domain=""
-    prompt_input "Enter your domain name (e.g., api.payasun.com)" "" domain
+    prompt_input "Enter your domain name (e.g., api.joftojoor.com)" "" domain
 
     if [ -z "$domain" ]; then
         error "Domain name cannot be empty. Returning to menu."
@@ -422,7 +422,7 @@ configure_nginx() {
 
     sudo tee "$config_file" > /dev/null << NGINX_CONF
 # ──────────────────────────────────────────────────────────
-# Payasun Backend — Nginx Reverse Proxy Configuration
+# Joftojoor Backend — Nginx Reverse Proxy Configuration
 # Domain: ${domain}
 # Generated: $(date '+%Y-%m-%d %H:%M:%S')
 # ──────────────────────────────────────────────────────────
@@ -879,7 +879,7 @@ regenerate_full_env() {
 
     # ── Read existing values as defaults if available ─────────────
     local cur_db_host="localhost" cur_db_port="5432" cur_db_user="postgres"
-    local cur_db_pass="postgres" cur_db_name="payasun_db"
+        local cur_db_pass="postgres" cur_db_name="joftojoor_db"
     local cur_jwt_exp="7d" cur_jwt_secret=""
     local cur_sms_user="username_here" cur_sms_pass="password_here"
     local cur_sms_body="12345" cur_sms_enabled="false" cur_app_port="3000"
@@ -901,7 +901,7 @@ regenerate_full_env() {
 
     # Generate random JWT secret if none exists
     if [ -z "$cur_jwt_secret" ]; then
-        cur_jwt_secret=$(openssl rand -hex 32 2>/dev/null || echo "payasun_jwt_$(date +%s)")
+        cur_jwt_secret=$(openssl rand -hex 32 2>/dev/null || echo "joftojoor_jwt_$(date +%s)")
     fi
 
     # ── Database ─────────────────────────────────────────────────
@@ -999,7 +999,7 @@ diagnose_database() {
     db_port=$(grep -E '^DB_PORT=' "$ENV_FILE" 2>/dev/null | cut -d= -f2 || echo "5432")
     db_user=$(grep -E '^DB_USERNAME=' "$ENV_FILE" 2>/dev/null | cut -d= -f2 || echo "postgres")
     db_pass=$(grep -E '^DB_PASSWORD=' "$ENV_FILE" 2>/dev/null | cut -d= -f2 || echo "")
-    db_name=$(grep -E '^DB_NAME=' "$ENV_FILE" 2>/dev/null | cut -d= -f2 || echo "payasun_db")
+    db_name=$(grep -E '^DB_NAME=' "$ENV_FILE" 2>/dev/null | cut -d= -f2 || echo "joftojoor_db")
 
     info "Loaded .env credentials:"
     echo -e "    ${DIM}Host:     ${NC}${db_host}"
@@ -1363,7 +1363,7 @@ main() {
             7)
                 echo ""
                 echo -e "  ${GREEN}${BOLD}Goodbye! 👋${NC}"
-                echo -e "  ${DIM}Payasun Platform Management Dashboard v${VERSION}${NC}"
+                echo -e "  ${DIM}Joftojoor Platform Management Dashboard v${VERSION}${NC}"
                 echo ""
                 exit 0
                 ;;
