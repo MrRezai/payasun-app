@@ -1,5 +1,5 @@
 import { ApiPropertyOptional } from '@nestjs/swagger';
-import { IsArray, IsOptional, IsString, MaxLength } from 'class-validator';
+import { IsArray, IsOptional, IsString, MaxLength, IsBoolean } from 'class-validator';
 
 /**
  * DTO for partially updating a welder's profile.
@@ -41,4 +41,12 @@ export class UpdateWelderProfileDto {
   @IsOptional()
   @IsString()
   bio?: string;
+
+  @ApiPropertyOptional({
+    description: 'Flag indicating if the onboarding setup is completed',
+    example: true,
+  })
+  @IsOptional()
+  @IsBoolean()
+  is_setup_completed?: boolean;
 }

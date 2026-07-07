@@ -68,4 +68,7 @@ export class WelderProfile {
 
   @Column({ type: 'int', default: 0 })
   completed_jobs_count: number;
+
+  @Column({ type: 'boolean', default: false })
+  is_setup_completed: boolean;
 }

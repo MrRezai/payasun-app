@@ -235,25 +235,25 @@ class _LoginPhoneScreenState extends State<LoginPhoneScreen> {
     );
   }
 
-  Widget _buildImageLogo() {
+  Widget _buildImageLogo({double size = 90}) {
     return Container(
       decoration: BoxDecoration(
         color: AppColors.white,
-        borderRadius: BorderRadius.circular(20),
+        borderRadius: BorderRadius.circular(size * 0.22),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withValues(alpha: 0.05),
-            blurRadius: 20,
-            offset: const Offset(0, 10),
+            blurRadius: size * 0.22,
+            offset: Offset(0, size * 0.11),
           ),
         ],
       ),
       child: ClipRRect(
-        borderRadius: BorderRadius.circular(18), // Slightly rounded corners
+        borderRadius: BorderRadius.circular(size * 0.2), // Slightly rounded corners
         child: Image.asset(
           'assets/logo/joftojoor.png',
-          width: 90,
-          height: 90,
+          width: size,
+          height: size,
           fit: BoxFit.cover,
         ),
       ),

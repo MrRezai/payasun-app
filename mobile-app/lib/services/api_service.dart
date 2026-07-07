@@ -185,12 +185,14 @@ class ApiService {
     String? homeCity,
     List<String>? activeCities,
     String? bio,
+    bool? isSetupCompleted,
   }) async {
     final bodyMap = <String, dynamic>{};
     if (fullName != null) bodyMap['full_name'] = fullName;
     if (homeCity != null) bodyMap['home_city'] = homeCity;
     if (activeCities != null) bodyMap['active_cities'] = activeCities;
     if (bio != null) bodyMap['bio'] = bio;
+    if (isSetupCompleted != null) bodyMap['is_setup_completed'] = isSetupCompleted;
 
     final response = await http.patch(
       Uri.parse('$baseUrl/profile/welder'),

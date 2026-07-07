@@ -147,6 +147,9 @@ export class ProfileService {
     if (dto.bio !== undefined) {
       profile.bio = dto.bio;
     }
+    if (dto.is_setup_completed !== undefined) {
+      profile.is_setup_completed = dto.is_setup_completed;
+    }
 
     const updated = await this.welderProfileRepository.save(profile);
 

@@ -31,7 +31,7 @@ class AuthProvider with ChangeNotifier {
 
   /// Evaluates if the welder profile contains the minimum necessary onboarding setup.
   /// If they are an EMPLOYER, it returns true by default.
-  /// If they are a WELDER, they must have entered a full_name and at least one active_city.
+  /// If they are a WELDER, they must have completed the setup.
   bool get isProfileComplete {
     if (_currentRole == UserRole.employer) return true;
     if (_profileData == null) return false;
@@ -39,10 +39,7 @@ class AuthProvider with ChangeNotifier {
     final profile = _profileData!['profile'] as Map<String, dynamic>?;
     if (profile == null) return false;
     
-    final fullName = profile['full_name'] as String?;
-    final activeCities = profile['active_cities'] as List<dynamic>?;
-    
-    return fullName != null && fullName.trim().isNotEmpty && activeCities != null && activeCities.isNotEmpty;
+    return profile['is_setup_completed'] == true;
   }
 
   void toggleRole() {
@@ -146,6 +143,7 @@ class AuthProvider with ChangeNotifier {
     String? homeCity,
     List<String>? activeCities,
     String? bio,
+    bool? isSetupCompleted,
   }) async {
     if (_token == null) return;
     _isLoading = true;
@@ -159,6 +157,7 @@ class AuthProvider with ChangeNotifier {
         homeCity: homeCity,
         activeCities: activeCities,
         bio: bio,
+        isSetupCompleted: isSetupCompleted,
       );
       // Reload profile
       await loadProfile();

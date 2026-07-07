@@ -5,6 +5,7 @@ import 'package:provider/provider.dart';
 import '../../constants/app_colors.dart';
 import '../../providers/auth_provider.dart';
 import '../main_shell_screen.dart';
+import '../welder/welder_setup_screen.dart';
 
 class VerifyOtpScreen extends StatefulWidget {
   final String phoneNumber;
@@ -98,11 +99,19 @@ class _VerifyOtpScreenState extends State<VerifyOtpScreen> {
     final success = await auth.verifyOtpCode(code);
 
     if (success && mounted) {
-      Navigator.pushAndRemoveUntil(
-        context,
-        MaterialPageRoute(builder: (context) => const MainShellScreen()),
-        (route) => false,
-      );
+      if (auth.isWelder && !auth.isProfileComplete) {
+        Navigator.pushAndRemoveUntil(
+          context,
+          MaterialPageRoute(builder: (context) => const WelderSetupScreen()),
+          (route) => false,
+        );
+      } else {
+        Navigator.pushAndRemoveUntil(
+          context,
+          MaterialPageRoute(builder: (context) => const MainShellScreen()),
+          (route) => false,
+        );
+      }
     } else if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
@@ -307,25 +316,25 @@ class _VerifyOtpScreenState extends State<VerifyOtpScreen> {
     );
   }
 
-  Widget _buildImageLogo() {
+  Widget _buildImageLogo({double size = 75}) {
     return Container(
       decoration: BoxDecoration(
         color: AppColors.white,
-        borderRadius: BorderRadius.circular(20),
+        borderRadius: BorderRadius.circular(size * 0.22),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withValues(alpha: 0.05),
-            blurRadius: 20,
-            offset: const Offset(0, 10),
+            blurRadius: size * 0.22,
+            offset: Offset(0, size * 0.11),
           ),
         ],
       ),
       child: ClipRRect(
-        borderRadius: BorderRadius.circular(18),
+        borderRadius: BorderRadius.circular(size * 0.2),
         child: Image.asset(
           'assets/logo/joftojoor.png',
-          width: 75,
-          height: 75,
+          width: size,
+          height: size,
           fit: BoxFit.cover,
         ),
       ),

@@ -46,15 +46,30 @@ class _MainShellScreenState extends State<MainShellScreen> {
           shadowColor: AppColors.borderGrey,
           title: Row(
             children: [
-              // Logo/App Title Text
-              const Text(
-                'جفت‌وجور',
-                style: TextStyle(
-                  color: AppColors.burgundy,
-                  fontWeight: FontWeight.w900,
-                  fontSize: 22,
-                  letterSpacing: -0.5,
-                ),
+              // Logo/App Title Text and Icon
+              Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(6),
+                    child: Image.asset(
+                      'assets/logo/joftojoor.png',
+                      width: 28,
+                      height: 28,
+                      fit: BoxFit.cover,
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  const Text(
+                    'جفت‌وجور',
+                    style: TextStyle(
+                      color: AppColors.burgundy,
+                      fontWeight: FontWeight.w900,
+                      fontSize: 22,
+                      letterSpacing: -0.5,
+                    ),
+                  ),
+                ],
               ),
               const Spacer(),
               // Stylized Role Switcher Button
