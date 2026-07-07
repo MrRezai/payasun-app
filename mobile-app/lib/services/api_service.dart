@@ -184,6 +184,8 @@ class ApiService {
     String? firstName,
     String? lastName,
     String? homeCity,
+    String? homeProvince,
+    String? activeProvince,
     List<String>? activeCities,
     String? bio,
     bool? isSetupCompleted,
@@ -192,6 +194,8 @@ class ApiService {
     if (firstName != null) bodyMap['first_name'] = firstName;
     if (lastName != null) bodyMap['last_name'] = lastName;
     if (homeCity != null) bodyMap['home_city'] = homeCity;
+    if (homeProvince != null) bodyMap['home_province'] = homeProvince;
+    if (activeProvince != null) bodyMap['active_province'] = activeProvince;
     if (activeCities != null) bodyMap['active_cities'] = activeCities;
     if (bio != null) bodyMap['bio'] = bio;
     if (isSetupCompleted != null) bodyMap['is_setup_completed'] = isSetupCompleted;

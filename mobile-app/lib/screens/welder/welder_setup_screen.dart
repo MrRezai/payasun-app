@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../constants/app_colors.dart';
+import '../../constants/route_transitions.dart';
 import '../../providers/auth_provider.dart';
 import '../../services/api_service.dart';
+import '../main_shell_screen.dart';
 
 class WelderSetupScreen extends StatefulWidget {
   const WelderSetupScreen({super.key});
@@ -289,23 +291,32 @@ class _WelderSetupScreenState extends State<WelderSetupScreen> {
     final auth = Provider.of<AuthProvider>(context, listen: false);
 
     try {
+      final homeProvinceObj = _provinces.firstWhere(
+        (prov) => prov['id'] == _homeProvinceId,
+        orElse: () => null,
+      );
+      final homeProvinceName = homeProvinceObj != null ? homeProvinceObj['name'] as String : '';
+
+      final activeProvinceObj = _provinces.firstWhere(
+        (prov) => prov['id'] == _selectedProvinceId,
+        orElse: () => null,
+      );
+      final activeProvinceName = activeProvinceObj != null ? activeProvinceObj['name'] as String : '';
+
       // 1. Update general profile info
       await auth.updateWelderProfile(
         firstName: _firstNameController.text.trim(),
         lastName: _lastNameController.text.trim(),
         homeCity: _homeCityName!,
+        homeProvince: homeProvinceName,
+        activeProvince: activeProvinceName,
         activeCities: _selectedCities,
         bio: _bioController.text.trim(),
         isSetupCompleted: true,
       );
 
-      // 2. Update pricing list (if any prices added, otherwise upload default pricing list)
-      final priceListToSend = _customPrices.isNotEmpty
-          ? _customPrices
-          : [
-              {'title': 'جوشکاری عمومی برق', 'unit': 'ساعت', 'price_per_unit': 200000.0}
-            ];
-      await auth.updateWelderPrices(priceListToSend);
+      // 2. Update pricing list (pass empty or populated list directly)
+      await auth.updateWelderPrices(_customPrices);
 
       setState(() => _isSaving = false);
       if (mounted) {
@@ -314,6 +325,11 @@ class _WelderSetupScreenState extends State<WelderSetupScreen> {
             content: Text('حساب کاربری شما با موفقیت پیکربندی شد. خوش آمدید!'),
             backgroundColor: Colors.green,
           ),
+        );
+        Navigator.pushAndRemoveUntil(
+          context,
+          FadePageRoute(page: const MainShellScreen()),
+          (route) => false,
         );
       }
     } catch (e) {
@@ -420,24 +436,21 @@ class _WelderSetupScreenState extends State<WelderSetupScreen> {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            // Brand Logo at the top
-                            Center(
-                              child: Padding(
-                                padding: const EdgeInsets.only(bottom: 16),
-                                child: _buildImageLogo(76),
-                              ),
-                            ),
-
-                            // Header Title
-                            const Center(
-                              child: Text(
-                                'تکمیل پروفایل جوشکار جفت‌وجور',
-                                style: TextStyle(
-                                  fontSize: 18,
-                                  fontWeight: FontWeight.w900,
-                                  color: AppColors.burgundy,
+                            // Header Title with small logo next to it
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                _buildImageLogo(24),
+                                const SizedBox(width: 8),
+                                const Text(
+                                  'تکمیل پروفایل جوشکار جفت‌وجور',
+                                  style: TextStyle(
+                                    fontSize: 18,
+                                    fontWeight: FontWeight.w900,
+                                    color: AppColors.burgundy,
+                                  ),
                                 ),
-                              ),
+                              ],
                             ),
                             const SizedBox(height: 6),
                             const Center(
@@ -661,26 +674,7 @@ class _WelderSetupScreenState extends State<WelderSetupScreen> {
                             _buildGeoSelectorCard(),
                             const SizedBox(height: 25),
 
-                            // Selected cities display
-                            if (_selectedCities.isNotEmpty) ...[
-                              _buildSectionLabel('شهرهای انتخاب شده شما:'),
-                              const SizedBox(height: 10),
-                              Wrap(
-                                spacing: 8,
-                                runSpacing: 8,
-                                children: _selectedCities.map((city) {
-                                  return InputChip(
-                                    label: Text(city),
-                                    onDeleted: () => _removeCity(city),
-                                    deleteIconColor: AppColors.burgundy,
-                                    labelStyle: const TextStyle(fontSize: 12),
-                                    backgroundColor: AppColors.lightGrey,
-                                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                                  );
-                                }).toList(),
-                              ),
-                              const SizedBox(height: 25),
-                            ],
+
 
                             // Bids management
                             _buildSectionLabel('تعرفه‌ها و نرخ‌های دستمزد شما (اختیاری)'),
@@ -1345,11 +1339,7 @@ class _WelderSetupScreenState extends State<WelderSetupScreen> {
                     side: const BorderSide(color: AppColors.royalBlue, width: 0.5),
                   ),
                   deleteIcon: const Icon(Icons.close, size: 14, color: AppColors.royalBlue),
-                  onDeleted: () {
-                    setState(() {
-                      _selectedCities.remove(cityName);
-                    });
-                  },
+                  onDeleted: () => _removeCity(cityName),
                 );
               }).toList(),
             ),
@@ -1459,9 +1449,9 @@ class _WelderSetupScreenState extends State<WelderSetupScreen> {
         borderRadius: BorderRadius.circular(size * 0.2),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.08),
-            blurRadius: 15,
-            offset: const Offset(0, 8),
+            color: Colors.black.withValues(alpha: 0.15),
+            blurRadius: 8,
+            offset: const Offset(0, 3),
           ),
         ],
       ),

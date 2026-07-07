@@ -43,6 +43,15 @@ export class UpdateWelderProfileDto {
   home_province?: string;
 
   @ApiPropertyOptional({
+    description: 'Welder active province / operational province',
+    example: 'کرمان',
+  })
+  @IsOptional()
+  @IsString()
+  @MaxLength(100)
+  active_province?: string;
+
+  @ApiPropertyOptional({
     description: 'Array of city names where the welder is willing to work',
     example: ['کرمان', 'بم', 'رفسنجان', 'جیرفت'],
     type: [String],

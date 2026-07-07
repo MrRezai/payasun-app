@@ -153,6 +153,9 @@ export class ProfileService {
     if (dto.home_province !== undefined) {
       profile.home_province = dto.home_province;
     }
+    if (dto.active_province !== undefined) {
+      profile.active_province = dto.active_province;
+    }
     if (dto.active_cities !== undefined) {
       profile.active_cities = dto.active_cities;
     }

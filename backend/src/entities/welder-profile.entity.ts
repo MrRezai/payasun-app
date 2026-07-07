@@ -52,6 +52,9 @@ export class WelderProfile {
   @Column({ type: 'varchar', length: 100, nullable: true })
   home_province: string | null;
 
+  @Column({ type: 'varchar', length: 100, nullable: true })
+  active_province: string | null;
+
   /**
    * JSONB array of city names where the welder is willing to operate.
    * Example: ["کرمان", "بم", "رفسنجان", "جیرفت"]

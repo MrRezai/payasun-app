@@ -20,10 +20,17 @@ class _WelderProfileScreenState extends State<WelderProfileScreen> {
   final _firstNameController = TextEditingController();
   final _lastNameController = TextEditingController();
   final _bioController = TextEditingController();
-  final _homeCityController = TextEditingController();
+
+  // Home location states
+  int? _homeProvinceId;
+  String? _homeCityName;
+  String? _homeProvinceName;
+  List<dynamic> _citiesOfHomeProvince = [];
+  bool _isLoadingHomeCities = false;
 
   List<String> _activeCities = [];
   List<Map<String, dynamic>> _priceList = [];
+  String? _activeProvinceName;
 
   // Geo API states
   final ApiService _apiService = ApiService();
@@ -40,14 +47,18 @@ class _WelderProfileScreenState extends State<WelderProfileScreen> {
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
       Provider.of<AuthProvider>(context, listen: false).loadProfile().then((_) {
-        _populateFields();
+        if (mounted) {
+          _populateFields();
+        }
       });
     });
     _loadProvinces();
   }
 
   void _populateFields() {
+    if (!mounted) return;
     final auth = Provider.of<AuthProvider>(context, listen: false);
     if (auth.profileData != null) {
       final profile = auth.profileData!['profile'] as Map<String, dynamic>?;
@@ -56,7 +67,9 @@ class _WelderProfileScreenState extends State<WelderProfileScreen> {
           _firstNameController.text = profile['first_name'] ?? '';
           _lastNameController.text = profile['last_name'] ?? '';
           _bioController.text = profile['bio'] ?? '';
-          _homeCityController.text = profile['home_city'] ?? '';
+          _homeCityName = profile['home_city'];
+          _homeProvinceName = profile['home_province'];
+          _activeProvinceName = profile['active_province'];
           
           final rawCities = profile['active_cities'] as List<dynamic>?;
           _activeCities = rawCities != null ? rawCities.map((e) => e.toString()).toList() : [];
@@ -68,6 +81,8 @@ class _WelderProfileScreenState extends State<WelderProfileScreen> {
           
           _initialized = true;
         });
+        _resolveHomeProvinceId();
+        _resolveActiveProvinceId();
       }
     }
   }
@@ -81,6 +96,8 @@ class _WelderProfileScreenState extends State<WelderProfileScreen> {
           _provinces = list;
           _isLoadingGeo = false;
         });
+        _resolveHomeProvinceId();
+        _resolveActiveProvinceId();
       }
     } catch (e) {
       if (mounted) {
@@ -111,12 +128,61 @@ class _WelderProfileScreenState extends State<WelderProfileScreen> {
     }
   }
 
+  Future<void> _loadHomeCities(int provinceId) async {
+    if (mounted) {
+      setState(() {
+        _isLoadingHomeCities = true;
+        _citiesOfHomeProvince = [];
+      });
+    }
+    try {
+      final list = await _apiService.fetchCities(provinceId);
+      if (mounted) {
+        setState(() {
+          _citiesOfHomeProvince = list;
+          _isLoadingHomeCities = false;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() => _isLoadingHomeCities = false);
+      }
+    }
+  }
+
+  void _resolveHomeProvinceId() {
+    if (_provinces.isEmpty || _homeProvinceName == null) return;
+    final matched = _provinces.firstWhere(
+      (prov) => (prov['name'] as String).trim() == _homeProvinceName!.trim(),
+      orElse: () => null,
+    );
+    if (matched != null) {
+      setState(() {
+        _homeProvinceId = matched['id'] as int;
+      });
+      _loadHomeCities(_homeProvinceId!);
+    }
+  }
+
+  void _resolveActiveProvinceId() {
+    if (_provinces.isEmpty || _activeProvinceName == null) return;
+    final matched = _provinces.firstWhere(
+      (prov) => (prov['name'] as String).trim() == _activeProvinceName!.trim(),
+      orElse: () => null,
+    );
+    if (matched != null) {
+      setState(() {
+        _selectedProvinceId = matched['id'] as int;
+      });
+      _loadCities(_selectedProvinceId!);
+    }
+  }
+
   @override
   void dispose() {
     _firstNameController.dispose();
     _lastNameController.dispose();
     _bioController.dispose();
-    _homeCityController.dispose();
     super.dispose();
   }
 
@@ -129,14 +195,25 @@ class _WelderProfileScreenState extends State<WelderProfileScreen> {
       _showError('لطفاً نام خانوادگی خود را وارد کنید.');
       return;
     }
+    if (_homeCityName == null || _homeCityName!.isEmpty) {
+      _showError('لطفاً شهر محل سکونت خود را انتخاب کنید.');
+      return;
+    }
     setState(() => _isSaving = true);
     try {
       final auth = Provider.of<AuthProvider>(context, listen: false);
+      final homeProvinceObj = _provinces.firstWhere(
+        (prov) => prov['id'] == _homeProvinceId,
+        orElse: () => null,
+      );
+      final homeProvinceName = homeProvinceObj != null ? homeProvinceObj['name'] as String : _homeProvinceName ?? '';
+
       await auth.updateWelderProfile(
         firstName: _firstNameController.text.trim(),
         lastName: _lastNameController.text.trim(),
         bio: _bioController.text.trim(),
-        homeCity: _homeCityController.text.trim(),
+        homeCity: _homeCityName!,
+        homeProvince: homeProvinceName,
         isSetupCompleted: true,
       );
       setState(() {
@@ -158,7 +235,13 @@ class _WelderProfileScreenState extends State<WelderProfileScreen> {
     setState(() => _isSaving = true);
     try {
       final auth = Provider.of<AuthProvider>(context, listen: false);
+      final activeProvinceObj = _provinces.firstWhere(
+        (prov) => prov['id'] == _selectedProvinceId,
+        orElse: () => null,
+      );
+      final activeProvName = activeProvinceObj != null ? activeProvinceObj['name'] as String : _activeProvinceName ?? '';
       await auth.updateWelderProfile(
+        activeProvince: activeProvName,
         activeCities: _activeCities,
         isSetupCompleted: true,
       );
@@ -516,21 +599,24 @@ class _WelderProfileScreenState extends State<WelderProfileScreen> {
   }) {
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
-      decoration: BoxDecoration(
+      child: Material(
         color: AppColors.white,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppColors.borderGrey),
-      ),
-      child: ListTile(
-        onTap: onTap,
-        leading: Container(
-          padding: const EdgeInsets.all(8),
-          decoration: BoxDecoration(color: AppColors.burgundy.withValues(alpha: 0.08), shape: BoxShape.circle),
-          child: Icon(icon, color: AppColors.burgundy, size: 20),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(16),
+          side: const BorderSide(color: AppColors.borderGrey),
         ),
-        title: Text(title, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: AppColors.textDark)),
-        subtitle: Text(subtitle, style: const TextStyle(fontSize: 10, color: AppColors.textMuted)),
-        trailing: const Icon(Icons.chevron_right, color: AppColors.textMuted, size: 20),
+        clipBehavior: Clip.antiAlias,
+        child: ListTile(
+          onTap: onTap,
+          leading: Container(
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(color: AppColors.burgundy.withValues(alpha: 0.08), shape: BoxShape.circle),
+            child: Icon(icon, color: AppColors.burgundy, size: 20),
+          ),
+          title: Text(title, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: AppColors.textDark)),
+          subtitle: Text(subtitle, style: const TextStyle(fontSize: 10, color: AppColors.textMuted)),
+          trailing: const Icon(Icons.chevron_right, color: AppColors.textMuted, size: 20),
+        ),
       ),
     );
   }
@@ -551,10 +637,32 @@ class _WelderProfileScreenState extends State<WelderProfileScreen> {
                 child: TextFormField(
                   controller: _firstNameController,
                   decoration: InputDecoration(
-                    labelText: 'نام (الزامی)',
+                    label: RichText(
+                      text: const TextSpan(
+                        text: 'نام',
+                        style: TextStyle(color: AppColors.textDark, fontFamily: 'Vazirmatn', fontSize: 13),
+                        children: [
+                          TextSpan(
+                            text: ' *',
+                            style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold, fontSize: 14),
+                          ),
+                        ],
+                      ),
+                    ),
                     filled: true,
                     fillColor: AppColors.white,
-                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(16)),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(16),
+                      borderSide: const BorderSide(color: AppColors.borderGrey),
+                    ),
+                    enabledBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(16),
+                      borderSide: const BorderSide(color: AppColors.borderGrey),
+                    ),
+                    focusedBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(16),
+                      borderSide: const BorderSide(color: AppColors.royalBlue, width: 1.5),
+                    ),
                   ),
                 ),
               ),
@@ -563,23 +671,139 @@ class _WelderProfileScreenState extends State<WelderProfileScreen> {
                 child: TextFormField(
                   controller: _lastNameController,
                   decoration: InputDecoration(
-                    labelText: 'نام خانوادگی (الزامی)',
+                    label: RichText(
+                      text: const TextSpan(
+                        text: 'نام خانوادگی',
+                        style: TextStyle(color: AppColors.textDark, fontFamily: 'Vazirmatn', fontSize: 13),
+                        children: [
+                          TextSpan(
+                            text: ' *',
+                            style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold, fontSize: 14),
+                          ),
+                        ],
+                      ),
+                    ),
                     filled: true,
                     fillColor: AppColors.white,
-                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(16)),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(16),
+                      borderSide: const BorderSide(color: AppColors.borderGrey),
+                    ),
+                    enabledBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(16),
+                      borderSide: const BorderSide(color: AppColors.borderGrey),
+                    ),
+                    focusedBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(16),
+                      borderSide: const BorderSide(color: AppColors.royalBlue, width: 1.5),
+                    ),
                   ),
                 ),
               ),
             ],
           ),
+          
+          // Residence Province Selector
           const SizedBox(height: 14),
-          TextFormField(
-            controller: _homeCityController,
-            decoration: InputDecoration(
-              labelText: 'شهر محل سکونت',
-              filled: true,
-              fillColor: AppColors.white,
-              border: OutlineInputBorder(borderRadius: BorderRadius.circular(16)),
+          _isLoadingGeo
+              ? const Center(child: CircularProgressIndicator(color: AppColors.burgundy))
+              : InkWell(
+                  onTap: _showHomeProvincePickerBottomSheet,
+                  borderRadius: BorderRadius.circular(16),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                    decoration: BoxDecoration(
+                      color: AppColors.white,
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(color: AppColors.borderGrey),
+                    ),
+                    child: Row(
+                      children: [
+                        const Icon(Icons.map_outlined, color: AppColors.royalBlue, size: 20),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              RichText(
+                                text: const TextSpan(
+                                  text: 'استان محل سکونت',
+                                  style: TextStyle(fontSize: 10, color: AppColors.textMuted, fontWeight: FontWeight.bold, fontFamily: 'Vazirmatn'),
+                                  children: [
+                                    TextSpan(
+                                      text: ' *',
+                                      style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              const SizedBox(height: 4),
+                              Text(
+                                _provinces.firstWhere(
+                                  (prov) => prov['id'] == _homeProvinceId,
+                                  orElse: () => {'name': _homeProvinceName ?? 'انتخاب نشده'},
+                                )['name'] as String,
+                                style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: AppColors.textDark),
+                              ),
+                            ],
+                          ),
+                        ),
+                        const Icon(Icons.keyboard_arrow_down_rounded, color: AppColors.textMuted),
+                      ],
+                    ),
+                  ),
+                ),
+
+          // Residence City Selector
+          const SizedBox(height: 14),
+          InkWell(
+            onTap: _homeProvinceId == null ? null : _showHomeCityPickerBottomSheet,
+            borderRadius: BorderRadius.circular(16),
+            child: Opacity(
+              opacity: _homeProvinceId == null ? 0.5 : 1.0,
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                decoration: BoxDecoration(
+                  color: AppColors.white,
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(color: AppColors.borderGrey),
+                ),
+                child: Row(
+                  children: [
+                    const Icon(Icons.location_city_outlined, color: AppColors.royalBlue, size: 20),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          RichText(
+                            text: const TextSpan(
+                              text: 'شهر محل سکونت',
+                              style: TextStyle(fontSize: 10, color: AppColors.textMuted, fontWeight: FontWeight.bold, fontFamily: 'Vazirmatn'),
+                              children: [
+                                TextSpan(
+                                  text: ' *',
+                                  style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold),
+                                ),
+                              ],
+                            ),
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            _homeCityName ?? 'انتخاب نشده',
+                            style: TextStyle(
+                              fontSize: 13,
+                              fontWeight: FontWeight.bold,
+                              color: _homeCityName == null ? AppColors.textMuted : AppColors.textDark,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const Icon(Icons.keyboard_arrow_down_rounded, color: AppColors.textMuted),
+                  ],
+                ),
+              ),
             ),
           ),
           const SizedBox(height: 14),
@@ -858,6 +1082,241 @@ class _WelderProfileScreenState extends State<WelderProfileScreen> {
                       ),
                     ),
                     const SizedBox(height: 20),
+                  ],
+                ),
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+
+  void _showHomeProvincePickerBottomSheet() {
+    String searchFilter = "";
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: AppColors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (context) {
+        return StatefulBuilder(
+          builder: (context, setSheetState) {
+            final filteredProvinces = _provinces.where((prov) {
+              final name = prov['name'] as String;
+              return name.contains(searchFilter);
+            }).toList();
+
+            return Directionality(
+              textDirection: TextDirection.rtl,
+              child: Padding(
+                padding: EdgeInsets.only(
+                  bottom: MediaQuery.of(context).viewInsets.bottom,
+                  top: 20,
+                  left: 16,
+                  right: 16,
+                ),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Center(
+                      child: Container(
+                        width: 40,
+                        height: 4,
+                        decoration: BoxDecoration(
+                          color: AppColors.borderGrey,
+                          borderRadius: BorderRadius.circular(2),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 18),
+                    const Text(
+                      'انتخاب استان محل سکونت',
+                      style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: AppColors.burgundy),
+                    ),
+                    const SizedBox(height: 12),
+
+                    // Search field for provinces
+                    TextField(
+                      onChanged: (val) {
+                        setSheetState(() {
+                          searchFilter = val;
+                        });
+                      },
+                      decoration: InputDecoration(
+                        hintText: 'جستجوی نام استان...',
+                        prefixIcon: const Icon(Icons.search, color: AppColors.textMuted),
+                        filled: true,
+                        fillColor: AppColors.lightGrey,
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide: BorderSide.none,
+                        ),
+                        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                      ),
+                    ),
+                    const SizedBox(height: 14),
+
+                    Expanded(
+                      child: filteredProvinces.isEmpty
+                          ? const Center(
+                              child: Text(
+                                'هیچ استانی یافت نشد.',
+                                style: TextStyle(color: AppColors.textMuted),
+                              ),
+                            )
+                          : ListView.builder(
+                              itemCount: filteredProvinces.length,
+                              itemBuilder: (context, idx) {
+                                final prov = filteredProvinces[idx];
+                                final isSelected = prov['id'] == _homeProvinceId;
+                                return ListTile(
+                                  title: Text(
+                                    prov['name'] as String,
+                                    style: TextStyle(
+                                      fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                                      color: isSelected ? AppColors.royalBlue : AppColors.textDark,
+                                    ),
+                                  ),
+                                  trailing: isSelected
+                                      ? const Icon(Icons.check_circle, color: AppColors.royalBlue)
+                                      : null,
+                                  onTap: () {
+                                    setState(() {
+                                      _homeProvinceId = prov['id'] as int;
+                                      _homeCityName = null; // Clear home city since province changed
+                                    });
+                                    _loadHomeCities(prov['id'] as int);
+                                    Navigator.pop(context);
+                                  },
+                                );
+                              },
+                            ),
+                    ),
+                  ],
+                ),
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+
+  void _showHomeCityPickerBottomSheet() {
+    String searchFilter = "";
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: AppColors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (context) {
+        return StatefulBuilder(
+          builder: (context, setSheetState) {
+            final filteredCities = _citiesOfHomeProvince.where((city) {
+              final cityName = city['name'] as String;
+              return cityName.contains(searchFilter);
+            }).toList();
+
+            return Directionality(
+              textDirection: TextDirection.rtl,
+              child: Padding(
+                padding: EdgeInsets.only(
+                  bottom: MediaQuery.of(context).viewInsets.bottom,
+                  top: 20,
+                  left: 16,
+                  right: 16,
+                ),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Center(
+                      child: Container(
+                        width: 40,
+                        height: 4,
+                        decoration: BoxDecoration(
+                          color: AppColors.borderGrey,
+                          borderRadius: BorderRadius.circular(2),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 18),
+                    const Text(
+                      'انتخاب شهر محل سکونت',
+                      style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: AppColors.burgundy),
+                    ),
+                    const SizedBox(height: 12),
+
+                    // Search field for cities
+                    TextField(
+                      onChanged: (val) {
+                        setSheetState(() {
+                          searchFilter = val;
+                        });
+                      },
+                      decoration: InputDecoration(
+                        hintText: 'جستجوی نام شهر...',
+                        prefixIcon: const Icon(Icons.search, color: AppColors.textMuted),
+                        filled: true,
+                        fillColor: AppColors.lightGrey,
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide: BorderSide.none,
+                        ),
+                        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                      ),
+                    ),
+                    const SizedBox(height: 14),
+
+                    _isLoadingHomeCities
+                        ? const Center(
+                            child: Padding(
+                              padding: EdgeInsets.all(32.0),
+                              child: CircularProgressIndicator(color: AppColors.royalBlue),
+                            ),
+                          )
+                        : Expanded(
+                            child: filteredCities.isEmpty
+                                ? const Center(
+                                    child: Text(
+                                      'هیچ شهری یافت نشد.',
+                                      style: TextStyle(color: AppColors.textMuted),
+                                    ),
+                                  )
+                                : ListView.builder(
+                                    itemCount: filteredCities.length,
+                                    itemBuilder: (context, idx) {
+                                      final city = filteredCities[idx];
+                                      final cityName = city['name'] as String;
+                                      final isSelected = _homeCityName == cityName;
+
+                                      return ListTile(
+                                        title: Text(
+                                          cityName,
+                                          style: TextStyle(
+                                            fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                                            color: isSelected ? AppColors.royalBlue : AppColors.textDark,
+                                          ),
+                                        ),
+                                        trailing: isSelected
+                                            ? const Icon(Icons.check_circle, color: AppColors.royalBlue)
+                                            : null,
+                                        onTap: () {
+                                          setState(() {
+                                            _homeCityName = cityName;
+                                          });
+                                          Navigator.pop(context);
+                                        },
+                                      );
+                                    },
+                                  ),
+                          ),
                   ],
                 ),
               ),

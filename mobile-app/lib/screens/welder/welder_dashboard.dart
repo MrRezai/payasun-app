@@ -1,12 +1,48 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import '../../constants/app_colors.dart';
+import '../../providers/auth_provider.dart';
 
-class WelderDashboard extends StatelessWidget {
+class WelderDashboard extends StatefulWidget {
   const WelderDashboard({super.key});
 
   @override
+  State<WelderDashboard> createState() => _WelderDashboardState();
+}
+
+class _WelderDashboardState extends State<WelderDashboard> {
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      final auth = Provider.of<AuthProvider>(context, listen: false);
+      if (!auth.isProfileLoaded) {
+        auth.loadProfile();
+      }
+    });
+  }
+
+  @override
   Widget build(BuildContext context) {
-    final size = MediaQuery.of(context).size;
+    final auth = Provider.of<AuthProvider>(context);
+    final profile = auth.profileData?['profile'] as Map<String, dynamic>?;
+    final user = auth.profileData?['user'] as Map<String, dynamic>?;
+
+    final firstName = profile?['first_name'] ?? '';
+    final lastName = profile?['last_name'] ?? '';
+    final fullName = '$firstName $lastName'.trim();
+    final displayName = fullName.isNotEmpty ? fullName : 'جوشکار';
+    final bio = profile?['bio'] as String? ?? '';
+    final homeCity = profile?['home_city'] as String? ?? '';
+    final homeProvince = profile?['home_province'] as String? ?? '';
+    final activeProvince = profile?['active_province'] as String? ?? '';
+    final activeCities = (profile?['active_cities'] as List<dynamic>?) ?? [];
+    final totalScore = double.tryParse(profile?['total_score']?.toString() ?? '0') ?? 0;
+    final completedJobs = profile?['completed_jobs_count'] ?? 0;
+    final isSetupCompleted = profile?['is_setup_completed'] == true;
+    final phone = user?['phone'] ?? auth.phoneNumber;
+    final priceList = (profile?['base_price_list'] as List<dynamic>?) ?? [];
 
     return Scaffold(
       backgroundColor: AppColors.lightGrey,
@@ -16,21 +52,49 @@ class WelderDashboard extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Welder Header Profile Card (Burgundy Gradient)
-            _buildWelderHeaderCard(size),
+            // Welder Header Profile Card
+            _buildWelderHeaderCard(displayName, homeCity, homeProvince, totalScore, isSetupCompleted),
             const SizedBox(height: 25),
 
             // Performance Metrics
             _buildSectionHeader('خلاصه عملکرد شما'),
             const SizedBox(height: 14),
-            _buildPerformanceGrid(),
+            _buildPerformanceGrid(completedJobs, totalScore, priceList.length),
             const SizedBox(height: 28),
 
-            // Tips & Auto-pricing section card
+            // Active Cities Coverage
+            _buildSectionHeader('محدوده فعالیت شما'),
+            const SizedBox(height: 14),
+            _buildCoverageCard(activeProvince, activeCities),
+            const SizedBox(height: 28),
+
+            // Bio Card
+            if (bio.isNotEmpty) ...[
+              _buildSectionHeader('درباره شما'),
+              const SizedBox(height: 14),
+              _buildBioCard(bio),
+              const SizedBox(height: 28),
+            ],
+
+            // Price List Section
+            if (priceList.isNotEmpty) ...[
+              _buildSectionHeader('تعرفه‌های فعال شما'),
+              const SizedBox(height: 14),
+              _buildPriceListCard(priceList),
+              const SizedBox(height: 28),
+            ],
+
+            // Contact Info
+            _buildSectionHeader('اطلاعات تماس'),
+            const SizedBox(height: 14),
+            _buildContactCard(phone, homeCity, homeProvince),
+            const SizedBox(height: 28),
+
+            // Tips
             _buildTipsCard(),
             const SizedBox(height: 28),
 
-            // Current projects feed
+            // Current projects
             _buildSectionHeader('پروژه‌های جاری'),
             const SizedBox(height: 14),
             _buildCurrentContractsSection(),
@@ -40,7 +104,9 @@ class WelderDashboard extends StatelessWidget {
     );
   }
 
-  Widget _buildWelderHeaderCard(Size size) {
+  Widget _buildWelderHeaderCard(String name, String city, String province, double score, bool setupDone) {
+    final locationText = [city, province].where((s) => s.isNotEmpty).join('، ');
+
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(22),
@@ -61,7 +127,6 @@ class WelderDashboard extends StatelessWidget {
       ),
       child: Row(
         children: [
-          // Avatar container with glowing border
           Container(
             padding: const EdgeInsets.all(3),
             decoration: const BoxDecoration(
@@ -79,45 +144,72 @@ class WelderDashboard extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text(
-                  'استاد جوشکار عزیز',
-                  style: TextStyle(
+                Text(
+                  name,
+                  style: const TextStyle(
                     color: AppColors.white,
                     fontSize: 16,
                     fontWeight: FontWeight.bold,
                   ),
+                  overflow: TextOverflow.ellipsis,
                 ),
                 const SizedBox(height: 6),
                 Row(
                   children: [
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                      decoration: BoxDecoration(
-                        color: AppColors.white.withValues(alpha: 0.15),
-                        borderRadius: BorderRadius.circular(20),
-                      ),
-                      child: const Row(
-                        children: [
-                          Icon(Icons.verified, color: AppColors.amberOrange, size: 12),
-                          SizedBox(width: 4),
-                          Text(
-                            'تأیید شده',
-                            style: TextStyle(
-                              color: AppColors.white,
-                              fontSize: 10,
-                              fontWeight: FontWeight.bold,
+                    if (setupDone)
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: AppColors.white.withValues(alpha: 0.15),
+                          borderRadius: BorderRadius.circular(20),
+                        ),
+                        child: const Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(Icons.verified, color: AppColors.amberOrange, size: 12),
+                            SizedBox(width: 4),
+                            Text(
+                              'تأیید شده',
+                              style: TextStyle(
+                                color: AppColors.white,
+                                fontSize: 10,
+                                fontWeight: FontWeight.bold,
+                              ),
                             ),
-                          ),
-                        ],
+                          ],
+                        ),
                       ),
-                    ),
-                    const SizedBox(width: 8),
-                    const Text(
-                      'سطح ارشد',
-                      style: TextStyle(color: Colors.white70, fontSize: 11),
-                    )
+                    if (locationText.isNotEmpty) ...[
+                      const SizedBox(width: 8),
+                      Flexible(
+                        child: Text(
+                          locationText,
+                          style: const TextStyle(color: Colors.white70, fontSize: 11),
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                    ],
                   ],
                 ),
+                if (score > 0) ...[
+                  const SizedBox(height: 6),
+                  Row(
+                    children: [
+                      ...List.generate(5, (i) {
+                        return Icon(
+                          i < score.round() ? Icons.star_rounded : Icons.star_border_rounded,
+                          color: AppColors.amberOrange,
+                          size: 14,
+                        );
+                      }),
+                      const SizedBox(width: 4),
+                      Text(
+                        score.toStringAsFixed(1),
+                        style: const TextStyle(color: Colors.white70, fontSize: 10, fontWeight: FontWeight.bold),
+                      ),
+                    ],
+                  ),
+                ],
               ],
             ),
           ),
@@ -150,7 +242,7 @@ class WelderDashboard extends StatelessWidget {
     );
   }
 
-  Widget _buildPerformanceGrid() {
+  Widget _buildPerformanceGrid(int completedJobs, double score, int tariffCount) {
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.symmetric(vertical: 18, horizontal: 12),
@@ -170,17 +262,8 @@ class WelderDashboard extends StatelessWidget {
         children: [
           Expanded(
             child: _buildMetricItem(
-              'پیشنهادها',
-              '۱۲ عدد',
-              Icons.pending_actions_outlined,
-              AppColors.royalBlue,
-            ),
-          ),
-          _buildVerticalDivider(),
-          Expanded(
-            child: _buildMetricItem(
-              'موفق',
-              '۸ پروژه',
+              'پروژه‌های انجام شده',
+              '$completedJobs',
               Icons.done_all_outlined,
               Colors.green,
             ),
@@ -189,7 +272,7 @@ class WelderDashboard extends StatelessWidget {
           Expanded(
             child: _buildMetricItem(
               'امتیاز شما',
-              '۴.۹',
+              score > 0 ? score.toStringAsFixed(1) : '—',
               Icons.star_rate_rounded,
               AppColors.amberOrange,
             ),
@@ -197,10 +280,10 @@ class WelderDashboard extends StatelessWidget {
           _buildVerticalDivider(),
           Expanded(
             child: _buildMetricItem(
-              'درآمد ماه',
-              '۴۵.۲ م',
-              Icons.account_balance_wallet_outlined,
-              AppColors.burgundy,
+              'تعرفه‌های فعال',
+              '$tariffCount',
+              Icons.receipt_long_outlined,
+              AppColors.royalBlue,
             ),
           ),
         ],
@@ -237,6 +320,7 @@ class WelderDashboard extends StatelessWidget {
             fontSize: 10,
             fontWeight: FontWeight.bold,
           ),
+          textAlign: TextAlign.center,
         ),
       ],
     );
@@ -247,6 +331,222 @@ class WelderDashboard extends StatelessWidget {
       width: 1,
       height: 40,
       color: AppColors.borderGrey,
+    );
+  }
+
+  Widget _buildCoverageCard(String activeProvince, List<dynamic> activeCities) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(18),
+      decoration: BoxDecoration(
+        color: AppColors.white,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: AppColors.borderGrey),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          if (activeProvince.isNotEmpty)
+            Row(
+              children: [
+                const Icon(Icons.map_outlined, color: AppColors.royalBlue, size: 18),
+                const SizedBox(width: 8),
+                Text(
+                  'استان فعال: $activeProvince',
+                  style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: AppColors.textDark),
+                ),
+              ],
+            ),
+          if (activeCities.isNotEmpty) ...[
+            if (activeProvince.isNotEmpty) const SizedBox(height: 12),
+            Row(
+              children: [
+                const Icon(Icons.location_city_outlined, color: AppColors.royalBlue, size: 18),
+                const SizedBox(width: 8),
+                Text(
+                  '${activeCities.length} شهر فعال',
+                  style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: AppColors.textMuted),
+                ),
+              ],
+            ),
+            const SizedBox(height: 10),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: activeCities.map((city) {
+                return Chip(
+                  label: Text(city.toString()),
+                  backgroundColor: AppColors.royalBlue.withValues(alpha: 0.08),
+                  labelStyle: const TextStyle(color: AppColors.royalBlue, fontSize: 11, fontWeight: FontWeight.bold),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    side: const BorderSide(color: AppColors.royalBlue, width: 0.5),
+                  ),
+                  materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                  visualDensity: VisualDensity.compact,
+                );
+              }).toList(),
+            ),
+          ],
+          if (activeProvince.isEmpty && activeCities.isEmpty)
+            const Center(
+              child: Text(
+                'محدوده فعالیت تعیین نشده است.',
+                style: TextStyle(color: AppColors.textMuted, fontSize: 12),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildBioCard(String bio) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(18),
+      decoration: BoxDecoration(
+        color: AppColors.white,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: AppColors.borderGrey),
+      ),
+      child: Text(
+        bio,
+        style: const TextStyle(
+          fontSize: 12,
+          color: AppColors.textDark,
+          height: 1.7,
+        ),
+      ),
+    );
+  }
+
+  Widget _buildPriceListCard(List<dynamic> priceList) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(18),
+      decoration: BoxDecoration(
+        color: AppColors.white,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: AppColors.borderGrey),
+      ),
+      child: Column(
+        children: priceList.asMap().entries.map((entry) {
+          final idx = entry.key;
+          final item = entry.value as Map<String, dynamic>;
+          final title = item['title'] ?? '';
+          final unit = item['unit'] ?? '';
+          final price = item['price_per_unit'];
+          final priceStr = price != null ? _formatPrice(price) : '—';
+
+          return Column(
+            children: [
+              Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(6),
+                    decoration: BoxDecoration(
+                      color: AppColors.burgundy.withValues(alpha: 0.08),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: const Icon(Icons.construction, color: AppColors.burgundy, size: 16),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          title,
+                          style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: AppColors.textDark),
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          'واحد: $unit',
+                          style: const TextStyle(fontSize: 10, color: AppColors.textMuted),
+                        ),
+                      ],
+                    ),
+                  ),
+                  Text(
+                    '$priceStr ریال',
+                    style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: AppColors.royalBlue),
+                  ),
+                ],
+              ),
+              if (idx < priceList.length - 1)
+                const Divider(color: AppColors.borderGrey, height: 20),
+            ],
+          );
+        }).toList(),
+      ),
+    );
+  }
+
+  String _formatPrice(dynamic price) {
+    final num = double.tryParse(price.toString()) ?? 0;
+    if (num >= 1000000) {
+      return '${(num / 1000000).toStringAsFixed(1)}M';
+    } else if (num >= 1000) {
+      return '${(num / 1000).toStringAsFixed(0)}K';
+    }
+    return num.toStringAsFixed(0);
+  }
+
+  Widget _buildContactCard(String phone, String city, String province) {
+    final locationText = [city, province].where((s) => s.isNotEmpty).join('، ');
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(18),
+      decoration: BoxDecoration(
+        color: AppColors.white,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: AppColors.borderGrey),
+      ),
+      child: Column(
+        children: [
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: AppColors.royalBlue.withValues(alpha: 0.08),
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(Icons.phone_outlined, color: AppColors.royalBlue, size: 18),
+              ),
+              const SizedBox(width: 12),
+              Text(
+                phone,
+                style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: AppColors.textDark, letterSpacing: 1),
+              ),
+            ],
+          ),
+          if (locationText.isNotEmpty) ...[
+            const SizedBox(height: 12),
+            Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: AppColors.burgundy.withValues(alpha: 0.08),
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Icon(Icons.home_outlined, color: AppColors.burgundy, size: 18),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Text(
+                    'محل سکونت: $locationText',
+                    style: const TextStyle(fontSize: 12, color: AppColors.textDark),
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ],
+      ),
     );
   }
 

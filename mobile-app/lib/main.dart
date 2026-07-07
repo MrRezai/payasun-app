@@ -39,13 +39,22 @@ class JoftojoorApp extends StatelessWidget {
       ),
       home: Consumer<AuthProvider>(
         builder: (context, auth, _) {
+          Widget child;
           if (!auth.isAuthenticated) {
-            return const LoginPhoneScreen();
+            child = const LoginPhoneScreen(key: ValueKey('LoginPhoneScreen'));
+          } else if (auth.isWelder && !auth.isProfileComplete) {
+            child = const WelderSetupScreen(key: ValueKey('WelderSetupScreen'));
+          } else {
+            child = const MainShellScreen(key: ValueKey('MainShellScreen'));
           }
-          if (auth.isWelder && !auth.isProfileComplete) {
-            return const WelderSetupScreen();
-          }
-          return const MainShellScreen();
+
+          return AnimatedSwitcher(
+            duration: const Duration(milliseconds: 350),
+            transitionBuilder: (Widget child, Animation<double> animation) {
+              return FadeTransition(opacity: animation, child: child);
+            },
+            child: child,
+          );
         },
       ),
     );

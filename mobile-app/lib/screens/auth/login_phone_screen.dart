@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import '../../constants/app_colors.dart';
+import '../../constants/route_transitions.dart';
 import '../../providers/auth_provider.dart';
 import 'verify_otp_screen.dart';
 
@@ -29,8 +30,8 @@ class _LoginPhoneScreenState extends State<LoginPhoneScreen> {
       if (mounted) {
         Navigator.push(
           context,
-          MaterialPageRoute(
-            builder: (context) => VerifyOtpScreen(
+          FadePageRoute(
+            page: VerifyOtpScreen(
               phoneNumber: phone,
               debugCode: debugCode,
             ),
