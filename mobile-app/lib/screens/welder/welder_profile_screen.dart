@@ -73,31 +73,41 @@ class _WelderProfileScreenState extends State<WelderProfileScreen> {
   }
 
   Future<void> _loadProvinces() async {
-    setState(() => _isLoadingGeo = true);
+    if (mounted) setState(() => _isLoadingGeo = true);
     try {
       final list = await _apiService.fetchProvinces();
-      setState(() {
-        _provinces = list;
-        _isLoadingGeo = false;
-      });
+      if (mounted) {
+        setState(() {
+          _provinces = list;
+          _isLoadingGeo = false;
+        });
+      }
     } catch (e) {
-      setState(() => _isLoadingGeo = false);
+      if (mounted) {
+        setState(() => _isLoadingGeo = false);
+      }
     }
   }
 
   Future<void> _loadCities(int provinceId) async {
-    setState(() {
-      _isLoadingCities = true;
-      _citiesOfSelectedProvince = [];
-    });
+    if (mounted) {
+      setState(() {
+        _isLoadingCities = true;
+        _citiesOfSelectedProvince = [];
+      });
+    }
     try {
       final list = await _apiService.fetchCities(provinceId);
-      setState(() {
-        _citiesOfSelectedProvince = list;
-        _isLoadingCities = false;
-      });
+      if (mounted) {
+        setState(() {
+          _citiesOfSelectedProvince = list;
+          _isLoadingCities = false;
+        });
+      }
     } catch (e) {
-      setState(() => _isLoadingCities = false);
+      if (mounted) {
+        setState(() => _isLoadingCities = false);
+      }
     }
   }
 
