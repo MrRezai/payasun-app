@@ -1325,8 +1325,8 @@ update_and_rebuild_backend() {
 
     # Rebuild and restart backend
     if confirm "Do you want to rebuild node modules and build the backend now?"; then
-        info "Installing backend dependencies..."
-        (cd "${BACKEND_DIR}" && npm install)
+        info "Installing backend dependencies (npm i)..."
+        (cd "${BACKEND_DIR}" && npm i)
         if [ $? -ne 0 ]; then
             error "Dependency installation failed."
             pause_continue
