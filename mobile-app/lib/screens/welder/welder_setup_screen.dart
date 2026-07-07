@@ -13,7 +13,8 @@ class WelderSetupScreen extends StatefulWidget {
 
 class _WelderSetupScreenState extends State<WelderSetupScreen> {
   final _formKey = GlobalKey<FormState>();
-  final _fullNameController = TextEditingController();
+  final _firstNameController = TextEditingController();
+  final _lastNameController = TextEditingController();
   final _bioController = TextEditingController();
   final _homeCityController = TextEditingController();
 
@@ -78,7 +79,8 @@ class _WelderSetupScreenState extends State<WelderSetupScreen> {
 
   @override
   void dispose() {
-    _fullNameController.dispose();
+    _firstNameController.dispose();
+    _lastNameController.dispose();
     _bioController.dispose();
     _homeCityController.dispose();
     super.dispose();
@@ -244,8 +246,9 @@ class _WelderSetupScreenState extends State<WelderSetupScreen> {
     try {
       // 1. Update general profile info
       await auth.updateWelderProfile(
-        fullName: _fullNameController.text.trim(),
-        homeCity: _homeCityController.text.trim().isNotEmpty ? _homeCityController.text.trim() : 'کرمان',
+        firstName: _firstNameController.text.trim(),
+        lastName: _lastNameController.text.trim(),
+        homeCity: _homeCityController.text.trim(),
         activeCities: _selectedCities,
         bio: _bioController.text.trim(),
         isSetupCompleted: true,
@@ -340,6 +343,14 @@ class _WelderSetupScreenState extends State<WelderSetupScreen> {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
+                            // Brand Logo at the top
+                            Center(
+                              child: Padding(
+                                padding: const EdgeInsets.only(bottom: 16),
+                                child: _buildImageLogo(76),
+                              ),
+                            ),
+
                             // Header Title
                             const Center(
                               child: Text(
@@ -363,35 +374,55 @@ class _WelderSetupScreenState extends State<WelderSetupScreen> {
                             // Personal info card
                             _buildSectionLabel('اطلاعات شخصی'),
                             const SizedBox(height: 10),
-                            TextFormField(
-                              controller: _fullNameController,
-                              decoration: InputDecoration(
-                                labelText: 'نام و نام خانوادگی شما',
-                                prefixIcon: const Icon(Icons.person_outline, size: 20),
-                                filled: true,
-                                fillColor: AppColors.lightGrey,
-                                border: OutlineInputBorder(borderRadius: BorderRadius.circular(16)),
-                              ),
-                              validator: (val) => val == null || val.trim().isEmpty ? 'لطفاً نام خود را وارد کنید' : null,
+                            Row(
+                              children: [
+                                Expanded(
+                                  child: TextFormField(
+                                    controller: _firstNameController,
+                                    decoration: InputDecoration(
+                                      labelText: 'نام (الزامی)',
+                                      prefixIcon: const Icon(Icons.person_outline, size: 20),
+                                      filled: true,
+                                      fillColor: AppColors.lightGrey,
+                                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(16)),
+                                    ),
+                                    validator: (val) => val == null || val.trim().isEmpty ? 'نام الزامی است' : null,
+                                  ),
+                                ),
+                                const SizedBox(width: 12),
+                                Expanded(
+                                  child: TextFormField(
+                                    controller: _lastNameController,
+                                    decoration: InputDecoration(
+                                      labelText: 'نام خانوادگی (الزامی)',
+                                      prefixIcon: const Icon(Icons.person_outline, size: 20),
+                                      filled: true,
+                                      fillColor: AppColors.lightGrey,
+                                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(16)),
+                                    ),
+                                    validator: (val) => val == null || val.trim().isEmpty ? 'نام خانوادگی الزامی است' : null,
+                                  ),
+                                ),
+                              ],
                             ),
                             const SizedBox(height: 14),
                             TextFormField(
                               controller: _homeCityController,
                               decoration: InputDecoration(
-                                labelText: 'شهر محل سکونت',
+                                labelText: 'شهر محل سکونت (الزامی)',
                                 prefixIcon: const Icon(Icons.home_outlined, size: 20),
                                 filled: true,
                                 fillColor: AppColors.lightGrey,
                                 border: OutlineInputBorder(borderRadius: BorderRadius.circular(16)),
                               ),
-                              validator: (val) => val == null || val.trim().isEmpty ? 'لطفاً شهر محل سکونت خود را وارد کنید' : null,
+                              validator: (val) => val == null || val.trim().isEmpty ? 'وارد کردن شهر محل سکونت الزامی است' : null,
                             ),
                             const SizedBox(height: 14),
                             TextFormField(
                               controller: _bioController,
                               maxLines: 3,
                               decoration: InputDecoration(
-                                labelText: 'معرفی کوتاه / سابقه کاری شما',
+                                labelText: 'معرفی کوتاه / سابقه کاری شما (اختیاری)',
                                 prefixIcon: const Icon(Icons.description_outlined, size: 20),
                                 filled: true,
                                 fillColor: AppColors.lightGrey,
@@ -401,7 +432,7 @@ class _WelderSetupScreenState extends State<WelderSetupScreen> {
                             const SizedBox(height: 25),
 
                             // Geography settings
-                            _buildSectionLabel('محدوده خدمات‌رسانی (استان و شهرها)'),
+                            _buildSectionLabel('محدوده خدمات‌رسانی (استان و شهرها) (الزامی)'),
                             const SizedBox(height: 10),
                             _buildGeoSelectorCard(),
                             const SizedBox(height: 25),
@@ -428,7 +459,7 @@ class _WelderSetupScreenState extends State<WelderSetupScreen> {
                             ],
 
                             // Bids management
-                            _buildSectionLabel('تعرفه‌ها و نرخ‌های دستمزد شما'),
+                            _buildSectionLabel('تعرفه‌ها و نرخ‌های دستمزد شما (اختیاری)'),
                             const SizedBox(height: 10),
                             _buildPricesManagerCard(),
                             const SizedBox(height: 35),
@@ -475,69 +506,114 @@ class _WelderSetupScreenState extends State<WelderSetupScreen> {
   }
 
   void _showProvincePickerBottomSheet() {
+    String searchFilter = "";
     showModalBottomSheet(
       context: context,
+      isScrollControlled: true,
       backgroundColor: AppColors.white,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
       builder: (context) {
-        return Directionality(
-          textDirection: TextDirection.rtl,
-          child: Padding(
-            padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 16),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Center(
-                  child: Container(
-                    width: 40,
-                    height: 4,
-                    decoration: BoxDecoration(
-                      color: AppColors.borderGrey,
-                      borderRadius: BorderRadius.circular(2),
-                    ),
-                  ),
+        return StatefulBuilder(
+          builder: (context, setSheetState) {
+            final filteredProvinces = _provinces.where((prov) {
+              final name = prov['name'] as String;
+              return name.contains(searchFilter);
+            }).toList();
+
+            return Directionality(
+              textDirection: TextDirection.rtl,
+              child: Padding(
+                padding: EdgeInsets.only(
+                  bottom: MediaQuery.of(context).viewInsets.bottom,
+                  top: 20,
+                  left: 16,
+                  right: 16,
                 ),
-                const SizedBox(height: 18),
-                const Text(
-                  'انتخاب استان محل فعالیت',
-                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: AppColors.burgundy),
-                ),
-                const SizedBox(height: 12),
-                Expanded(
-                  child: ListView.builder(
-                    itemCount: _provinces.length,
-                    itemBuilder: (context, idx) {
-                      final prov = _provinces[idx];
-                      final isSelected = prov['id'] == _selectedProvinceId;
-                      return ListTile(
-                        title: Text(
-                          prov['name'] as String,
-                          style: TextStyle(
-                            fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-                            color: isSelected ? AppColors.royalBlue : AppColors.textDark,
-                          ),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Center(
+                      child: Container(
+                        width: 40,
+                        height: 4,
+                        decoration: BoxDecoration(
+                          color: AppColors.borderGrey,
+                          borderRadius: BorderRadius.circular(2),
                         ),
-                        trailing: isSelected
-                            ? const Icon(Icons.check_circle, color: AppColors.royalBlue)
-                            : null,
-                        onTap: () {
-                          setState(() {
-                            _selectedProvinceId = prov['id'] as int;
-                            _selectedCities.clear(); // Clear previously selected cities since province changed
-                          });
-                          _loadCities(prov['id'] as int);
-                          Navigator.pop(context);
-                        },
-                      );
-                    },
-                  ),
+                      ),
+                    ),
+                    const SizedBox(height: 18),
+                    const Text(
+                      'انتخاب استان محل فعالیت',
+                      style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: AppColors.burgundy),
+                    ),
+                    const SizedBox(height: 12),
+
+                    // Search field for provinces
+                    TextField(
+                      onChanged: (val) {
+                        setSheetState(() {
+                          searchFilter = val;
+                        });
+                      },
+                      decoration: InputDecoration(
+                        hintText: 'جستجوی نام استان...',
+                        prefixIcon: const Icon(Icons.search, color: AppColors.textMuted),
+                        filled: true,
+                        fillColor: AppColors.lightGrey,
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide: BorderSide.none,
+                        ),
+                        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                      ),
+                    ),
+                    const SizedBox(height: 14),
+
+                    Expanded(
+                      child: filteredProvinces.isEmpty
+                          ? const Center(
+                              child: Text(
+                                'هیچ استانی یافت نشد.',
+                                style: TextStyle(color: AppColors.textMuted),
+                              ),
+                            )
+                          : ListView.builder(
+                              itemCount: filteredProvinces.length,
+                              itemBuilder: (context, idx) {
+                                final prov = filteredProvinces[idx];
+                                final isSelected = prov['id'] == _selectedProvinceId;
+                                return ListTile(
+                                  title: Text(
+                                    prov['name'] as String,
+                                    style: TextStyle(
+                                      fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                                      color: isSelected ? AppColors.royalBlue : AppColors.textDark,
+                                    ),
+                                  ),
+                                  trailing: isSelected
+                                      ? const Icon(Icons.check_circle, color: AppColors.royalBlue)
+                                      : null,
+                                  onTap: () {
+                                    setState(() {
+                                      _selectedProvinceId = prov['id'] as int;
+                                      _selectedCities.clear(); // Clear previously selected cities since province changed
+                                    });
+                                    _loadCities(prov['id'] as int);
+                                    Navigator.pop(context);
+                                  },
+                                );
+                              },
+                            ),
+                    ),
+                  ],
                 ),
-              ],
-            ),
-          ),
+              ),
+            );
+          },
         );
       },
     );
@@ -921,6 +997,30 @@ class _WelderSetupScreenState extends State<WelderSetupScreen> {
               },
             ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildImageLogo(double size) {
+    return Container(
+      width: size,
+      height: size,
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(size * 0.2),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.08),
+            blurRadius: 15,
+            offset: const Offset(0, 8),
+          ),
+        ],
+      ),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(size * 0.2),
+        child: Image.asset(
+          'assets/logo/joftojoor.png',
+          fit: BoxFit.cover,
+        ),
       ),
     );
   }

@@ -7,13 +7,22 @@ import { IsArray, IsOptional, IsString, MaxLength, IsBoolean } from 'class-valid
  */
 export class UpdateWelderProfileDto {
   @ApiPropertyOptional({
-    description: 'Welder full name',
-    example: 'محمد احمدی',
+    description: 'Welder first name',
+    example: 'محمد',
   })
   @IsOptional()
   @IsString()
-  @MaxLength(255)
-  full_name?: string;
+  @MaxLength(150)
+  first_name?: string;
+
+  @ApiPropertyOptional({
+    description: 'Welder last name',
+    example: 'احمدی',
+  })
+  @IsOptional()
+  @IsString()
+  @MaxLength(150)
+  last_name?: string;
 
   @ApiPropertyOptional({
     description: 'Welder home city / base of operations',

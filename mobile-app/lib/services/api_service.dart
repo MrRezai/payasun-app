@@ -181,14 +181,16 @@ class ApiService {
   /// Partially update welder profile info.
   Future<Map<String, dynamic>> updateWelderProfile(
     String token, {
-    String? fullName,
+    String? firstName,
+    String? lastName,
     String? homeCity,
     List<String>? activeCities,
     String? bio,
     bool? isSetupCompleted,
   }) async {
     final bodyMap = <String, dynamic>{};
-    if (fullName != null) bodyMap['full_name'] = fullName;
+    if (firstName != null) bodyMap['first_name'] = firstName;
+    if (lastName != null) bodyMap['last_name'] = lastName;
     if (homeCity != null) bodyMap['home_city'] = homeCity;
     if (activeCities != null) bodyMap['active_cities'] = activeCities;
     if (bio != null) bodyMap['bio'] = bio;

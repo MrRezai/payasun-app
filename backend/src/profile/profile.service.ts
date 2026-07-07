@@ -65,6 +65,12 @@ export class ProfileService {
       throw new NotFoundException('Profile not found. Please contact support.');
     }
 
+    if (role === Role.WELDER) {
+      const welderProfile = profile as WelderProfile;
+      (welderProfile as any).full_name =
+        `${welderProfile.first_name || ''} ${welderProfile.last_name || ''}`.trim();
+    }
+
     return { user, profile };
   }
 
@@ -135,8 +141,11 @@ export class ProfileService {
       throw new NotFoundException('Welder profile not found.');
     }
 
-    if (dto.full_name !== undefined) {
-      profile.full_name = dto.full_name;
+    if (dto.first_name !== undefined) {
+      profile.first_name = dto.first_name;
+    }
+    if (dto.last_name !== undefined) {
+      profile.last_name = dto.last_name;
     }
     if (dto.home_city !== undefined) {
       profile.home_city = dto.home_city;
@@ -152,6 +161,7 @@ export class ProfileService {
     }
 
     const updated = await this.welderProfileRepository.save(profile);
+    (updated as any).full_name = `${updated.first_name || ''} ${updated.last_name || ''}`.trim();
 
     this.logger.log(`Welder profile updated for user ${userId}`);
     return updated;

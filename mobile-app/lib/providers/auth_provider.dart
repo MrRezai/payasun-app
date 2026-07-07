@@ -139,7 +139,8 @@ class AuthProvider with ChangeNotifier {
 
   /// Update welder profile details.
   Future<void> updateWelderProfile({
-    String? fullName,
+    String? firstName,
+    String? lastName,
     String? homeCity,
     List<String>? activeCities,
     String? bio,
@@ -153,7 +154,8 @@ class AuthProvider with ChangeNotifier {
     try {
       await _apiService.updateWelderProfile(
         _token!,
-        fullName: fullName,
+        firstName: firstName,
+        lastName: lastName,
         homeCity: homeCity,
         activeCities: activeCities,
         bio: bio,

@@ -17,7 +17,8 @@ class _WelderProfileScreenState extends State<WelderProfileScreen> {
   ProfileView _currentView = ProfileView.menu;
 
   // Controllers & Local States
-  final _fullNameController = TextEditingController();
+  final _firstNameController = TextEditingController();
+  final _lastNameController = TextEditingController();
   final _bioController = TextEditingController();
   final _homeCityController = TextEditingController();
 
@@ -52,7 +53,8 @@ class _WelderProfileScreenState extends State<WelderProfileScreen> {
       final profile = auth.profileData!['profile'] as Map<String, dynamic>?;
       if (profile != null) {
         setState(() {
-          _fullNameController.text = profile['full_name'] ?? '';
+          _firstNameController.text = profile['first_name'] ?? '';
+          _lastNameController.text = profile['last_name'] ?? '';
           _bioController.text = profile['bio'] ?? '';
           _homeCityController.text = profile['home_city'] ?? '';
           
@@ -101,22 +103,28 @@ class _WelderProfileScreenState extends State<WelderProfileScreen> {
 
   @override
   void dispose() {
-    _fullNameController.dispose();
+    _firstNameController.dispose();
+    _lastNameController.dispose();
     _bioController.dispose();
     _homeCityController.dispose();
     super.dispose();
   }
 
   Future<void> _savePersonalInfo() async {
-    if (_fullNameController.text.trim().isEmpty) {
-      _showError('لطفاً نام و نام خانوادگی خود را وارد کنید.');
+    if (_firstNameController.text.trim().isEmpty) {
+      _showError('لطفاً نام خود را وارد کنید.');
+      return;
+    }
+    if (_lastNameController.text.trim().isEmpty) {
+      _showError('لطفاً نام خانوادگی خود را وارد کنید.');
       return;
     }
     setState(() => _isSaving = true);
     try {
       final auth = Provider.of<AuthProvider>(context, listen: false);
       await auth.updateWelderProfile(
-        fullName: _fullNameController.text.trim(),
+        firstName: _firstNameController.text.trim(),
+        lastName: _lastNameController.text.trim(),
         bio: _bioController.text.trim(),
         homeCity: _homeCityController.text.trim(),
         isSetupCompleted: true,
@@ -527,14 +535,32 @@ class _WelderProfileScreenState extends State<WelderProfileScreen> {
         children: [
           const Text('اطلاعات هویتی شما:', style: TextStyle(fontWeight: FontWeight.bold, color: AppColors.burgundy)),
           const SizedBox(height: 14),
-          TextFormField(
-            controller: _fullNameController,
-            decoration: InputDecoration(
-              labelText: 'نام و نام خانوادگی',
-              filled: true,
-              fillColor: AppColors.white,
-              border: OutlineInputBorder(borderRadius: BorderRadius.circular(16)),
-            ),
+          Row(
+            children: [
+              Expanded(
+                child: TextFormField(
+                  controller: _firstNameController,
+                  decoration: InputDecoration(
+                    labelText: 'نام (الزامی)',
+                    filled: true,
+                    fillColor: AppColors.white,
+                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(16)),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: TextFormField(
+                  controller: _lastNameController,
+                  decoration: InputDecoration(
+                    labelText: 'نام خانوادگی (الزامی)',
+                    filled: true,
+                    fillColor: AppColors.white,
+                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(16)),
+                  ),
+                ),
+              ),
+            ],
           ),
           const SizedBox(height: 14),
           TextFormField(
@@ -579,69 +605,114 @@ class _WelderProfileScreenState extends State<WelderProfileScreen> {
   }
 
   void _showProvincePickerBottomSheet() {
+    String searchFilter = "";
     showModalBottomSheet(
       context: context,
+      isScrollControlled: true,
       backgroundColor: AppColors.white,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
       builder: (context) {
-        return Directionality(
-          textDirection: TextDirection.rtl,
-          child: Padding(
-            padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 16),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Center(
-                  child: Container(
-                    width: 40,
-                    height: 4,
-                    decoration: BoxDecoration(
-                      color: AppColors.borderGrey,
-                      borderRadius: BorderRadius.circular(2),
-                    ),
-                  ),
+        return StatefulBuilder(
+          builder: (context, setSheetState) {
+            final filteredProvinces = _provinces.where((prov) {
+              final name = prov['name'] as String;
+              return name.contains(searchFilter);
+            }).toList();
+
+            return Directionality(
+              textDirection: TextDirection.rtl,
+              child: Padding(
+                padding: EdgeInsets.only(
+                  bottom: MediaQuery.of(context).viewInsets.bottom,
+                  top: 20,
+                  left: 16,
+                  right: 16,
                 ),
-                const SizedBox(height: 18),
-                const Text(
-                  'انتخاب استان محل فعالیت',
-                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: AppColors.burgundy),
-                ),
-                const SizedBox(height: 12),
-                Expanded(
-                  child: ListView.builder(
-                    itemCount: _provinces.length,
-                    itemBuilder: (context, idx) {
-                      final prov = _provinces[idx];
-                      final isSelected = prov['id'] == _selectedProvinceId;
-                      return ListTile(
-                        title: Text(
-                          prov['name'] as String,
-                          style: TextStyle(
-                            fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-                            color: isSelected ? AppColors.royalBlue : AppColors.textDark,
-                          ),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Center(
+                      child: Container(
+                        width: 40,
+                        height: 4,
+                        decoration: BoxDecoration(
+                          color: AppColors.borderGrey,
+                          borderRadius: BorderRadius.circular(2),
                         ),
-                        trailing: isSelected
-                            ? const Icon(Icons.check_circle, color: AppColors.royalBlue)
-                            : null,
-                        onTap: () {
-                          setState(() {
-                            _selectedProvinceId = prov['id'] as int;
-                            _activeCities.clear(); // Clear previously selected cities since province changed
-                          });
-                          _loadCities(prov['id'] as int);
-                          Navigator.pop(context);
-                        },
-                      );
-                    },
-                  ),
+                      ),
+                    ),
+                    const SizedBox(height: 18),
+                    const Text(
+                      'انتخاب استان محل فعالیت',
+                      style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: AppColors.burgundy),
+                    ),
+                    const SizedBox(height: 12),
+
+                    // Search field for provinces
+                    TextField(
+                      onChanged: (val) {
+                        setSheetState(() {
+                          searchFilter = val;
+                        });
+                      },
+                      decoration: InputDecoration(
+                        hintText: 'جستجوی نام استان...',
+                        prefixIcon: const Icon(Icons.search, color: AppColors.textMuted),
+                        filled: true,
+                        fillColor: AppColors.lightGrey,
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide: BorderSide.none,
+                        ),
+                        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                      ),
+                    ),
+                    const SizedBox(height: 14),
+
+                    Expanded(
+                      child: filteredProvinces.isEmpty
+                          ? const Center(
+                              child: Text(
+                                'هیچ استانی یافت نشد.',
+                                style: TextStyle(color: AppColors.textMuted),
+                              ),
+                            )
+                          : ListView.builder(
+                              itemCount: filteredProvinces.length,
+                              itemBuilder: (context, idx) {
+                                final prov = filteredProvinces[idx];
+                                final isSelected = prov['id'] == _selectedProvinceId;
+                                return ListTile(
+                                  title: Text(
+                                    prov['name'] as String,
+                                    style: TextStyle(
+                                      fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                                      color: isSelected ? AppColors.royalBlue : AppColors.textDark,
+                                    ),
+                                  ),
+                                  trailing: isSelected
+                                      ? const Icon(Icons.check_circle, color: AppColors.royalBlue)
+                                      : null,
+                                  onTap: () {
+                                    setState(() {
+                                      _selectedProvinceId = prov['id'] as int;
+                                      _activeCities.clear(); // Clear previously selected cities since province changed
+                                    });
+                                    _loadCities(prov['id'] as int);
+                                    Navigator.pop(context);
+                                  },
+                                );
+                              },
+                            ),
+                    ),
+                  ],
                 ),
-              ],
-            ),
-          ),
+              ),
+            );
+          },
         );
       },
     );
