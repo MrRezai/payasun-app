@@ -173,102 +173,227 @@ class _EmployerSetupScreenState extends State<EmployerSetupScreen> {
   }
 
   void _showProvincePickerBottomSheet() {
+    String searchFilter = "";
     showModalBottomSheet(
       context: context,
+      isScrollControlled: true,
       backgroundColor: AppColors.white,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
       builder: (context) {
-        return Directionality(
-          textDirection: TextDirection.rtl,
-          child: Container(
-            padding: const EdgeInsets.all(24),
-            height: 400,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Text(
-                  'انتخاب استان محل فعالیت',
-                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: AppColors.royalBlue),
+        return StatefulBuilder(
+          builder: (context, setSheetState) {
+            final filteredProvinces = _provinces.where((prov) {
+              final name = prov['name'] as String;
+              return name.contains(searchFilter);
+            }).toList();
+
+            return Directionality(
+              textDirection: TextDirection.rtl,
+              child: Padding(
+                padding: EdgeInsets.only(
+                  bottom: MediaQuery.of(context).viewInsets.bottom,
+                  top: 20,
+                  left: 16,
+                  right: 16,
                 ),
-                const SizedBox(height: 16),
-                Expanded(
-                  child: ListView.builder(
-                    itemCount: _provinces.length,
-                    itemBuilder: (context, index) {
-                      final prov = _provinces[index];
-                      return ListTile(
-                        title: Text(
-                          prov['name'] as String,
-                          style: const TextStyle(fontWeight: FontWeight.bold),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Center(
+                      child: Container(
+                        width: 40,
+                        height: 4,
+                        decoration: BoxDecoration(
+                          color: AppColors.borderGrey,
+                          borderRadius: BorderRadius.circular(2),
                         ),
-                        onTap: () {
-                          setState(() {
-                            _selectedProvinceId = prov['id'] as int;
-                            _selectedProvinceName = prov['name'] as String;
-                          });
-                          _loadCities(_selectedProvinceId!);
-                          Navigator.pop(context);
-                        },
-                      );
-                    },
-                  ),
+                      ),
+                    ),
+                    const SizedBox(height: 18),
+                    const Text(
+                      'انتخاب استان محل فعالیت',
+                      style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: AppColors.royalBlue),
+                    ),
+                    const SizedBox(height: 12),
+
+                    // Search field for provinces
+                    TextField(
+                      onChanged: (val) {
+                        setSheetState(() {
+                          searchFilter = val;
+                        });
+                      },
+                      decoration: InputDecoration(
+                        hintText: 'جستجوی نام استان...',
+                        prefixIcon: const Icon(Icons.search, color: AppColors.textMuted),
+                        filled: true,
+                        fillColor: AppColors.lightGrey,
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide: BorderSide.none,
+                        ),
+                        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                      ),
+                    ),
+                    const SizedBox(height: 14),
+                    const Divider(color: AppColors.borderGrey, height: 1),
+                    const SizedBox(height: 8),
+
+                    Expanded(
+                      child: filteredProvinces.isEmpty
+                          ? const Center(
+                              child: Text(
+                                'هیچ استانی یافت نشد.',
+                                style: TextStyle(color: AppColors.textMuted),
+                              ),
+                            )
+                          : ListView.builder(
+                              itemCount: filteredProvinces.length,
+                              itemBuilder: (context, index) {
+                                final prov = filteredProvinces[index];
+                                final isSelected = prov['name'] == _selectedProvinceName;
+                                return ListTile(
+                                  title: Text(
+                                    prov['name'] as String,
+                                    style: TextStyle(
+                                      fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                                      color: isSelected ? AppColors.royalBlue : AppColors.textDark,
+                                    ),
+                                  ),
+                                  trailing: isSelected
+                                      ? const Icon(Icons.check_circle, color: AppColors.royalBlue)
+                                      : null,
+                                  onTap: () {
+                                    setState(() {
+                                      _selectedProvinceId = prov['id'] as int;
+                                      _selectedProvinceName = prov['name'] as String;
+                                    });
+                                    _loadCities(_selectedProvinceId!);
+                                    Navigator.pop(context);
+                                  },
+                                );
+                              },
+                            ),
+                    ),
+                  ],
                 ),
-              ],
-            ),
-          ),
+              ),
+            );
+          },
         );
       },
     );
   }
 
   void _showCityPickerBottomSheet() {
+    String searchFilter = "";
     showModalBottomSheet(
       context: context,
+      isScrollControlled: true,
       backgroundColor: AppColors.white,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
       builder: (context) {
-        return Directionality(
-          textDirection: TextDirection.rtl,
-          child: Container(
-            padding: const EdgeInsets.all(24),
-            height: 400,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'انتخاب شهر ($_selectedProvinceName)',
-                  style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: AppColors.royalBlue),
+        return StatefulBuilder(
+          builder: (context, setSheetState) {
+            final filteredCities = _citiesOfSelectedProvince.where((city) {
+              final cityName = city['name'] as String;
+              return cityName.contains(searchFilter);
+            }).toList();
+
+            return Directionality(
+              textDirection: TextDirection.rtl,
+              child: Padding(
+                padding: EdgeInsets.only(
+                  bottom: MediaQuery.of(context).viewInsets.bottom,
+                  top: 20,
+                  left: 16,
+                  right: 16,
                 ),
-                const SizedBox(height: 16),
-                Expanded(
-                  child: _citiesOfSelectedProvince.isEmpty
-                      ? const Center(child: Text('شهری یافت نشد.'))
-                      : ListView.builder(
-                          itemCount: _citiesOfSelectedProvince.length,
-                          itemBuilder: (context, index) {
-                            final city = _citiesOfSelectedProvince[index];
-                            return ListTile(
-                              title: Text(
-                                city['name'] as String,
-                                style: const TextStyle(fontWeight: FontWeight.bold),
-                              ),
-                              onTap: () {
-                                setState(() {
-                                  _selectedCityName = city['name'] as String;
-                                });
-                                Navigator.pop(context);
-                              },
-                            );
-                          },
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Center(
+                      child: Container(
+                        width: 40,
+                        height: 4,
+                        decoration: BoxDecoration(
+                          color: AppColors.borderGrey,
+                          borderRadius: BorderRadius.circular(2),
                         ),
+                      ),
+                    ),
+                    const SizedBox(height: 18),
+                    Text(
+                      'انتخاب شهر ($_selectedProvinceName)',
+                      style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: AppColors.royalBlue),
+                    ),
+                    const SizedBox(height: 12),
+
+                    // Search field for cities
+                    TextField(
+                      onChanged: (val) {
+                        setSheetState(() {
+                          searchFilter = val;
+                        });
+                      },
+                      decoration: InputDecoration(
+                        hintText: 'جستجوی نام شهر...',
+                        prefixIcon: const Icon(Icons.search, color: AppColors.textMuted),
+                        filled: true,
+                        fillColor: AppColors.lightGrey,
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide: BorderSide.none,
+                        ),
+                        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                      ),
+                    ),
+                    const SizedBox(height: 14),
+                    const Divider(color: AppColors.borderGrey, height: 1),
+                    const SizedBox(height: 8),
+
+                    Expanded(
+                      child: _isLoadingCities
+                          ? const Center(child: CircularProgressIndicator(color: AppColors.royalBlue))
+                          : filteredCities.isEmpty
+                              ? const Center(child: Text('شهری یافت نشد.', style: TextStyle(color: AppColors.textMuted)))
+                              : ListView.builder(
+                                  itemCount: filteredCities.length,
+                                  itemBuilder: (context, index) {
+                                    final city = filteredCities[index];
+                                    final isSelected = city['name'] == _selectedCityName;
+                                    return ListTile(
+                                      title: Text(
+                                        city['name'] as String,
+                                        style: TextStyle(
+                                          fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                                          color: isSelected ? AppColors.royalBlue : AppColors.textDark,
+                                        ),
+                                      ),
+                                      trailing: isSelected
+                                          ? const Icon(Icons.check_circle, color: AppColors.royalBlue)
+                                          : null,
+                                      onTap: () {
+                                        setState(() {
+                                          _selectedCityName = city['name'] as String;
+                                        });
+                                        Navigator.pop(context);
+                                      },
+                                    );
+                                  },
+                                ),
+                    ),
+                  ],
                 ),
-              ],
-            ),
-          ),
+              ),
+            );
+          },
         );
       },
     );
@@ -542,7 +667,7 @@ class _EmployerSetupScreenState extends State<EmployerSetupScreen> {
                             const SizedBox(height: 18),
 
                             // Location selector card
-                            _buildSectionLabel('محل فعالیت شرکت / کارگاه', isRequired: false),
+                            _buildSectionLabel('محل فعالیت / کارگاه', isRequired: false),
                             const SizedBox(height: 12),
                             _isLoadingProvinces
                                 ? const Center(child: CircularProgressIndicator(color: AppColors.royalBlue))

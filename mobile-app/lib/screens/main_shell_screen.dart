@@ -4,7 +4,7 @@ import '../constants/app_colors.dart';
 import '../providers/auth_provider.dart';
 import 'employer/employer_dashboard.dart';
 import 'employer/inquiry_list_screen.dart';
-import 'employer/create_inquiry_screen.dart';
+import 'employer/employer_profile_screen.dart';
 import 'welder/welder_dashboard.dart';
 import 'welder/available_jobs_screen.dart';
 import 'welder/welder_profile_screen.dart';
@@ -20,13 +20,10 @@ class MainShellScreen extends StatefulWidget {
 }
 
 class _MainShellScreenState extends State<MainShellScreen> {
-  int _employerIndex = 0;
-  int _welderIndex = 0;
-
   final List<Widget> _employerScreens = [
     const EmployerDashboard(),
     const InquiryListScreen(),
-    const CreateInquiryScreen(),
+    const EmployerProfileScreen(),
   ];
 
   final List<Widget> _welderScreens = [
@@ -38,7 +35,7 @@ class _MainShellScreenState extends State<MainShellScreen> {
   @override
   Widget build(BuildContext context) {
     final auth = Provider.of<AuthProvider>(context);
-    final activeIndex = auth.isEmployer ? _employerIndex : _welderIndex;
+    final activeIndex = auth.isEmployer ? auth.employerTabIndex : auth.welderTabIndex;
     return Directionality(
       textDirection: TextDirection.rtl,
       child: Scaffold(
@@ -111,10 +108,8 @@ class _MainShellScreenState extends State<MainShellScreen> {
                 await auth.switchUserRole(targetRole);
                 if (mounted) {
                   Navigator.pop(context); // Close loading dialog
-                  setState(() {
-                    _employerIndex = 0;
-                    _welderIndex = 0;
-                  });
+                  auth.setEmployerTabIndex(0);
+                  auth.setWelderTabIndex(0);
                 }
               } catch (e) {
                 if (mounted) {
@@ -164,11 +159,9 @@ class _MainShellScreenState extends State<MainShellScreen> {
   Widget _buildBottomNavBar(AuthProvider auth) {
     if (auth.isEmployer) {
       return BottomNavigationBar(
-        currentIndex: _employerIndex,
+        currentIndex: auth.employerTabIndex,
         onTap: (index) {
-          setState(() {
-            _employerIndex = index;
-          });
+          auth.setEmployerTabIndex(index);
         },
         backgroundColor: AppColors.white,
         selectedItemColor: AppColors.royalBlue,
@@ -188,19 +181,17 @@ class _MainShellScreenState extends State<MainShellScreen> {
             label: 'استعلام‌ها',
           ),
           BottomNavigationBarItem(
-            icon: Icon(Icons.add_circle_outline),
-            activeIcon: Icon(Icons.add_circle),
-            label: 'استعلام جدید',
+            icon: Icon(Icons.person_outline),
+            activeIcon: Icon(Icons.person),
+            label: 'پروفایل',
           ),
         ],
       );
     } else {
       return BottomNavigationBar(
-        currentIndex: _welderIndex,
+        currentIndex: auth.welderTabIndex,
         onTap: (index) {
-          setState(() {
-            _welderIndex = index;
-          });
+          auth.setWelderTabIndex(index);
         },
         backgroundColor: AppColors.white,
         selectedItemColor: AppColors.burgundy,

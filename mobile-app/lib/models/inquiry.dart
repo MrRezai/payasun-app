@@ -32,6 +32,7 @@ class Inquiry {
   final String title;
   final String description;
   final String city;
+  final String? province;
   final String status;
   final bool hasBlueprint;
   final String? blueprintUrl;
@@ -44,6 +45,7 @@ class Inquiry {
     required this.title,
     required this.description,
     required this.city,
+    this.province,
     required this.status,
     required this.hasBlueprint,
     this.blueprintUrl,
@@ -61,6 +63,7 @@ class Inquiry {
       title: json['title'] as String? ?? '',
       description: json['description'] as String? ?? '',
       city: json['city'] as String? ?? '',
+      province: json['province'] as String?,
       status: json['status'] as String? ?? 'DRAFT',
       hasBlueprint: json['has_blueprint'] as bool? ?? false,
       blueprintUrl: json['blueprint_url'] as String?,
@@ -76,6 +79,7 @@ class Inquiry {
       'title': title,
       'description': description,
       'city': city,
+      'province': province,
       'status': status,
       'has_blueprint': hasBlueprint,
       'blueprint_url': blueprintUrl,

@@ -4,7 +4,11 @@ import '../../constants/app_colors.dart';
 import '../../constants/route_transitions.dart';
 import '../../providers/auth_provider.dart';
 import '../../services/api_service.dart';
+import '../../utils/formatters.dart';
 import '../main_shell_screen.dart';
+import 'dart:io';
+import 'package:flutter/foundation.dart';
+import 'package:file_picker/file_picker.dart';
 
 class WelderSetupScreen extends StatefulWidget {
   const WelderSetupScreen({super.key});
@@ -17,6 +21,33 @@ class _WelderSetupScreenState extends State<WelderSetupScreen> {
   final _formKey = GlobalKey<FormState>();
   final _firstNameController = TextEditingController();
   final _lastNameController = TextEditingController();
+
+  // Profile image picker state
+  List<int>? _pickedImageBytes;
+  String? _pickedImageName;
+
+  Future<void> _pickProfileImage() async {
+    try {
+      final result = await FilePicker.platform.pickFiles(
+        type: FileType.image,
+        allowMultiple: false,
+      );
+
+      if (result != null && result.files.isNotEmpty) {
+        final file = result.files.first;
+        setState(() {
+          if (kIsWeb) {
+            _pickedImageBytes = file.bytes;
+          } else if (file.path != null) {
+            _pickedImageBytes = File(file.path!).readAsBytesSync();
+          }
+          _pickedImageName = file.name;
+        });
+      }
+    } catch (e) {
+      debugPrint('Error picking image: $e');
+    }
+  }
   final _bioController = TextEditingController();
 
   // Home location states
@@ -198,6 +229,9 @@ class _WelderSetupScreenState extends State<WelderSetupScreen> {
                         child: TextFormField(
                           controller: priceController,
                           keyboardType: TextInputType.number,
+                          inputFormatters: [
+                            PersianPriceInputFormatter(),
+                          ],
                           decoration: InputDecoration(
                             labelText: 'مبلغ (تومان)',
                             hintText: 'مثلاً: ۱۵۰,۰۰۰',
@@ -207,7 +241,8 @@ class _WelderSetupScreenState extends State<WelderSetupScreen> {
                           ),
                           validator: (val) {
                             if (val == null || val.trim().isEmpty) return 'لطفاً مبلغ را وارد کنید';
-                            if (double.tryParse(val.replaceAll(',', '')) == null) return 'عدد معتبر وارد کنید';
+                            final cleaned = Formatters.cleanNumber(val);
+                            if (double.tryParse(cleaned) == null) return 'عدد معتبر وارد کنید';
                             return null;
                           },
                         ),
@@ -241,7 +276,7 @@ class _WelderSetupScreenState extends State<WelderSetupScreen> {
                     child: ElevatedButton(
                       onPressed: () {
                         if (!bottomFormKey.currentState!.validate()) return;
-                        final priceClean = double.parse(priceController.text.replaceAll(',', ''));
+                        final priceClean = double.parse(Formatters.cleanNumber(priceController.text));
                         setState(() {
                           _customPrices.add({
                             'title': titleController.text.trim(),
@@ -363,7 +398,7 @@ class _WelderSetupScreenState extends State<WelderSetupScreen> {
       );
       final activeProvinceName = activeProvinceObj != null ? activeProvinceObj['name'] as String : '';
 
-      // 1. Update general profile info
+       // 1. Update general profile info
       await auth.updateWelderProfile(
         firstName: _firstNameController.text.trim(),
         lastName: _lastNameController.text.trim(),
@@ -374,6 +409,11 @@ class _WelderSetupScreenState extends State<WelderSetupScreen> {
         bio: _bioController.text.trim(),
         isSetupCompleted: true,
       );
+
+      // 1.5 Upload profile picture if picked
+      if (_pickedImageBytes != null && _pickedImageName != null) {
+        await auth.uploadProfilePicture(_pickedImageBytes!, _pickedImageName!);
+      }
 
       // 2. Update pricing list (pass empty or populated list directly)
       await auth.updateWelderPrices(_customPrices);
@@ -727,6 +767,8 @@ class _WelderSetupScreenState extends State<WelderSetupScreen> {
                               ),
                             ),
                             const SizedBox(height: 25),
+                            _buildProfilePhotoSetupCard(),
+                            const SizedBox(height: 25),
 
                             // Geography settings
                             _buildSectionLabel('محدوده خدمات‌رسانی (استان و شهرها)', isRequired: true),
@@ -841,6 +883,8 @@ class _WelderSetupScreenState extends State<WelderSetupScreen> {
                       ),
                     ),
                     const SizedBox(height: 14),
+                    const Divider(color: AppColors.borderGrey, height: 1),
+                    const SizedBox(height: 8),
 
                     Expanded(
                       child: filteredProvinces.isEmpty
@@ -955,6 +999,8 @@ class _WelderSetupScreenState extends State<WelderSetupScreen> {
                       ),
                     ),
                     const SizedBox(height: 14),
+                    const Divider(color: AppColors.borderGrey, height: 1),
+                    const SizedBox(height: 8),
 
                     _isLoadingCities
                         ? const Center(
@@ -1095,6 +1141,8 @@ class _WelderSetupScreenState extends State<WelderSetupScreen> {
                       ),
                     ),
                     const SizedBox(height: 14),
+                    const Divider(color: AppColors.borderGrey, height: 1),
+                    const SizedBox(height: 8),
 
                     Expanded(
                       child: filteredProvinces.isEmpty
@@ -1209,6 +1257,8 @@ class _WelderSetupScreenState extends State<WelderSetupScreen> {
                       ),
                     ),
                     const SizedBox(height: 14),
+                    const Divider(color: AppColors.borderGrey, height: 1),
+                    const SizedBox(height: 8),
 
                     _isLoadingHomeCities
                         ? const Center(
@@ -1455,10 +1505,7 @@ class _WelderSetupScreenState extends State<WelderSetupScreen> {
               itemCount: _customPrices.length,
               itemBuilder: (context, idx) {
                 final priceItem = _customPrices[idx];
-                final priceFormatted = priceItem['price_per_unit'].toString().replaceAllMapped(
-                      RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'),
-                      (Match m) => '${m[1]},',
-                    );
+                final priceFormatted = Formatters.formatPrice(priceItem['price_per_unit']);
 
                 return Container(
                   margin: const EdgeInsets.only(bottom: 8),
@@ -1521,6 +1568,170 @@ class _WelderSetupScreenState extends State<WelderSetupScreen> {
           'assets/logo/joftojoor.png',
           fit: BoxFit.cover,
         ),
+      ),
+    );
+  }
+
+  Widget _buildProfilePhotoSetupCard() {
+    void showPhotoOptions() {
+      showModalBottomSheet(
+        context: context,
+        backgroundColor: AppColors.white,
+        shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+        ),
+        builder: (sheetContext) => Directionality(
+          textDirection: TextDirection.rtl,
+          child: Padding(
+            padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 16),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Text(
+                  'مدیریت تصویر پروفایل',
+                  style: TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.bold,
+                    color: AppColors.burgundy,
+                    fontFamily: 'Vazirmatn',
+                  ),
+                ),
+                const SizedBox(height: 16),
+                ListTile(
+                  leading: const Icon(Icons.photo_library_outlined, color: AppColors.burgundy),
+                  title: const Text('انتخاب از گالری / فایل‌ها', style: TextStyle(fontFamily: 'Vazirmatn', fontSize: 13)),
+                  onTap: () {
+                    Navigator.pop(sheetContext);
+                    _pickProfileImage();
+                  },
+                ),
+                if (_pickedImageBytes != null) ...[
+                  const Divider(height: 1),
+                  ListTile(
+                    leading: const Icon(Icons.delete_outline, color: Colors.red),
+                    title: const Text('حذف تصویر', style: TextStyle(fontFamily: 'Vazirmatn', fontSize: 13, color: Colors.red)),
+                    onTap: () {
+                      Navigator.pop(sheetContext);
+                      setState(() {
+                        _pickedImageBytes = null;
+                        _pickedImageName = null;
+                      });
+                    },
+                  ),
+                ],
+                const Divider(height: 1),
+                ListTile(
+                  leading: const Icon(Icons.close, color: AppColors.textMuted),
+                  title: const Text('انصراف', style: TextStyle(fontFamily: 'Vazirmatn', fontSize: 13, color: AppColors.textMuted)),
+                  onTap: () => Navigator.pop(sheetContext),
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+    }
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: AppColors.white,
+        borderRadius: BorderRadius.circular(24),
+        border: Border.all(color: AppColors.borderGrey),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.02),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          _buildSectionLabel('تصویر پروفایل (اختیاری)'),
+          const SizedBox(height: 16),
+          Center(
+            child: Stack(
+              children: [
+                GestureDetector(
+                  onTap: showPhotoOptions,
+                  child: CircleAvatar(
+                    radius: 46,
+                    backgroundColor: _pickedImageBytes != null ? Colors.transparent : AppColors.burgundy.withValues(alpha: 0.12),
+                    backgroundImage: _pickedImageBytes != null ? MemoryImage(Uint8List.fromList(_pickedImageBytes!)) : null,
+                    child: _pickedImageBytes != null
+                        ? null
+                        : const Icon(Icons.add_a_photo_outlined, size: 30, color: AppColors.burgundy),
+                  ),
+                ),
+                Positioned(
+                  bottom: 0,
+                  right: 0,
+                  child: GestureDetector(
+                    onTap: showPhotoOptions,
+                    child: Container(
+                      padding: const EdgeInsets.all(6),
+                      decoration: const BoxDecoration(
+                        color: AppColors.burgundy,
+                        shape: BoxShape.circle,
+                      ),
+                      child: Icon(
+                        _pickedImageBytes != null ? Icons.edit : Icons.add,
+                        color: AppColors.white,
+                        size: 14,
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 16),
+          if (_pickedImageBytes != null)
+            Center(
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                decoration: BoxDecoration(
+                  color: Colors.green.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: Colors.green.withValues(alpha: 0.3), width: 0.5),
+                ),
+                child: const Text(
+                  'پیش‌نویس تصویر انتخاب شده است',
+                  style: TextStyle(
+                    fontSize: 10,
+                    fontWeight: FontWeight.bold,
+                    fontFamily: 'Vazirmatn',
+                    color: Colors.green,
+                  ),
+                ),
+              ),
+            ),
+          const SizedBox(height: 12),
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: AppColors.burgundy.withValues(alpha: 0.05),
+              borderRadius: BorderRadius.circular(14),
+              border: Border.all(color: AppColors.burgundy.withValues(alpha: 0.1)),
+            ),
+            child: const Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Icon(Icons.lightbulb_outline_rounded, color: AppColors.burgundy, size: 18),
+                SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    'داشتن تصویر پروفایل واقعی و باکیفیت، باعث جلب اعتماد بیشتر کارفرمایان و در نتیجه جذب پروژه‌های کاری بیشتر خواهد شد.',
+                    style: TextStyle(fontSize: 11, color: AppColors.textDark, height: 1.5, fontFamily: 'Vazirmatn'),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
       ),
     );
   }

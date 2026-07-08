@@ -22,9 +22,9 @@ export class InquiryService {
     const hasBlueprint = dto.has_blueprint ?? false;
     let initialStatus = InquiryStatus.DRAFT;
 
-    // If manual items are provided immediately without blueprint, we can broadcast it directly
+    // If manual items are provided immediately without blueprint, set status to PENDING_ESTIMATION
     if (!hasBlueprint && dto.items && dto.items.length > 0) {
-      initialStatus = InquiryStatus.BROADCASTED;
+      initialStatus = InquiryStatus.PENDING_ESTIMATION;
     } else if (hasBlueprint) {
       initialStatus = InquiryStatus.DRAFT; // Awaiting blueprint upload
     }
@@ -34,6 +34,7 @@ export class InquiryService {
       title: dto.title,
       description: dto.description,
       city: dto.city,
+      province: dto.province ?? null,
       status: initialStatus,
       has_blueprint: hasBlueprint,
       items: dto.items ?? [],

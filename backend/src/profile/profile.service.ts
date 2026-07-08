@@ -6,6 +6,8 @@ import {
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
+import { join } from 'path';
+import { existsSync, unlinkSync } from 'fs';
 
 import { User } from '../entities/user.entity';
 import { EmployerProfile } from '../entities/employer-profile.entity';
@@ -249,5 +251,75 @@ export class ProfileService {
       `Welder price list updated for user ${userId} (${dto.base_price_list.length} items)`,
     );
     return updated;
+  }
+
+  async uploadProfilePicture(
+    userId: string,
+    role: Role,
+    file: Express.Multer.File,
+  ): Promise<{ user: User; profile: EmployerProfile | WelderProfile }> {
+    const profileData = await this.getProfile(userId, role);
+    const profile = profileData.profile;
+
+    const fileUrl = `/uploads/profile-pictures/${file.filename}`;
+
+    // Clean up old pending picture if exists
+    if (profile.pending_profile_picture_url) {
+      this.deletePhysicalFile(profile.pending_profile_picture_url);
+    }
+
+    profile.pending_profile_picture_url = fileUrl;
+    profile.profile_picture_status = 'PENDING';
+
+    if (role === Role.EMPLOYER) {
+      await this.employerProfileRepository.save(profile as EmployerProfile);
+    } else {
+      await this.welderProfileRepository.save(profile as WelderProfile);
+    }
+
+    this.logger.log(`Uploaded profile picture for user ${userId} to ${fileUrl}`);
+    return this.getProfile(userId, role);
+  }
+
+  async deleteProfilePicture(
+    userId: string,
+    role: Role,
+  ): Promise<{ user: User; profile: EmployerProfile | WelderProfile }> {
+    const profileData = await this.getProfile(userId, role);
+    const profile = profileData.profile;
+
+    // Delete current and pending files
+    if (profile.profile_picture_url) {
+      this.deletePhysicalFile(profile.profile_picture_url);
+    }
+    if (profile.pending_profile_picture_url) {
+      this.deletePhysicalFile(profile.pending_profile_picture_url);
+    }
+
+    profile.profile_picture_url = null;
+    profile.pending_profile_picture_url = null;
+    profile.profile_picture_status = 'NONE';
+
+    if (role === Role.EMPLOYER) {
+      await this.employerProfileRepository.save(profile as EmployerProfile);
+    } else {
+      await this.welderProfileRepository.save(profile as WelderProfile);
+    }
+
+    this.logger.log(`Deleted profile picture for user ${userId}`);
+    return this.getProfile(userId, role);
+  }
+
+  private deletePhysicalFile(fileUrl: string) {
+    try {
+      const parts = fileUrl.split('/');
+      const filename = parts[parts.length - 1];
+      const filePath = join(process.cwd(), 'uploads', 'profile-pictures', filename);
+      if (existsSync(filePath)) {
+        unlinkSync(filePath);
+      }
+    } catch (e) {
+      this.logger.error(`Error deleting physical file ${fileUrl}: ${e}`);
+    }
   }
 }

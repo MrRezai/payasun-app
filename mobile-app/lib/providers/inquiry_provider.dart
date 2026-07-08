@@ -122,6 +122,7 @@ class InquiryProvider with ChangeNotifier {
     required String title,
     required String description,
     required String city,
+    required String province,
   }) async {
     _isLoading = true;
     _errorMessage = null;
@@ -131,6 +132,7 @@ class InquiryProvider with ChangeNotifier {
       if (title.trim().isEmpty) throw Exception('لطفاً عنوان استعلام را وارد کنید.');
       if (description.trim().isEmpty) throw Exception('لطفاً توضیحات استعلام را وارد کنید.');
       if (city.trim().isEmpty) throw Exception('لطفاً شهر محل پروژه را وارد کنید.');
+      if (province.trim().isEmpty) throw Exception('لطفاً استان محل پروژه را وارد کنید.');
       
       if (_hasBlueprint) {
         if (_selectedFileBytes == null || _selectedFileName == null) {
@@ -147,6 +149,7 @@ class InquiryProvider with ChangeNotifier {
         title: title,
         description: description,
         city: city,
+        province: province,
         hasBlueprint: _hasBlueprint,
         items: _hasBlueprint ? [] : _manualItems,
       );
@@ -159,6 +162,7 @@ class InquiryProvider with ChangeNotifier {
           filename: _selectedFileName!,
         );
         
+        await loadMyInquiries(token);
         _isLoading = false;
         clearSelectedFile();
         clearManualItems();
@@ -166,6 +170,7 @@ class InquiryProvider with ChangeNotifier {
         return updatedInquiry;
       }
 
+      await loadMyInquiries(token);
       _isLoading = false;
       clearManualItems();
       notifyListeners();
@@ -175,6 +180,29 @@ class InquiryProvider with ChangeNotifier {
       _errorMessage = e.toString().replaceAll('Exception: ', '');
       notifyListeners();
       return null;
+    }
+  }
+
+  Future<bool> confirmInquiry({
+    required String token,
+    required String inquiryId,
+    required List<InquiryItem> items,
+  }) async {
+    _isLoading = true;
+    _errorMessage = null;
+    notifyListeners();
+
+    try {
+      await _apiService.confirmInquiry(token, inquiryId, items);
+      await loadMyInquiries(token);
+      _isLoading = false;
+      notifyListeners();
+      return true;
+    } catch (e) {
+      _isLoading = false;
+      _errorMessage = e.toString().replaceAll('Exception: ', '');
+      notifyListeners();
+      return false;
     }
   }
 }

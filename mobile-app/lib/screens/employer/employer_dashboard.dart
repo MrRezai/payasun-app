@@ -3,6 +3,9 @@ import 'package:provider/provider.dart';
 import '../../constants/app_colors.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/inquiry_provider.dart';
+import '../../utils/formatters.dart';
+import '../../services/api_service.dart';
+import 'inquiry_details_screen.dart';
 
 class EmployerDashboard extends StatefulWidget {
   const EmployerDashboard({super.key});
@@ -31,9 +34,34 @@ class _EmployerDashboardState extends State<EmployerDashboard> {
     final provider = Provider.of<InquiryProvider>(context);
     
     final profile = auth.profileData?['profile'] as Map<String, dynamic>?;
+    final firstName = profile?['first_name'] as String? ?? '';
+    final lastName = profile?['last_name'] as String? ?? '';
     final fullName = profile?['full_name'] as String? ?? '';
+    final province = profile?['province'] as String? ?? '';
     final city = profile?['city'] as String? ?? '';
     final displayName = fullName.isNotEmpty ? fullName : 'کارفرما';
+
+    final profilePicUrl = profile?['profile_picture_url'] as String?;
+    final fullPicUrl = profilePicUrl != null && profilePicUrl.isNotEmpty
+        ? '${ApiService().baseUrl}$profilePicUrl'
+        : null;
+
+    String initials = '';
+    if (firstName.isNotEmpty) initials += firstName[0];
+    if (lastName.isNotEmpty) {
+      if (initials.isNotEmpty) initials += '‌';
+      initials += lastName[0];
+    }
+    if (initials.isEmpty) initials = 'ک‌م';
+
+    String locationText = '';
+    if (province.isNotEmpty && city.isNotEmpty) {
+      locationText = '$province، $city';
+    } else if (province.isNotEmpty) {
+      locationText = province;
+    } else {
+      locationText = city;
+    }
 
     final myInquiries = provider.myInquiries;
 
@@ -55,7 +83,7 @@ class _EmployerDashboardState extends State<EmployerDashboard> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             // Welcome Header Card (Redesigned matching welder profile card layout but with blue/business branding)
-            _buildWelcomeCard(displayName, city),
+            _buildWelcomeCard(displayName, locationText, initials, fullPicUrl, auth),
             const SizedBox(height: 25),
 
             // Statistics Grid
@@ -93,9 +121,7 @@ class _EmployerDashboardState extends State<EmployerDashboard> {
     );
   }
 
-  Widget _buildWelcomeCard(String name, String city) {
-    final locationText = city.isNotEmpty ? city : '';
-
+  Widget _buildWelcomeCard(String name, String locationText, String initials, String? fullPicUrl, AuthProvider auth) {
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(22),
@@ -116,16 +142,37 @@ class _EmployerDashboardState extends State<EmployerDashboard> {
       ),
       child: Row(
         children: [
-          Container(
-            padding: const EdgeInsets.all(3),
-            decoration: const BoxDecoration(
-              color: AppColors.amberOrange,
-              shape: BoxShape.circle,
-            ),
-            child: const CircleAvatar(
-              radius: 28,
-              backgroundColor: AppColors.white,
-              child: Icon(Icons.business_rounded, color: AppColors.royalBlue, size: 30),
+          ClipOval(
+            child: Material(
+              color: Colors.transparent,
+              child: InkWell(
+                onTap: () {
+                  auth.setEmployerTabIndex(2);
+                },
+                child: Container(
+                  padding: const EdgeInsets.all(3),
+                  decoration: const BoxDecoration(
+                    color: AppColors.amberOrange,
+                    shape: BoxShape.circle,
+                  ),
+                  child: CircleAvatar(
+                    radius: 28,
+                    backgroundColor: fullPicUrl != null ? Colors.transparent : AppColors.royalBlue.withValues(alpha: 0.12),
+                    backgroundImage: fullPicUrl != null ? NetworkImage(fullPicUrl) : null,
+                    child: fullPicUrl != null
+                        ? null
+                        : Text(
+                            initials,
+                            style: const TextStyle(
+                              color: AppColors.royalBlue,
+                              fontWeight: FontWeight.bold,
+                              fontSize: 15,
+                              fontFamily: 'Vazirmatn',
+                            ),
+                          ),
+                  ),
+                ),
+              ),
             ),
           ),
           const SizedBox(width: 16),
@@ -430,24 +477,30 @@ class _EmployerDashboardState extends State<EmployerDashboard> {
 
     return Column(
       children: itemsToShow.map((inquiry) {
-        final dateStr = '${inquiry.createdAt.year}/${inquiry.createdAt.month}/${inquiry.createdAt.day}';
+        final dateStr = Formatters.toPersianDate(inquiry.createdAt);
 
-        return Container(
+        return Card(
+          elevation: 0,
           margin: const EdgeInsets.only(bottom: 12),
-          decoration: BoxDecoration(
-            color: AppColors.white,
+          shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(20),
-            border: Border.all(color: AppColors.borderGrey),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withValues(alpha: 0.01),
-                blurRadius: 10,
-                offset: const Offset(0, 4),
-              ),
-            ],
+            side: const BorderSide(color: AppColors.borderGrey),
           ),
-          child: Padding(
-            padding: const EdgeInsets.all(16.0),
+          color: AppColors.white,
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(20),
+            child: InkWell(
+              borderRadius: BorderRadius.circular(20),
+              onTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => InquiryDetailsScreen(inquiry: inquiry),
+                  ),
+                );
+              },
+              child: Padding(
+                padding: const EdgeInsets.all(16.0),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -491,30 +544,43 @@ class _EmployerDashboardState extends State<EmployerDashboard> {
                     const Icon(Icons.location_on_outlined, size: 14, color: AppColors.textMuted),
                     const SizedBox(width: 4),
                     Text(
-                      inquiry.city,
-                      style: const TextStyle(color: AppColors.textMuted, fontSize: 11),
+                      inquiry.province != null && inquiry.province!.isNotEmpty
+                          ? '${inquiry.province}، ${inquiry.city}'
+                          : inquiry.city,
+                      style: const TextStyle(color: AppColors.textMuted, fontSize: 11, fontFamily: 'Vazirmatn'),
                     ),
                     const SizedBox(width: 16),
                     const Icon(Icons.calendar_today_outlined, size: 12, color: AppColors.textMuted),
                     const SizedBox(width: 4),
                     Text(
                       dateStr,
-                      style: const TextStyle(color: AppColors.textMuted, fontSize: 11),
+                      style: const TextStyle(color: AppColors.textMuted, fontSize: 11, fontFamily: 'Vazirmatn'),
                     ),
                     const SizedBox(width: 16),
                     const Icon(Icons.layers_outlined, size: 14, color: AppColors.textMuted),
                     const SizedBox(width: 4),
                     Text(
                       '${inquiry.items.length} ردیف نقشه',
-                      style: const TextStyle(color: AppColors.textMuted, fontSize: 11),
+                      style: const TextStyle(color: AppColors.textMuted, fontSize: 11, fontFamily: 'Vazirmatn'),
                     ),
+                    if (inquiry.status == 'BROADCASTED') ...[
+                      const Spacer(),
+                      const Icon(Icons.people_outline, size: 14, color: Colors.green),
+                      const SizedBox(width: 4),
+                      const Text(
+                        '۳ پیشنهاد',
+                        style: TextStyle(color: Colors.green, fontSize: 11, fontWeight: FontWeight.bold, fontFamily: 'Vazirmatn'),
+                      ),
+                    ],
                   ],
                 ),
               ],
             ),
           ),
-        );
-      }).toList(),
+        ),
+      ),
+    );
+  }).toList(),
     );
   }
 

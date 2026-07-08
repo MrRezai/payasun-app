@@ -7,7 +7,16 @@ import {
   Patch,
   Put,
   UseGuards,
+  Post,
+  Delete,
+  UseInterceptors,
+  UploadedFile,
+  BadRequestException,
 } from '@nestjs/common';
+import { FileInterceptor } from '@nestjs/platform-express';
+import { diskStorage } from 'multer';
+import { extname } from 'path';
+import { existsSync, mkdirSync } from 'fs';
 import {
   ApiBearerAuth,
   ApiBody,
@@ -175,5 +184,65 @@ export class ProfileController {
     @Body() dto: UpdateWelderPricesDto,
   ) {
     return this.profileService.updateWelderPrices(user.id, user.role, dto);
+  }
+
+  /**
+   * POST /profile/picture
+   *
+   * Uploads and sets a new profile picture. Status is set to PENDING.
+   */
+  @Post('picture')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary: 'Upload Profile Picture',
+    description: 'Uploads a profile picture. Sent to pending approval state.',
+  })
+  @UseInterceptors(
+    FileInterceptor('file', {
+      storage: diskStorage({
+        destination: (req, file, cb) => {
+          const uploadPath = './uploads/profile-pictures';
+          if (!existsSync(uploadPath)) {
+            mkdirSync(uploadPath, { recursive: true });
+          }
+          cb(null, uploadPath);
+        },
+        filename: (req, file, cb) => {
+          const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1e9);
+          const ext = extname(file.originalname);
+          cb(null, `profile-${uniqueSuffix}${ext}`);
+        },
+      }),
+      fileFilter: (req, file, cb) => {
+        if (!file.originalname.match(/\.(jpg|jpeg|png)$/)) {
+          return cb(new Error('Only JPG, JPEG, and PNG images are allowed!'), false);
+        }
+        cb(null, true);
+      },
+    }),
+  )
+  async uploadProfilePicture(
+    @CurrentUser() user: AuthenticatedUser,
+    @UploadedFile() file: Express.Multer.File,
+  ) {
+    if (!file) {
+      throw new BadRequestException('Please provide an image file.');
+    }
+    return this.profileService.uploadProfilePicture(user.id, user.role, file);
+  }
+
+  /**
+   * DELETE /profile/picture
+   *
+   * Removes current/pending profile picture.
+   */
+  @Delete('picture')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary: 'Delete Profile Picture',
+    description: 'Removes the current and pending profile pictures.',
+  })
+  async deleteProfilePicture(@CurrentUser() user: AuthenticatedUser) {
+    return this.profileService.deleteProfilePicture(user.id, user.role);
   }
 }

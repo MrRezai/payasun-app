@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../constants/app_colors.dart';
 import '../../providers/auth_provider.dart';
+import '../../services/api_service.dart';
 
 class WelderDashboard extends StatefulWidget {
   const WelderDashboard({super.key});
@@ -44,6 +45,19 @@ class _WelderDashboardState extends State<WelderDashboard> {
 
     final priceList = (profile?['base_price_list'] as List<dynamic>?) ?? [];
 
+    final profilePicUrl = profile?['profile_picture_url'] as String?;
+    final fullPicUrl = profilePicUrl != null && profilePicUrl.isNotEmpty
+        ? '${ApiService().baseUrl}$profilePicUrl'
+        : null;
+
+    String initials = '';
+    if (firstName.toString().isNotEmpty) initials += firstName.toString()[0];
+    if (lastName.toString().isNotEmpty) {
+      if (initials.isNotEmpty) initials += '‌';
+      initials += lastName.toString()[0];
+    }
+    if (initials.isEmpty) initials = 'ج‌م';
+
     return Scaffold(
       backgroundColor: AppColors.lightGrey,
       body: SingleChildScrollView(
@@ -53,7 +67,7 @@ class _WelderDashboardState extends State<WelderDashboard> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             // Welder Header Profile Card
-            _buildWelderHeaderCard(displayName, homeCity, homeProvince, totalScore, isSetupCompleted),
+            _buildWelderHeaderCard(displayName, homeCity, homeProvince, totalScore, isSetupCompleted, initials, fullPicUrl, auth),
             const SizedBox(height: 25),
 
             // Performance Metrics
@@ -94,7 +108,7 @@ class _WelderDashboardState extends State<WelderDashboard> {
     );
   }
 
-  Widget _buildWelderHeaderCard(String name, String city, String province, double score, bool setupDone) {
+  Widget _buildWelderHeaderCard(String name, String city, String province, double score, bool setupDone, String initials, String? fullPicUrl, AuthProvider auth) {
     final locationText = [city, province].where((s) => s.isNotEmpty).join('، ');
 
     return Container(
@@ -117,16 +131,37 @@ class _WelderDashboardState extends State<WelderDashboard> {
       ),
       child: Row(
         children: [
-          Container(
-            padding: const EdgeInsets.all(3),
-            decoration: const BoxDecoration(
-              color: AppColors.amberOrange,
-              shape: BoxShape.circle,
-            ),
-            child: const CircleAvatar(
-              radius: 28,
-              backgroundColor: AppColors.white,
-              child: Icon(Icons.engineering, color: AppColors.burgundy, size: 30),
+          ClipOval(
+            child: Material(
+              color: Colors.transparent,
+              child: InkWell(
+                onTap: () {
+                  auth.setWelderTabIndex(2);
+                },
+                child: Container(
+                  padding: const EdgeInsets.all(3),
+                  decoration: const BoxDecoration(
+                    color: AppColors.amberOrange,
+                    shape: BoxShape.circle,
+                  ),
+                  child: CircleAvatar(
+                    radius: 28,
+                    backgroundColor: fullPicUrl != null ? Colors.transparent : AppColors.burgundy.withValues(alpha: 0.12),
+                    backgroundImage: fullPicUrl != null ? NetworkImage(fullPicUrl) : null,
+                    child: fullPicUrl != null
+                        ? null
+                        : Text(
+                            initials,
+                            style: const TextStyle(
+                              color: AppColors.burgundy,
+                              fontWeight: FontWeight.bold,
+                              fontSize: 15,
+                              fontFamily: 'Vazirmatn',
+                            ),
+                          ),
+                  ),
+                ),
+              ),
             ),
           ),
           const SizedBox(width: 16),

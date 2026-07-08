@@ -35,6 +35,11 @@ export class CreateInquiryDto {
   @IsNotEmpty()
   city: string;
 
+  @ApiPropertyOptional({ description: 'استان محل پروژه', example: 'کرمان' })
+  @IsOptional()
+  @IsString()
+  province?: string;
+
   @ApiPropertyOptional({ description: 'آیا استعلام دارای فایل پلان/نقشه است؟', default: false, example: false })
   @IsOptional()
   @IsBoolean()

@@ -4,6 +4,7 @@ import '../../constants/app_colors.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/inquiry_provider.dart';
 import '../../models/inquiry.dart';
+import '../../utils/formatters.dart';
 
 class AvailableJobsScreen extends StatefulWidget {
   const AvailableJobsScreen({super.key});
@@ -114,7 +115,7 @@ class _AvailableJobsScreenState extends State<AvailableJobsScreen> {
   }
 
   Widget _buildJobCard(Inquiry job) {
-    final dateStr = '${job.createdAt.year}/${job.createdAt.month}/${job.createdAt.day}';
+    final dateStr = Formatters.toPersianDate(job.createdAt);
 
     return Container(
       margin: const EdgeInsets.only(bottom: 16),
@@ -356,12 +357,16 @@ class _AvailableJobsScreenState extends State<AvailableJobsScreen> {
                     controller: bidController,
                     keyboardType: TextInputType.number,
                     textAlign: TextAlign.left,
+                    inputFormatters: [
+                      PersianPriceInputFormatter(),
+                    ],
                     validator: (val) {
                       if (val == null || val.trim().isEmpty) {
                         return 'لطفاً مبلغ کل را وارد کنید';
                       }
-                      if (double.tryParse(val) == null) {
-                        return 'لطفاً فقط عدد انگلیسی وارد کنید';
+                      final cleaned = Formatters.cleanNumber(val);
+                      if (double.tryParse(cleaned) == null) {
+                        return 'لطفاً یک عدد معتبر وارد کنید';
                       }
                       return null;
                     },

@@ -80,4 +80,13 @@ export class WelderProfile {
 
   @Column({ type: 'boolean', default: false })
   is_setup_completed: boolean;
+
+  @Column({ type: 'varchar', length: 500, nullable: true })
+  profile_picture_url: string | null;
+
+  @Column({ type: 'varchar', length: 500, nullable: true })
+  pending_profile_picture_url: string | null;
+
+  @Column({ type: 'varchar', length: 50, default: 'NONE' })
+  profile_picture_status: string;
 }

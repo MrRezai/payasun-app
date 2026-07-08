@@ -4,6 +4,9 @@ import '../../constants/app_colors.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/inquiry_provider.dart';
 import '../../models/inquiry.dart';
+import '../../utils/formatters.dart';
+import 'inquiry_details_screen.dart';
+import 'create_inquiry_screen.dart';
 
 class InquiryListScreen extends StatefulWidget {
   const InquiryListScreen({super.key});
@@ -43,25 +46,34 @@ class _InquiryListScreenState extends State<InquiryListScreen> with SingleTicker
     return Scaffold(
       backgroundColor: AppColors.lightGrey,
       appBar: PreferredSize(
-        preferredSize: const Size.fromHeight(kToolbarHeight),
+        preferredSize: const Size.fromHeight(68),
         child: Container(
           color: AppColors.white,
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
           child: SafeArea(
-            child: Column(
-              children: [
-                TabBar(
-                  controller: _tabController,
-                  indicatorColor: AppColors.royalBlue,
-                  labelColor: AppColors.royalBlue,
-                  unselectedLabelColor: AppColors.textMuted,
-                  labelStyle: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
-                  unselectedLabelStyle: const TextStyle(fontSize: 13),
-                  tabs: const [
-                    Tab(text: 'در حال پردازش (فعال)'),
-                    Tab(text: 'تاریخچه انتشار'),
-                  ],
+            child: Container(
+              decoration: BoxDecoration(
+                color: AppColors.lightGrey,
+                borderRadius: BorderRadius.circular(16),
+              ),
+              child: TabBar(
+                controller: _tabController,
+                dividerColor: Colors.transparent,
+                splashBorderRadius: BorderRadius.circular(12),
+                indicatorSize: TabBarIndicatorSize.tab,
+                indicator: BoxDecoration(
+                  color: AppColors.royalBlue,
+                  borderRadius: BorderRadius.circular(12),
                 ),
-              ],
+                labelColor: AppColors.white,
+                unselectedLabelColor: AppColors.textMuted,
+                labelStyle: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13, fontFamily: 'Vazirmatn'),
+                unselectedLabelStyle: const TextStyle(fontSize: 13, fontFamily: 'Vazirmatn'),
+                tabs: const [
+                  Tab(text: 'در حال پردازش (فعال)'),
+                  Tab(text: 'تاریخچه انتشار'),
+                ],
+              ),
             ),
           ),
         ),
@@ -77,6 +89,29 @@ class _InquiryListScreenState extends State<InquiryListScreen> with SingleTicker
                 _buildInquiryList(broadcastedInquiries, 'هیچ استعلام منتشر شده‌ای یافت نشد.'),
               ],
             ),
+      floatingActionButton: FloatingActionButton.extended(
+        onPressed: () {
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (context) => const CreateInquiryScreen(),
+            ),
+          );
+        },
+        backgroundColor: AppColors.royalBlue,
+        foregroundColor: AppColors.white,
+        elevation: 4,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        icon: const Icon(Icons.add, size: 20),
+        label: const Text(
+          'استعلام جدید',
+          style: TextStyle(
+            fontWeight: FontWeight.bold,
+            fontSize: 14,
+            fontFamily: 'Vazirmatn',
+          ),
+        ),
+      ),
     );
   }
 
@@ -115,25 +150,30 @@ class _InquiryListScreenState extends State<InquiryListScreen> with SingleTicker
   }
 
   Widget _buildInquiryCard(Inquiry inquiry) {
-    // Basic Persian date placeholder logic
-    final dateStr = '${inquiry.createdAt.year}/${inquiry.createdAt.month}/${inquiry.createdAt.day}';
+    final dateStr = Formatters.toPersianDate(inquiry.createdAt);
 
-    return Container(
+    return Card(
+      elevation: 0,
       margin: const EdgeInsets.only(bottom: 12),
-      decoration: BoxDecoration(
-        color: AppColors.white,
+      shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppColors.borderGrey),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.02),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
-          ),
-        ],
+        side: const BorderSide(color: AppColors.borderGrey),
       ),
-      child: Padding(
-        padding: const EdgeInsets.all(16.0),
+      color: AppColors.white,
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(16),
+        child: InkWell(
+          borderRadius: BorderRadius.circular(16),
+          onTap: () {
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (context) => InquiryDetailsScreen(inquiry: inquiry),
+              ),
+            );
+          },
+          child: Padding(
+            padding: const EdgeInsets.all(16.0),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -185,16 +225,27 @@ class _InquiryListScreenState extends State<InquiryListScreen> with SingleTicker
                   Icon(Icons.location_on_outlined, size: 14, color: Colors.grey[400]),
                   const SizedBox(width: 4),
                   Text(
-                    inquiry.city,
-                    style: TextStyle(color: Colors.grey[600], fontSize: 11),
+                    inquiry.province != null && inquiry.province!.isNotEmpty
+                        ? '${inquiry.province}، ${inquiry.city}'
+                        : inquiry.city,
+                    style: const TextStyle(color: AppColors.textMuted, fontSize: 11, fontFamily: 'Vazirmatn'),
                   ),
-                  const Spacer(),
+                  const SizedBox(width: 16),
                   Icon(Icons.calendar_month_outlined, size: 14, color: Colors.grey[400]),
                   const SizedBox(width: 4),
                   Text(
                     dateStr,
-                    style: TextStyle(color: Colors.grey[600], fontSize: 11),
+                    style: const TextStyle(color: AppColors.textMuted, fontSize: 11, fontFamily: 'Vazirmatn'),
                   ),
+                  if (inquiry.status == 'BROADCASTED') ...[
+                    const Spacer(),
+                    const Icon(Icons.people_outline, size: 14, color: Colors.green),
+                    const SizedBox(width: 4),
+                    const Text(
+                      '۳ پیشنهاد',
+                      style: TextStyle(color: Colors.green, fontSize: 11, fontWeight: FontWeight.bold, fontFamily: 'Vazirmatn'),
+                    ),
+                  ],
                 ],
               ),
             ),
@@ -213,8 +264,10 @@ class _InquiryListScreenState extends State<InquiryListScreen> with SingleTicker
           ],
         ),
       ),
-    );
-  }
+    ),
+  ),
+);
+}
 
   Widget _buildStatusBadge(String status) {
     Color bg;
@@ -312,38 +365,183 @@ class _InquiryListScreenState extends State<InquiryListScreen> with SingleTicker
 
   void _confirmInquiry(Inquiry inquiry) async {
     final provider = Provider.of<InquiryProvider>(context, listen: false);
-    final token = Provider.of<AuthProvider>(context, listen: false).token;
+    final auth = Provider.of<AuthProvider>(context, listen: false);
 
-    // Direct mock confirm for demonstration or we can make a clean dialog to let the user confirm
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('تأیید نهایی برآورد', textDirection: TextDirection.rtl),
-        content: const Text(
-          'آیا با انتشار عمومی این اقلام برای جوشکاران موافق هستید؟',
-          textDirection: TextDirection.rtl,
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('خیر'),
-          ),
-          TextButton(
-            onPressed: () async {
-              Navigator.pop(context);
-              try {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('برآورد با موفقیت تایید و منتشر شد.')),
-                );
-                await provider.loadMyInquiries(token);
-              } catch (e) {
-                // handle error
-              }
-            },
-            child: const Text('بله، انتشار عمومی'),
-          ),
-        ],
-      ),
+      barrierDismissible: false,
+      builder: (context) {
+        bool isSubmitting = false;
+        return StatefulBuilder(
+          builder: (context, setDialogState) {
+            return Directionality(
+              textDirection: TextDirection.rtl,
+              child: Dialog(
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+                backgroundColor: AppColors.white,
+                child: Padding(
+                  padding: const EdgeInsets.all(20),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          const Icon(Icons.assignment_turned_in_outlined, color: AppColors.royalBlue, size: 24),
+                          const SizedBox(width: 8),
+                          const Text(
+                            'تأیید نهایی برآورد',
+                            style: TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
+                              color: AppColors.royalBlue,
+                            ),
+                          ),
+                          const Spacer(),
+                          IconButton(
+                            icon: const Icon(Icons.close, color: AppColors.textMuted),
+                            onPressed: () => Navigator.pop(context),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 12),
+                      const Text(
+                        'لیست اقلام زیر توسط کارشناسان برآورد شده است. در صورت تأیید، استعلام شما برای جوشکاران منتشر خواهد شد:',
+                        style: TextStyle(fontSize: 12, color: AppColors.textMuted, height: 1.5),
+                      ),
+                      const SizedBox(height: 16),
+
+                      // List of items
+                      Container(
+                        constraints: const BoxConstraints(maxHeight: 180),
+                        width: double.infinity,
+                        decoration: BoxDecoration(
+                          color: AppColors.lightGrey,
+                          borderRadius: BorderRadius.circular(16),
+                          border: Border.all(color: AppColors.borderGrey),
+                        ),
+                        child: ClipRRect(
+                          borderRadius: BorderRadius.circular(16),
+                          child: ListView.separated(
+                            shrinkWrap: true,
+                            padding: const EdgeInsets.all(12),
+                            itemCount: inquiry.items.length,
+                            separatorBuilder: (context, index) => const Divider(color: AppColors.borderGrey, height: 16),
+                            itemBuilder: (context, index) {
+                              final item = inquiry.items[index];
+                              return Row(
+                                children: [
+                                  Container(
+                                    width: 8,
+                                    height: 8,
+                                    decoration: const BoxDecoration(
+                                      color: AppColors.amberOrange,
+                                      shape: BoxShape.circle,
+                                    ),
+                                  ),
+                                  const SizedBox(width: 8),
+                                  Expanded(
+                                    child: Text(
+                                      item.title,
+                                      style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: AppColors.textDark),
+                                    ),
+                                  ),
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                                    decoration: BoxDecoration(
+                                      color: AppColors.white,
+                                      borderRadius: BorderRadius.circular(12),
+                                      border: Border.all(color: AppColors.borderGrey),
+                                    ),
+                                    child: Text(
+                                      '${item.quantity} ${item.unit}',
+                                      style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: AppColors.royalBlue),
+                                    ),
+                                  ),
+                                ],
+                              );
+                            },
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 24),
+
+                      Row(
+                        children: [
+                          Expanded(
+                            child: SizedBox(
+                              height: 48,
+                              child: OutlinedButton(
+                                onPressed: isSubmitting ? null : () => Navigator.pop(context),
+                                style: OutlinedButton.styleFrom(
+                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                                  side: const BorderSide(color: AppColors.borderGrey),
+                                ),
+                                child: const Text('انصراف', style: TextStyle(color: AppColors.textMuted)),
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 10),
+                          Expanded(
+                            child: SizedBox(
+                              height: 48,
+                              child: ElevatedButton(
+                                onPressed: isSubmitting
+                                    ? null
+                                    : () async {
+                                        setDialogState(() {
+                                          isSubmitting = true;
+                                        });
+                                        final success = await provider.confirmInquiry(
+                                          token: auth.token,
+                                          inquiryId: inquiry.id,
+                                          items: inquiry.items,
+                                        );
+                                        if (success && context.mounted) {
+                                          Navigator.pop(context);
+                                          ScaffoldMessenger.of(context).showSnackBar(
+                                            const SnackBar(
+                                              content: Text('برآورد با موفقیت تایید و منتشر شد.'),
+                                              backgroundColor: Colors.green,
+                                            ),
+                                          );
+                                        } else if (context.mounted) {
+                                          setDialogState(() {
+                                            isSubmitting = false;
+                                          });
+                                          ScaffoldMessenger.of(context).showSnackBar(
+                                            SnackBar(
+                                              content: Text(provider.errorMessage ?? 'خطا در انتشار استعلام'),
+                                              backgroundColor: Colors.red,
+                                            ),
+                                          );
+                                        }
+                                      },
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: AppColors.royalBlue,
+                                  foregroundColor: AppColors.white,
+                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                                ),
+                                child: isSubmitting
+                                    ? const SizedBox(
+                                        width: 20,
+                                        height: 20,
+                                        child: CircularProgressIndicator(color: AppColors.white, strokeWidth: 2),
+                                      )
+                                    : const Text('تأیید و انتشار', style: TextStyle(fontWeight: FontWeight.bold)),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            );
+          },
+        );
+      },
     );
   }
 }

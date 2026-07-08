@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../services/api_service.dart';
 
 enum UserRole { employer, welder }
@@ -16,6 +17,63 @@ class AuthProvider with ChangeNotifier {
   Map<String, dynamic>? _profileData;
   bool _isProfileLoaded = false;
 
+  int _employerTabIndex = 0;
+  int _welderTabIndex = 0;
+
+  AuthProvider() {
+    _loadPersistedData();
+  }
+
+  Future<void> _loadPersistedData() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final savedToken = prefs.getString('auth_token');
+      final savedPhone = prefs.getString('auth_phone');
+      final savedRole = prefs.getString('auth_role');
+
+      if (savedToken != null && savedToken.isNotEmpty) {
+        _token = savedToken;
+        _phoneNumber = savedPhone;
+        if (savedRole == 'WELDER') {
+          _currentRole = UserRole.welder;
+        } else {
+          _currentRole = UserRole.employer;
+        }
+        notifyListeners();
+        
+        try {
+          await loadProfile();
+        } catch (e) {
+          debugPrint('Error loading profile in auto-login: $e');
+          if (e.toString().contains('401') || e.toString().contains('Unauthorized')) {
+            logout();
+          }
+        }
+      }
+    } catch (e) {
+      debugPrint('Error loading persisted auth data: $e');
+    }
+  }
+
+  Future<void> _savePersistedData() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      if (_token != null) {
+        await prefs.setString('auth_token', _token!);
+      } else {
+        await prefs.remove('auth_token');
+      }
+      if (_phoneNumber != null) {
+        await prefs.setString('auth_phone', _phoneNumber!);
+      } else {
+        await prefs.remove('auth_phone');
+      }
+      await prefs.setString('auth_role', _currentRole == UserRole.welder ? 'WELDER' : 'EMPLOYER');
+    } catch (e) {
+      debugPrint('Error persisting auth data: $e');
+    }
+  }
+
   // Getters
   UserRole get currentRole => _currentRole;
   String get token => _token ?? '';
@@ -28,6 +86,19 @@ class AuthProvider with ChangeNotifier {
 
   Map<String, dynamic>? get profileData => _profileData;
   bool get isProfileLoaded => _isProfileLoaded;
+
+  int get employerTabIndex => _employerTabIndex;
+  int get welderTabIndex => _welderTabIndex;
+
+  void setEmployerTabIndex(int index) {
+    _employerTabIndex = index;
+    notifyListeners();
+  }
+
+  void setWelderTabIndex(int index) {
+    _welderTabIndex = index;
+    notifyListeners();
+  }
 
   /// Evaluates if the welder profile contains the minimum necessary onboarding setup.
   /// If they are an EMPLOYER, it returns true by default.
@@ -62,6 +133,7 @@ class AuthProvider with ChangeNotifier {
       _token = newToken;
       _currentRole = targetRole;
       _isProfileLoaded = false;
+      await _savePersistedData();
       await loadProfile();
       _isLoading = false;
       notifyListeners();
@@ -84,6 +156,7 @@ class AuthProvider with ChangeNotifier {
     _profileData = null;
     _isProfileLoaded = false;
     _errorMessage = null;
+    _savePersistedData();
     notifyListeners();
   }
 
@@ -97,6 +170,7 @@ class AuthProvider with ChangeNotifier {
     try {
       final response = await _apiService.sendOtp(phone);
       _phoneNumber = phone;
+      await _savePersistedData();
       _isLoading = false;
       notifyListeners();
 
@@ -129,6 +203,7 @@ class AuthProvider with ChangeNotifier {
       final roleStr = _currentRole == UserRole.employer ? 'EMPLOYER' : 'WELDER';
       final tokenResult = await _apiService.verifyOtp(_phoneNumber!, code, roleStr);
       _token = tokenResult;
+      await _savePersistedData();
       
       // Load user profile details immediately on login to verify onboarding status
       await loadProfile();
@@ -248,6 +323,46 @@ class AuthProvider with ChangeNotifier {
       await _apiService.updateWelderPrices(_token!, priceList);
       // Reload profile
       await loadProfile();
+      _isLoading = false;
+      notifyListeners();
+    } catch (e) {
+      _isLoading = false;
+      _errorMessage = e.toString().replaceAll('Exception: ', '');
+      notifyListeners();
+      rethrow;
+    }
+  }
+
+  /// Upload profile picture.
+  Future<void> uploadProfilePicture(List<int> fileBytes, String filename) async {
+    if (_token == null) return;
+    _isLoading = true;
+    _errorMessage = null;
+    notifyListeners();
+
+    try {
+      final data = await _apiService.uploadProfilePicture(_token!, fileBytes, filename);
+      _profileData = data;
+      _isLoading = false;
+      notifyListeners();
+    } catch (e) {
+      _isLoading = false;
+      _errorMessage = e.toString().replaceAll('Exception: ', '');
+      notifyListeners();
+      rethrow;
+    }
+  }
+
+  /// Delete profile picture.
+  Future<void> deleteProfilePicture() async {
+    if (_token == null) return;
+    _isLoading = true;
+    _errorMessage = null;
+    notifyListeners();
+
+    try {
+      final data = await _apiService.deleteProfilePicture(_token!);
+      _profileData = data;
       _isLoading = false;
       notifyListeners();
     } catch (e) {

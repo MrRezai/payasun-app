@@ -91,6 +91,7 @@ class ApiService {
     required String title,
     required String description,
     required String city,
+    required String province,
     required bool hasBlueprint,
     required List<InquiryItem> items,
   }) async {
@@ -98,6 +99,7 @@ class ApiService {
       'title': title,
       'description': description,
       'city': city,
+      'province': province,
       'has_blueprint': hasBlueprint,
       'items': items.map((e) => e.toJson()).toList(),
     });
@@ -284,6 +286,27 @@ class ApiService {
     }
   }
 
+  Future<Inquiry> confirmInquiry(String token, String inquiryId, List<InquiryItem> items) async {
+    final response = await http.patch(
+      Uri.parse('$baseUrl/inquiry/$inquiryId/confirm'),
+      headers: _getHeaders(token),
+      body: jsonEncode({
+        'items': items.map((i) => {
+          'title': i.title,
+          'unit': i.unit,
+          'quantity': i.quantity,
+        }).toList(),
+      }),
+    );
+
+    if (response.statusCode == 200) {
+      return Inquiry.fromJson(jsonDecode(response.body));
+    } else {
+      final error = jsonDecode(response.body);
+      throw Exception(error['message'] ?? 'خطا در تایید استعلام');
+    }
+  }
+
   /// Fetch all Iranian provinces from Geo API.
   Future<List<dynamic>> fetchProvinces() async {
     final response = await http.get(
@@ -309,6 +332,51 @@ class ApiService {
       return jsonDecode(response.body) as List<dynamic>;
     } else {
       throw Exception('خطا در دریافت لیست شهرها');
+    }
+  }
+
+  /// Upload profile picture.
+  Future<Map<String, dynamic>> uploadProfilePicture(
+    String token,
+    List<int> fileBytes,
+    String filename,
+  ) async {
+    final request = http.MultipartRequest(
+      'POST',
+      Uri.parse('$baseUrl/profile/picture'),
+    );
+    request.headers.addAll(_getHeaders(token));
+    request.files.add(
+      http.MultipartFile.fromBytes(
+        'file',
+        fileBytes,
+        filename: filename,
+      ),
+    );
+
+    final streamedResponse = await request.send();
+    final response = await http.Response.fromStream(streamedResponse);
+
+    if (response.statusCode == 200) {
+      return jsonDecode(response.body) as Map<String, dynamic>;
+    } else {
+      final error = jsonDecode(response.body);
+      throw Exception(error['message'] ?? 'خطا در آپلود عکس پروفایل');
+    }
+  }
+
+  /// Delete profile picture.
+  Future<Map<String, dynamic>> deleteProfilePicture(String token) async {
+    final response = await http.delete(
+      Uri.parse('$baseUrl/profile/picture'),
+      headers: _getHeaders(token),
+    );
+
+    if (response.statusCode == 200) {
+      return jsonDecode(response.body) as Map<String, dynamic>;
+    } else {
+      final error = jsonDecode(response.body);
+      throw Exception(error['message'] ?? 'خطا در حذف عکس پروفایل');
     }
   }
 }

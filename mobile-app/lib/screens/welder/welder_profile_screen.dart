@@ -3,6 +3,10 @@ import 'package:provider/provider.dart';
 import '../../constants/app_colors.dart';
 import '../../providers/auth_provider.dart';
 import '../../services/api_service.dart';
+import '../../utils/formatters.dart';
+import 'dart:io';
+import 'package:flutter/foundation.dart';
+import 'package:file_picker/file_picker.dart';
 import '../../constants/route_transitions.dart';
 import '../auth/login_phone_screen.dart';
 
@@ -17,6 +21,40 @@ class WelderProfileScreen extends StatefulWidget {
 
 class _WelderProfileScreenState extends State<WelderProfileScreen> {
   ProfileView _currentView = ProfileView.menu;
+
+  Future<void> _pickProfileImage(AuthProvider auth) async {
+    try {
+      final result = await FilePicker.platform.pickFiles(
+        type: FileType.image,
+        allowMultiple: false,
+      );
+
+      if (result != null && result.files.isNotEmpty) {
+        final file = result.files.first;
+        List<int>? bytes;
+        if (kIsWeb) {
+          bytes = file.bytes;
+        } else if (file.path != null) {
+          bytes = File(file.path!).readAsBytesSync();
+        }
+
+        if (bytes != null) {
+          setState(() => _isSaving = true);
+          try {
+            await auth.uploadProfilePicture(bytes, file.name);
+            setState(() => _isSaving = false);
+            _showSuccess('تصویر با موفقیت ارسال شد و در انتظار تایید ادمین قرار گرفت.');
+          } catch (e) {
+            setState(() => _isSaving = false);
+            _showError('خطا در آپلود تصویر: $e');
+          }
+        }
+      }
+    } catch (e) {
+      debugPrint('Error picking image: $e');
+      _showError('خطا در انتخاب تصویر');
+    }
+  }
 
   // Controllers & Local States
   final _firstNameController = TextEditingController();
@@ -340,6 +378,9 @@ class _WelderProfileScreenState extends State<WelderProfileScreen> {
                         child: TextFormField(
                           controller: priceController,
                           keyboardType: TextInputType.number,
+                          inputFormatters: [
+                            PersianPriceInputFormatter(),
+                          ],
                           decoration: InputDecoration(
                             labelText: 'مبلغ (تومان)',
                             filled: true,
@@ -348,7 +389,8 @@ class _WelderProfileScreenState extends State<WelderProfileScreen> {
                           ),
                           validator: (val) {
                             if (val == null || val.trim().isEmpty) return 'لطفاً مبلغ را وارد کنید';
-                            if (double.tryParse(val.replaceAll(',', '')) == null) return 'عدد معتبر وارد کنید';
+                            final cleaned = Formatters.cleanNumber(val);
+                            if (double.tryParse(cleaned) == null) return 'عدد معتبر وارد کنید';
                             return null;
                           },
                         ),
@@ -382,7 +424,7 @@ class _WelderProfileScreenState extends State<WelderProfileScreen> {
                     child: ElevatedButton(
                        onPressed: () async {
                         if (!bottomFormKey.currentState!.validate()) return;
-                        final priceClean = double.parse(priceController.text.replaceAll(',', ''));
+                        final priceClean = double.parse(Formatters.cleanNumber(priceController.text));
                         final newPrice = {
                           'title': titleController.text.trim(),
                           'unit': unitController.text.trim(),
@@ -569,6 +611,8 @@ class _WelderProfileScreenState extends State<WelderProfileScreen> {
   // --- 1. Main Menu View ---
   Widget _buildMainMenuBody(AuthProvider auth) {
     final profile = auth.profileData?['profile'] as Map<String, dynamic>?;
+    final firstName = profile?['first_name'] as String? ?? '';
+    final lastName = profile?['last_name'] as String? ?? '';
     final fullName = profile?['full_name'] ?? 'جوشکار مهمان';
     final bio = profile?['bio'] ?? 'بدون بیوگرافی یا توضیحات تخصص';
 
@@ -588,11 +632,207 @@ class _WelderProfileScreenState extends State<WelderProfileScreen> {
             ),
             child: Column(
               children: [
-                const CircleAvatar(
-                  radius: 36,
-                  backgroundColor: AppColors.lightGrey,
-                  child: Icon(Icons.engineering, size: 40, color: AppColors.burgundy),
-                ),
+                (() {
+                  final profilePicUrl = profile?['profile_picture_url'] as String?;
+                  final pendingPicUrl = profile?['pending_profile_picture_url'] as String?;
+                  final picStatus = profile?['profile_picture_status'] as String? ?? 'NONE';
+                  
+                  final ImageProvider? avatarImage;
+                  if (picStatus == 'PENDING' && pendingPicUrl != null) {
+                    avatarImage = NetworkImage('${ApiService().baseUrl}$pendingPicUrl');
+                  } else if (picStatus == 'APPROVED' && profilePicUrl != null) {
+                    avatarImage = NetworkImage('${ApiService().baseUrl}$profilePicUrl');
+                  } else {
+                    avatarImage = null;
+                  }
+
+                  // Compute initials
+                  String initials = '';
+                  if (firstName.isNotEmpty) initials += firstName[0];
+                  if (lastName.isNotEmpty) {
+                    if (initials.isNotEmpty) initials += '‌';
+                    initials += lastName[0];
+                  }
+                  if (initials.isEmpty) initials = 'ج‌م';
+
+                  void showPhotoOptions() {
+                    showModalBottomSheet(
+                      context: context,
+                      backgroundColor: AppColors.white,
+                      shape: const RoundedRectangleBorder(
+                        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+                      ),
+                      builder: (sheetContext) => Directionality(
+                        textDirection: TextDirection.rtl,
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 16),
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              const Text(
+                                'مدیریت تصویر پروفایل',
+                                style: TextStyle(
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.bold,
+                                  color: AppColors.burgundy,
+                                  fontFamily: 'Vazirmatn',
+                                ),
+                              ),
+                              const SizedBox(height: 16),
+                              ListTile(
+                                leading: const Icon(Icons.photo_library_outlined, color: AppColors.burgundy),
+                                title: const Text('انتخاب از گالری / فایل‌ها', style: TextStyle(fontFamily: 'Vazirmatn', fontSize: 13)),
+                                onTap: () {
+                                  Navigator.pop(sheetContext);
+                                  _pickProfileImage(auth);
+                                },
+                              ),
+                              if (picStatus != 'NONE') ...[
+                                const Divider(height: 1),
+                                ListTile(
+                                  leading: const Icon(Icons.delete_outline, color: Colors.red),
+                                  title: const Text('حذف تصویر پروفایل', style: TextStyle(fontFamily: 'Vazirmatn', fontSize: 13, color: Colors.red)),
+                                  onTap: () async {
+                                    Navigator.pop(sheetContext);
+                                    final confirm = await showDialog<bool>(
+                                      context: context,
+                                      builder: (context) => Directionality(
+                                        textDirection: TextDirection.rtl,
+                                        child: AlertDialog(
+                                          title: const Text('حذف تصویر پروفایل', style: TextStyle(fontFamily: 'Vazirmatn', fontSize: 15, fontWeight: FontWeight.bold)),
+                                          content: const Text('آیا از حذف عکس پروفایل خود اطمینان دارید؟', style: TextStyle(fontFamily: 'Vazirmatn', fontSize: 13)),
+                                          actions: [
+                                            TextButton(
+                                              onPressed: () => Navigator.pop(context, false),
+                                              child: const Text('انصراف', style: TextStyle(fontFamily: 'Vazirmatn')),
+                                            ),
+                                            TextButton(
+                                              onPressed: () => Navigator.pop(context, true),
+                                              child: const Text('بله، حذف شود', style: TextStyle(fontFamily: 'Vazirmatn', color: Colors.red)),
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                    );
+                                    if (confirm == true) {
+                                      setState(() => _isSaving = true);
+                                      try {
+                                        await auth.deleteProfilePicture();
+                                        setState(() => _isSaving = false);
+                                        _showSuccess('تصویر پروفایل با موفقیت حذف شد.');
+                                      } catch (e) {
+                                        setState(() => _isSaving = false);
+                                        _showError('خطا در حذف تصویر: $e');
+                                      }
+                                    }
+                                  },
+                                ),
+                              ],
+                              const Divider(height: 1),
+                              ListTile(
+                                leading: const Icon(Icons.close, color: AppColors.textMuted),
+                                title: const Text('انصراف', style: TextStyle(fontFamily: 'Vazirmatn', fontSize: 13, color: AppColors.textMuted)),
+                                onTap: () => Navigator.pop(sheetContext),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    );
+                  }
+
+                  return Column(
+                    children: [
+                      Stack(
+                        children: [
+                          GestureDetector(
+                            onTap: showPhotoOptions,
+                            child: CircleAvatar(
+                              radius: 42,
+                              backgroundColor: avatarImage != null ? Colors.transparent : AppColors.burgundy.withValues(alpha: 0.12),
+                              backgroundImage: avatarImage,
+                              child: avatarImage != null
+                                  ? null
+                                  : Text(
+                                      initials,
+                                      style: const TextStyle(
+                                        color: AppColors.burgundy,
+                                        fontWeight: FontWeight.bold,
+                                        fontSize: 20,
+                                        fontFamily: 'Vazirmatn',
+                                      ),
+                                    ),
+                            ),
+                          ),
+                          Positioned(
+                            bottom: 0,
+                            right: 0,
+                            child: GestureDetector(
+                              onTap: showPhotoOptions,
+                              child: Container(
+                                padding: const EdgeInsets.all(5),
+                                decoration: const BoxDecoration(
+                                  color: AppColors.burgundy,
+                                  shape: BoxShape.circle,
+                                ),
+                                child: const Icon(
+                                  Icons.edit,
+                                  color: AppColors.white,
+                                  size: 14,
+                                ),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                      if (picStatus == 'PENDING') ...[
+                        const SizedBox(height: 8),
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                          decoration: BoxDecoration(
+                            color: AppColors.amberOrange.withValues(alpha: 0.1),
+                            borderRadius: BorderRadius.circular(8),
+                            border: Border.all(
+                              color: AppColors.amberOrange,
+                              width: 0.5,
+                            ),
+                          ),
+                          child: const Text(
+                            'در انتظار تایید ادمین',
+                            style: TextStyle(
+                              fontSize: 10,
+                              fontWeight: FontWeight.bold,
+                              fontFamily: 'Vazirmatn',
+                              color: AppColors.amberOrange,
+                            ),
+                          ),
+                        ),
+                      ] else if (picStatus == 'REJECTED') ...[
+                        const SizedBox(height: 8),
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                          decoration: BoxDecoration(
+                            color: Colors.red.withValues(alpha: 0.1),
+                            borderRadius: BorderRadius.circular(8),
+                            border: Border.all(
+                              color: Colors.red,
+                              width: 0.5,
+                            ),
+                          ),
+                          child: const Text(
+                            'تصویر رد شده است',
+                            style: TextStyle(
+                              fontSize: 10,
+                              fontWeight: FontWeight.bold,
+                              fontFamily: 'Vazirmatn',
+                              color: Colors.red,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ],
+                  );
+                })(),
                 const SizedBox(height: 12),
                 Text(
                   fullName,
@@ -1596,10 +1836,7 @@ class _WelderProfileScreenState extends State<WelderProfileScreen> {
             Column(
               children: List.generate(_priceList.length, (idx) {
                 final item = _priceList[idx];
-                final priceFormatted = item['price_per_unit'].toString().replaceAllMapped(
-                      RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'),
-                      (Match m) => '${m[1]},',
-                    );
+                final priceFormatted = Formatters.formatPrice(item['price_per_unit']);
 
                 return Container(
                   key: ValueKey(item),
