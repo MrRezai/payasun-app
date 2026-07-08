@@ -33,7 +33,6 @@ class AuthProvider with ChangeNotifier {
   /// If they are an EMPLOYER, it returns true by default.
   /// If they are a WELDER, they must have completed the setup.
   bool get isProfileComplete {
-    if (_currentRole == UserRole.employer) return true;
     if (_profileData == null) return false;
     
     final profile = _profileData!['profile'] as Map<String, dynamic>?;
@@ -162,6 +161,42 @@ class AuthProvider with ChangeNotifier {
         homeProvince: homeProvince,
         activeProvince: activeProvince,
         activeCities: activeCities,
+        bio: bio,
+        isSetupCompleted: isSetupCompleted,
+      );
+      // Reload profile
+      await loadProfile();
+      _isLoading = false;
+      notifyListeners();
+    } catch (e) {
+      _isLoading = false;
+      _errorMessage = e.toString().replaceAll('Exception: ', '');
+      notifyListeners();
+      rethrow;
+    }
+  }
+
+  /// Update employer profile details.
+  Future<void> updateEmployerProfile({
+    String? fullName,
+    String? province,
+    String? city,
+    String? companyName,
+    String? bio,
+    bool? isSetupCompleted,
+  }) async {
+    if (_token == null) return;
+    _isLoading = true;
+    _errorMessage = null;
+    notifyListeners();
+
+    try {
+      await _apiService.updateEmployerProfile(
+        _token!,
+        fullName: fullName,
+        province: province,
+        city: city,
+        companyName: companyName,
         bio: bio,
         isSetupCompleted: isSetupCompleted,
       );

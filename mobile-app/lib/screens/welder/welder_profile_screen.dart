@@ -3,6 +3,8 @@ import 'package:provider/provider.dart';
 import '../../constants/app_colors.dart';
 import '../../providers/auth_provider.dart';
 import '../../services/api_service.dart';
+import '../../constants/route_transitions.dart';
+import '../auth/login_phone_screen.dart';
 
 enum ProfileView { menu, personalInfo, coverage, rates }
 
@@ -256,25 +258,7 @@ class _WelderProfileScreenState extends State<WelderProfileScreen> {
     }
   }
 
-  Future<void> _saveRates() async {
-    if (_priceList.isEmpty) {
-      _showError('لیست قیمت‌ها نمی‌تواند خالی باشد. حداقل یک تعرفه وارد کنید.');
-      return;
-    }
-    setState(() => _isSaving = true);
-    try {
-      final auth = Provider.of<AuthProvider>(context, listen: false);
-      await auth.updateWelderPrices(_priceList);
-      setState(() {
-        _isSaving = false;
-        _currentView = ProfileView.menu;
-      });
-      _showSuccess('لیست تعرفه‌های قیمت با موفقیت به‌روزرسانی شد.');
-    } catch (e) {
-      setState(() => _isSaving = false);
-      _showError('خطا در ذخیره تعرفه‌ها: $e');
-    }
-  }
+
 
   void _showSuccess(String msg) {
     ScaffoldMessenger.of(context).showSnackBar(
@@ -293,7 +277,7 @@ class _WelderProfileScreenState extends State<WelderProfileScreen> {
   void _showAddPriceBottomSheet() {
     final titleController = TextEditingController();
     final priceController = TextEditingController();
-    final unitController = TextEditingController();
+    final unitController = TextEditingController(text: 'بند');
     final bottomFormKey = GlobalKey<FormState>();
 
     showModalBottomSheet(
@@ -371,15 +355,22 @@ class _WelderProfileScreenState extends State<WelderProfileScreen> {
                       ),
                       const SizedBox(width: 12),
                       Expanded(
-                        child: TextFormField(
-                          controller: unitController,
-                          decoration: InputDecoration(
-                            labelText: 'واحد محاسبه',
-                            filled: true,
-                            fillColor: AppColors.lightGrey,
-                            border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                        child: GestureDetector(
+                          onTap: () => _showUnitPickerBottomSheet(context, unitController),
+                          child: AbsorbPointer(
+                            child: TextFormField(
+                              controller: unitController,
+                              readOnly: true,
+                              decoration: InputDecoration(
+                                labelText: 'واحد محاسبه',
+                                filled: true,
+                                fillColor: AppColors.lightGrey,
+                                border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                                suffixIcon: const Icon(Icons.arrow_drop_down, color: AppColors.textMuted),
+                                contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 15),
+                              ),
+                            ),
                           ),
-                          validator: (val) => val == null || val.trim().isEmpty ? 'لطفاً واحد را وارد کنید' : null,
                         ),
                       ),
                     ],
@@ -389,17 +380,37 @@ class _WelderProfileScreenState extends State<WelderProfileScreen> {
                     width: double.infinity,
                     height: 50,
                     child: ElevatedButton(
-                      onPressed: () {
+                       onPressed: () async {
                         if (!bottomFormKey.currentState!.validate()) return;
                         final priceClean = double.parse(priceController.text.replaceAll(',', ''));
-                        setState(() {
-                          _priceList.add({
-                            'title': titleController.text.trim(),
-                            'unit': unitController.text.trim(),
-                            'price_per_unit': priceClean,
-                          });
-                        });
+                        final newPrice = {
+                          'title': titleController.text.trim(),
+                          'unit': unitController.text.trim(),
+                          'price_per_unit': priceClean,
+                        };
+
+                        // Pop bottom sheet first so overlay is shown on main screen
                         Navigator.pop(context);
+
+                        setState(() {
+                          _priceList.add(newPrice);
+                          _isSaving = true;
+                        });
+
+                        try {
+                          final auth = Provider.of<AuthProvider>(context, listen: false);
+                          await auth.updateWelderPrices(_priceList);
+                          setState(() {
+                            _isSaving = false;
+                          });
+                          _showSuccess('تعرفه با موفقیت اضافه شد.');
+                        } catch (e) {
+                          setState(() {
+                            _isSaving = false;
+                          });
+                          _showError('خطا در اضافه کردن تعرفه: $e');
+                          _populateFields();
+                        }
                       },
                       style: ElevatedButton.styleFrom(
                         backgroundColor: AppColors.burgundy,
@@ -413,6 +424,60 @@ class _WelderProfileScreenState extends State<WelderProfileScreen> {
                   const SizedBox(height: 24),
                 ],
               ),
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  void _showUnitPickerBottomSheet(BuildContext context, TextEditingController controller) {
+    final units = ['بند', 'متر', 'عدد', 'کیلوگرم', 'ساعت', 'روز', 'تن', 'پروژه‌ای'];
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: AppColors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (context) {
+        return Directionality(
+          textDirection: TextDirection.rtl,
+          child: SafeArea(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const SizedBox(height: 16),
+                const Text(
+                  'انتخاب واحد محاسبه',
+                  style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: AppColors.burgundy),
+                ),
+                const SizedBox(height: 12),
+                const Divider(color: AppColors.borderGrey, height: 1),
+                Flexible(
+                  child: ListView.builder(
+                    shrinkWrap: true,
+                    itemCount: units.length,
+                    itemBuilder: (context, idx) {
+                      final u = units[idx];
+                      final isSelected = controller.text == u;
+                      return ListTile(
+                        title: Text(
+                          u,
+                          style: TextStyle(
+                            fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                            color: isSelected ? AppColors.royalBlue : AppColors.textDark,
+                          ),
+                        ),
+                        trailing: isSelected ? const Icon(Icons.check_circle, color: AppColors.royalBlue) : null,
+                        onTap: () {
+                          controller.text = u;
+                          Navigator.pop(context);
+                        },
+                      );
+                    },
+                  ),
+                ),
+              ],
             ),
           ),
         );
@@ -556,19 +621,28 @@ class _WelderProfileScreenState extends State<WelderProfileScreen> {
             title: 'ویرایش اطلاعات شناسایی',
             subtitle: 'تغییر نام و نشان، بیوگرافی و شهر محل سکونت',
             icon: Icons.person_outline,
-            onTap: () => setState(() => _currentView = ProfileView.personalInfo),
+            onTap: () {
+              _populateFields();
+              setState(() => _currentView = ProfileView.personalInfo);
+            },
           ),
           _buildMenuTile(
             title: 'مدیریت محدوده فعالیت (استان و شهرها)',
             subtitle: 'انتخاب استان‌ها و اضافه کردن شهرهای خدماتی شما',
             icon: Icons.map_outlined,
-            onTap: () => setState(() => _currentView = ProfileView.coverage),
+            onTap: () {
+              _populateFields();
+              setState(() => _currentView = ProfileView.coverage);
+            },
           ),
           _buildMenuTile(
             title: 'مدیریت نرخ‌ها و تعرفه‌ها',
             subtitle: 'تنظیم چندین قیمت پایه برای انواع جوشکاری‌ها',
             icon: Icons.monetization_on_outlined,
-            onTap: () => setState(() => _currentView = ProfileView.rates),
+            onTap: () {
+              _populateFields();
+              setState(() => _currentView = ProfileView.rates);
+            },
           ),
           const SizedBox(height: 30),
 
@@ -577,7 +651,14 @@ class _WelderProfileScreenState extends State<WelderProfileScreen> {
             width: double.infinity,
             height: 52,
             child: OutlinedButton.icon(
-              onPressed: () => auth.logout(),
+              onPressed: () {
+                auth.logout();
+                Navigator.pushAndRemoveUntil(
+                  context,
+                  FadePageRoute(page: const LoginPhoneScreen(key: ValueKey('LoginPhoneScreen'))),
+                  (route) => false,
+                );
+              },
               icon: const Icon(Icons.logout, color: Colors.red),
               label: const Text('خروج از حساب کاربری', style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold)),
               style: OutlinedButton.styleFrom(
@@ -1512,11 +1593,8 @@ class _WelderProfileScreenState extends State<WelderProfileScreen> {
               ),
             )
           else
-            ListView.builder(
-              shrinkWrap: true,
-              physics: const NeverScrollableScrollPhysics(),
-              itemCount: _priceList.length,
-              itemBuilder: (context, idx) {
+            Column(
+              children: List.generate(_priceList.length, (idx) {
                 final item = _priceList[idx];
                 final priceFormatted = item['price_per_unit'].toString().replaceAllMapped(
                       RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'),
@@ -1524,6 +1602,7 @@ class _WelderProfileScreenState extends State<WelderProfileScreen> {
                     );
 
                 return Container(
+                  key: ValueKey(item),
                   margin: const EdgeInsets.only(bottom: 10),
                   padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                   decoration: BoxDecoration(
@@ -1546,35 +1625,35 @@ class _WelderProfileScreenState extends State<WelderProfileScreen> {
                         style: const TextStyle(color: AppColors.royalBlue, fontWeight: FontWeight.bold, fontSize: 12),
                       ),
                       const SizedBox(width: 10),
-                      IconButton(
+                       IconButton(
                         icon: const Icon(Icons.delete_outline, color: Colors.red, size: 18),
-                        onPressed: () {
+                        onPressed: () async {
                           setState(() {
                             _priceList.removeAt(idx);
+                            _isSaving = true;
                           });
+                          try {
+                            final auth = Provider.of<AuthProvider>(context, listen: false);
+                            await auth.updateWelderPrices(_priceList);
+                            setState(() {
+                              _isSaving = false;
+                            });
+                            _showSuccess('تعرفه با موفقیت حذف شد.');
+                          } catch (e) {
+                            setState(() {
+                              _isSaving = false;
+                            });
+                            _showError('خطا در حذف تعرفه: $e');
+                            _populateFields();
+                          }
                         },
                       ),
                     ],
                   ),
                 );
-              },
+              }),
             ),
-          const SizedBox(height: 30),
 
-          SizedBox(
-            width: double.infinity,
-            height: 52,
-            child: ElevatedButton(
-              onPressed: _saveRates,
-              style: ElevatedButton.styleFrom(
-                backgroundColor: AppColors.royalBlue,
-                foregroundColor: AppColors.white,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                elevation: 0,
-              ),
-              child: const Text('ذخیره تعرفه‌های قیمت', style: TextStyle(fontWeight: FontWeight.bold)),
-            ),
-          ),
         ],
       ),
     );

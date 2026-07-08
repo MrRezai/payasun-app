@@ -193,16 +193,26 @@ class _VerifyOtpScreenState extends State<VerifyOtpScreen> {
                       _buildImageLogo(),
                       const SizedBox(height: 20),
 
+                      // Title Typography
                       const Text(
                         'جفت‌وجور',
                         style: TextStyle(
-                          fontSize: 24,
+                          fontSize: 26,
                           fontWeight: FontWeight.w900,
                           color: AppColors.burgundy,
                           letterSpacing: -0.5,
                         ),
                       ),
-                      const SizedBox(height: 35),
+                      const SizedBox(height: 8),
+                      const Text(
+                        'سامانه هوشمند استعلام و برآورد جوشکاری',
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: AppColors.textMuted,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                      const SizedBox(height: 48),
 
                       // Code Input Card
                       Container(
@@ -304,7 +314,17 @@ class _VerifyOtpScreenState extends State<VerifyOtpScreen> {
                           ],
                         ),
                       ),
-                      const SizedBox(height: 40),
+                      const SizedBox(height: 30),
+
+                      // Footnote / Terms
+                      const Text(
+                        'ورود شما به معنای پذیرش قوانین و مقررات جفت‌وجور است.',
+                        style: TextStyle(
+                          fontSize: 10,
+                          color: AppColors.textMuted,
+                        ),
+                        textAlign: TextAlign.center,
+                      ),
                     ],
                   ),
                 ),
@@ -316,7 +336,7 @@ class _VerifyOtpScreenState extends State<VerifyOtpScreen> {
     );
   }
 
-  Widget _buildImageLogo({double size = 75}) {
+  Widget _buildImageLogo({double size = 90}) {
     return Container(
       decoration: BoxDecoration(
         color: AppColors.white,

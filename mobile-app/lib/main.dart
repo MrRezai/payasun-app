@@ -5,6 +5,7 @@ import 'providers/inquiry_provider.dart';
 import 'screens/main_shell_screen.dart';
 import 'screens/auth/login_phone_screen.dart';
 import 'screens/welder/welder_setup_screen.dart';
+import 'screens/employer/employer_setup_screen.dart';
 import 'constants/app_colors.dart';
 
 void main() {
@@ -36,14 +37,25 @@ class JoftojoorApp extends StatelessWidget {
           surfaceTintColor: Colors.transparent,
           elevation: 0,
         ),
+        snackBarTheme: const SnackBarThemeData(
+          contentTextStyle: TextStyle(
+            fontFamily: 'Vazirmatn',
+            color: Colors.white,
+            fontSize: 14,
+          ),
+        ),
       ),
       home: Consumer<AuthProvider>(
         builder: (context, auth, _) {
           Widget child;
           if (!auth.isAuthenticated) {
             child = const LoginPhoneScreen(key: ValueKey('LoginPhoneScreen'));
-          } else if (auth.isWelder && !auth.isProfileComplete) {
-            child = const WelderSetupScreen(key: ValueKey('WelderSetupScreen'));
+          } else if (!auth.isProfileComplete) {
+            if (auth.isWelder) {
+              child = const WelderSetupScreen(key: ValueKey('WelderSetupScreen'));
+            } else {
+              child = const EmployerSetupScreen(key: ValueKey('EmployerSetupScreen'));
+            }
           } else {
             child = const MainShellScreen(key: ValueKey('MainShellScreen'));
           }

@@ -16,14 +16,25 @@ class _EmployerDashboardState extends State<EmployerDashboard> {
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      final token = Provider.of<AuthProvider>(context, listen: false).token;
-      Provider.of<InquiryProvider>(context, listen: false).loadMyInquiries(token);
+      if (!mounted) return;
+      final auth = Provider.of<AuthProvider>(context, listen: false);
+      if (!auth.isProfileLoaded) {
+        auth.loadProfile();
+      }
+      Provider.of<InquiryProvider>(context, listen: false).loadMyInquiries(auth.token);
     });
   }
 
   @override
   Widget build(BuildContext context) {
+    final auth = Provider.of<AuthProvider>(context);
     final provider = Provider.of<InquiryProvider>(context);
+    
+    final profile = auth.profileData?['profile'] as Map<String, dynamic>?;
+    final fullName = profile?['full_name'] as String? ?? '';
+    final city = profile?['city'] as String? ?? '';
+    final displayName = fullName.isNotEmpty ? fullName : 'کارفرما';
+
     final myInquiries = provider.myInquiries;
 
     // Calculate metrics
@@ -34,33 +45,37 @@ class _EmployerDashboardState extends State<EmployerDashboard> {
 
     return RefreshIndicator(
       onRefresh: () async {
-        final token = Provider.of<AuthProvider>(context, listen: false).token;
-        await provider.loadMyInquiries(token);
+        await provider.loadMyInquiries(auth.token);
       },
+      color: AppColors.royalBlue,
       child: SingleChildScrollView(
         physics: const AlwaysScrollableScrollPhysics(),
-        padding: const EdgeInsets.all(20),
+        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Welcome Header Card
-            _buildWelcomeCard(),
+            // Welcome Header Card (Redesigned matching welder profile card layout but with blue/business branding)
+            _buildWelcomeCard(displayName, city),
             const SizedBox(height: 25),
 
             // Statistics Grid
             _buildSectionHeader('وضعیت استعلام‌های شما'),
-            const SizedBox(height: 12),
+            const SizedBox(height: 14),
             _buildStatsGrid(
               total: totalCount,
               pending: pendingEstimation,
               estimated: estimated,
               broadcasted: broadcasted,
             ),
-            const SizedBox(height: 25),
+            const SizedBox(height: 28),
+
+            // Tips / Info Banner
+            _buildTipsCard(),
+            const SizedBox(height: 28),
 
             // Recent activity list
             _buildSectionHeader('آخرین فعالیت‌ها'),
-            const SizedBox(height: 12),
+            const SizedBox(height: 14),
             if (provider.isLoading)
               const Center(
                 child: Padding(
@@ -78,43 +93,95 @@ class _EmployerDashboardState extends State<EmployerDashboard> {
     );
   }
 
-  Widget _buildWelcomeCard() {
+  Widget _buildWelcomeCard(String name, String city) {
+    final locationText = city.isNotEmpty ? city : '';
+
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.all(20),
+      padding: const EdgeInsets.all(22),
       decoration: BoxDecoration(
         gradient: const LinearGradient(
-          colors: [AppColors.royalBlue, Color(0xFF5C85FF)],
+          colors: [AppColors.royalBlue, Color(0xFF1E3A8A)],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(24),
         boxShadow: [
           BoxShadow(
-            color: AppColors.royalBlue.withValues(alpha: 0.25),
-            blurRadius: 15,
-            offset: const Offset(0, 8),
+            color: AppColors.royalBlue.withValues(alpha: 0.15),
+            blurRadius: 20,
+            offset: const Offset(0, 10),
           ),
         ],
       ),
-      child: const Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+      child: Row(
         children: [
-          Text(
-            'خوش آمدید به جفت‌وجور',
-            style: TextStyle(
-              color: AppColors.white,
-              fontSize: 18,
-              fontWeight: FontWeight.bold,
+          Container(
+            padding: const EdgeInsets.all(3),
+            decoration: const BoxDecoration(
+              color: AppColors.amberOrange,
+              shape: BoxShape.circle,
+            ),
+            child: const CircleAvatar(
+              radius: 28,
+              backgroundColor: AppColors.white,
+              child: Icon(Icons.business_rounded, color: AppColors.royalBlue, size: 30),
             ),
           ),
-          SizedBox(height: 8),
-          Text(
-            'درخواست خود را ثبت کنید تا در سریع‌ترین زمان ممکن نقشه‌های شما برآورد شده و برای جوشکاران حرفه‌ای ارسال گردد.',
-            style: TextStyle(
-              color: Colors.white70,
-              fontSize: 13,
-              height: 1.6,
+          const SizedBox(width: 16),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  name,
+                  style: const TextStyle(
+                    color: AppColors.white,
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                  ),
+                  overflow: TextOverflow.ellipsis,
+                ),
+                const SizedBox(height: 6),
+                Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: AppColors.white.withValues(alpha: 0.15),
+                        borderRadius: BorderRadius.circular(20),
+                      ),
+                      child: const Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(Icons.badge_outlined, color: AppColors.amberOrange, size: 12),
+                          SizedBox(width: 4),
+                          Text(
+                            'کارفرمای رسمی',
+                            style: TextStyle(
+                              color: AppColors.white,
+                              fontSize: 10,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    if (locationText.isNotEmpty) ...[
+                      const SizedBox(width: 8),
+                      const Icon(Icons.location_on_outlined, color: Colors.white70, size: 12),
+                      const SizedBox(width: 2),
+                      Flexible(
+                        child: Text(
+                          locationText,
+                          style: const TextStyle(color: Colors.white70, fontSize: 11),
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
+              ],
             ),
           ),
         ],
@@ -123,13 +190,26 @@ class _EmployerDashboardState extends State<EmployerDashboard> {
   }
 
   Widget _buildSectionHeader(String title) {
-    return Text(
-      title,
-      style: const TextStyle(
-        fontSize: 16,
-        fontWeight: FontWeight.bold,
-        color: AppColors.burgundy,
-      ),
+    return Row(
+      children: [
+        Container(
+          width: 4,
+          height: 18,
+          decoration: BoxDecoration(
+            color: AppColors.royalBlue,
+            borderRadius: BorderRadius.circular(4),
+          ),
+        ),
+        const SizedBox(width: 10),
+        Text(
+          title,
+          style: const TextStyle(
+            fontSize: 15,
+            fontWeight: FontWeight.bold,
+            color: AppColors.royalBlue,
+          ),
+        ),
+      ],
     );
   }
 
@@ -139,61 +219,159 @@ class _EmployerDashboardState extends State<EmployerDashboard> {
     required int estimated,
     required int broadcasted,
   }) {
-    return GridView.count(
-      crossAxisCount: 2,
-      crossAxisSpacing: 12,
-      mainAxisSpacing: 12,
-      shrinkWrap: true,
-      physics: const NeverScrollableScrollPhysics(),
-      childAspectRatio: 1.5,
-      children: [
-        _buildStatCard('کل درخواست‌ها', total.toString(), Icons.folder_open, AppColors.burgundy),
-        _buildStatCard('انتظار برآورد', pending.toString(), Icons.hourglass_empty, AppColors.amberOrange),
-        _buildStatCard('برآورد شده', estimated.toString(), Icons.check_circle_outline, AppColors.royalBlue),
-        _buildStatCard('انتشار یافته', broadcasted.toString(), Icons.campaign, Colors.green),
-      ],
-    );
-  }
-
-  Widget _buildStatCard(String label, String value, IconData icon, Color color) {
     return Container(
-      padding: const EdgeInsets.all(16),
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(vertical: 18, horizontal: 8),
       decoration: BoxDecoration(
         color: AppColors.white,
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(20),
         border: Border.all(color: AppColors.borderGrey),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withValues(alpha: 0.02),
+            blurRadius: 15,
+            offset: const Offset(0, 5),
+          ),
+        ],
+      ),
+      child: Row(
+        children: [
+          Expanded(
+            child: _buildMetricItem(
+              'کل درخواست‌ها',
+              '$total',
+              Icons.folder_open,
+              AppColors.burgundy,
+            ),
+          ),
+          _buildVerticalDivider(),
+          Expanded(
+            child: _buildMetricItem(
+              'انتظار برآورد',
+              '$pending',
+              Icons.hourglass_empty,
+              AppColors.amberOrange,
+            ),
+          ),
+          _buildVerticalDivider(),
+          Expanded(
+            child: _buildMetricItem(
+              'برآورد شده',
+              '$estimated',
+              Icons.check_circle_outline,
+              AppColors.royalBlue,
+            ),
+          ),
+          _buildVerticalDivider(),
+          Expanded(
+            child: _buildMetricItem(
+              'انتشار یافته',
+              '$broadcasted',
+              Icons.campaign,
+              Colors.green,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildMetricItem(String label, String value, IconData icon, Color color) {
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Container(
+          padding: const EdgeInsets.all(8),
+          decoration: BoxDecoration(
+            color: color.withValues(alpha: 0.08),
+            shape: BoxShape.circle,
+          ),
+          child: Icon(icon, color: color, size: 16),
+        ),
+        const SizedBox(height: 8),
+        Text(
+          value,
+          style: const TextStyle(
+            color: AppColors.textDark,
+            fontSize: 16,
+            fontWeight: FontWeight.w900,
+          ),
+        ),
+        const SizedBox(height: 4),
+        Text(
+          label,
+          style: const TextStyle(
+            color: AppColors.textMuted,
+            fontSize: 9,
+            fontWeight: FontWeight.bold,
+          ),
+          textAlign: TextAlign.center,
+        ),
+      ],
+    );
+  }
+
+  Widget _buildVerticalDivider() {
+    return Container(
+      width: 1,
+      height: 40,
+      color: AppColors.borderGrey,
+    );
+  }
+
+  Widget _buildTipsCard() {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(18),
+      decoration: BoxDecoration(
+        color: AppColors.white,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: AppColors.borderGrey),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.01),
             blurRadius: 10,
             offset: const Offset(0, 4),
           ),
         ],
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+      child: Row(
         children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text(
-                label,
-                style: const TextStyle(
-                  color: AppColors.textMuted,
-                  fontSize: 11,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-              Icon(icon, color: color, size: 20),
-            ],
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: AppColors.amberOrange.withValues(alpha: 0.1),
+              borderRadius: BorderRadius.circular(16),
+            ),
+            child: const Icon(
+              Icons.lightbulb_outline,
+              color: AppColors.amberOrange,
+              size: 24,
+            ),
           ),
-          const Spacer(),
-          Text(
-            value,
-            style: const TextStyle(
-              color: AppColors.textDark,
-              fontSize: 20,
-              fontWeight: FontWeight.w900,
+          const SizedBox(width: 14),
+          const Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'راهنمای برآورد دقیق جوشکاری',
+                  style: TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.bold,
+                    color: AppColors.textDark,
+                  ),
+                ),
+                SizedBox(height: 4),
+                Text(
+                  'با بارگذاری نقشه‌های باکیفیت و تعیین طول دقیق شاسی، مقادیر مصرفی الکترود و آهن‌آلات را دقیق‌تر دریافت کنید.',
+                  style: TextStyle(
+                    fontSize: 11,
+                    color: AppColors.textMuted,
+                    height: 1.5,
+                  ),
+                ),
+              ],
             ),
           ),
         ],
@@ -204,16 +382,30 @@ class _EmployerDashboardState extends State<EmployerDashboard> {
   Widget _buildEmptyState() {
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.symmetric(vertical: 40, horizontal: 20),
+      padding: const EdgeInsets.symmetric(vertical: 36, horizontal: 20),
       decoration: BoxDecoration(
         color: AppColors.white,
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(24),
         border: Border.all(color: AppColors.borderGrey),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.01),
+            blurRadius: 15,
+            offset: const Offset(0, 5),
+          ),
+        ],
       ),
       child: Column(
         children: [
-          Icon(Icons.inbox_outlined, size: 48, color: Colors.grey[300]),
-          const SizedBox(height: 12),
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: const BoxDecoration(
+              color: AppColors.lightGrey,
+              shape: BoxShape.circle,
+            ),
+            child: Icon(Icons.inbox_outlined, size: 36, color: Colors.grey[400]),
+          ),
+          const SizedBox(height: 16),
           const Text(
             'تاکنون استعلامی ثبت نکرده‌اید',
             style: TextStyle(
@@ -222,10 +414,10 @@ class _EmployerDashboardState extends State<EmployerDashboard> {
               fontWeight: FontWeight.bold,
             ),
           ),
-          const SizedBox(height: 6),
-          Text(
-            'هم‌اکنون استعلام جوشکاری خود را در سامانه ثبت کنید.',
-            style: TextStyle(color: Colors.grey[400], fontSize: 11),
+          const SizedBox(height: 8),
+          const Text(
+            'از منوی پایین می‌توانید با زدن دکمه «استعلام جدید»، اولین استعلام جوشکاری خود را در سامانه ثبت کنید.',
+            style: TextStyle(color: AppColors.textMuted, fontSize: 11, height: 1.6),
             textAlign: TextAlign.center,
           ),
         ],
@@ -234,32 +426,92 @@ class _EmployerDashboardState extends State<EmployerDashboard> {
   }
 
   Widget _buildRecentList(List<dynamic> list) {
-    // Show top 3 recent inquiries
     final itemsToShow = list.take(3).toList();
 
     return Column(
       children: itemsToShow.map((inquiry) {
+        final dateStr = '${inquiry.createdAt.year}/${inquiry.createdAt.month}/${inquiry.createdAt.day}';
+
         return Container(
-          margin: const EdgeInsets.only(bottom: 10),
+          margin: const EdgeInsets.only(bottom: 12),
           decoration: BoxDecoration(
             color: AppColors.white,
-            borderRadius: BorderRadius.circular(14),
+            borderRadius: BorderRadius.circular(20),
             border: Border.all(color: AppColors.borderGrey),
-          ),
-          child: ListTile(
-            contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-            title: Text(
-              inquiry.title,
-              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
-            ),
-            subtitle: Padding(
-              padding: const EdgeInsets.only(top: 6),
-              child: Text(
-                'شهر: ${inquiry.city} | تعداد اقلام: ${inquiry.items.length}',
-                style: const TextStyle(color: AppColors.textMuted, fontSize: 12),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.01),
+                blurRadius: 10,
+                offset: const Offset(0, 4),
               ),
+            ],
+          ),
+          child: Padding(
+            padding: const EdgeInsets.all(16.0),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Expanded(
+                      child: Row(
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.all(8),
+                            decoration: BoxDecoration(
+                              color: AppColors.royalBlue.withValues(alpha: 0.08),
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                            child: const Icon(Icons.description_outlined, color: AppColors.royalBlue, size: 18),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Text(
+                              inquiry.title,
+                              style: const TextStyle(
+                                fontSize: 13,
+                                fontWeight: FontWeight.bold,
+                                color: AppColors.textDark,
+                              ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    _buildStatusBadge(inquiry.status),
+                  ],
+                ),
+                const SizedBox(height: 12),
+                Row(
+                  children: [
+                    const Icon(Icons.location_on_outlined, size: 14, color: AppColors.textMuted),
+                    const SizedBox(width: 4),
+                    Text(
+                      inquiry.city,
+                      style: const TextStyle(color: AppColors.textMuted, fontSize: 11),
+                    ),
+                    const SizedBox(width: 16),
+                    const Icon(Icons.calendar_today_outlined, size: 12, color: AppColors.textMuted),
+                    const SizedBox(width: 4),
+                    Text(
+                      dateStr,
+                      style: const TextStyle(color: AppColors.textMuted, fontSize: 11),
+                    ),
+                    const SizedBox(width: 16),
+                    const Icon(Icons.layers_outlined, size: 14, color: AppColors.textMuted),
+                    const SizedBox(width: 4),
+                    Text(
+                      '${inquiry.items.length} ردیف نقشه',
+                      style: const TextStyle(color: AppColors.textMuted, fontSize: 11),
+                    ),
+                  ],
+                ),
+              ],
             ),
-            trailing: _buildStatusBadge(inquiry.status),
           ),
         );
       }).toList(),
@@ -273,31 +525,32 @@ class _EmployerDashboardState extends State<EmployerDashboard> {
 
     switch (status) {
       case 'PENDING_ESTIMATION':
-        bg = AppColors.amberOrange.withValues(alpha: 0.1);
+        bg = AppColors.amberOrange.withValues(alpha: 0.08);
         fg = AppColors.amberOrange;
         label = 'انتظار برآورد';
         break;
       case 'ESTIMATED':
-        bg = AppColors.royalBlue.withValues(alpha: 0.1);
+        bg = AppColors.royalBlue.withValues(alpha: 0.08);
         fg = AppColors.royalBlue;
         label = 'برآورد شده';
         break;
       case 'BROADCASTED':
-        bg = Colors.green.withValues(alpha: 0.1);
+        bg = Colors.green.withValues(alpha: 0.08);
         fg = Colors.green;
         label = 'انتشار یافته';
         break;
       default:
-        bg = Colors.grey.withValues(alpha: 0.1);
+        bg = Colors.grey.withValues(alpha: 0.08);
         fg = Colors.grey;
         label = 'پیش‌نویس';
     }
 
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
       decoration: BoxDecoration(
         color: bg,
-        borderRadius: BorderRadius.circular(20),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: fg.withValues(alpha: 0.2), width: 0.5),
       ),
       child: Text(
         label,

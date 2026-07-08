@@ -28,5 +28,17 @@ export class EmployerProfile {
   full_name: string | null;
 
   @Column({ type: 'varchar', length: 100, nullable: true })
+  province: string | null;
+
+  @Column({ type: 'varchar', length: 100, nullable: true })
   city: string | null;
+
+  @Column({ type: 'varchar', length: 255, nullable: true })
+  company_name: string | null;
+
+  @Column({ type: 'text', nullable: true })
+  bio: string | null;
+
+  @Column({ type: 'boolean', default: false })
+  is_setup_completed: boolean;
 }

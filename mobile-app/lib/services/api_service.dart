@@ -214,6 +214,38 @@ class ApiService {
     }
   }
 
+  /// Partially update employer profile info.
+  Future<Map<String, dynamic>> updateEmployerProfile(
+    String token, {
+    String? fullName,
+    String? province,
+    String? city,
+    String? companyName,
+    String? bio,
+    bool? isSetupCompleted,
+  }) async {
+    final bodyMap = <String, dynamic>{};
+    if (fullName != null) bodyMap['full_name'] = fullName;
+    if (province != null) bodyMap['province'] = province;
+    if (city != null) bodyMap['city'] = city;
+    if (companyName != null) bodyMap['company_name'] = companyName;
+    if (bio != null) bodyMap['bio'] = bio;
+    if (isSetupCompleted != null) bodyMap['is_setup_completed'] = isSetupCompleted;
+
+    final response = await http.patch(
+      Uri.parse('$baseUrl/profile/employer'),
+      headers: _getHeaders(token),
+      body: jsonEncode(bodyMap),
+    );
+
+    if (response.statusCode == 200) {
+      return jsonDecode(response.body) as Map<String, dynamic>;
+    } else {
+      final error = jsonDecode(response.body);
+      throw Exception(error['message'] ?? 'خطا در به‌روزرسانی پروفایل کارفرما');
+    }
+  }
+
   /// Overwrites the entire base price list for the Welder.
   Future<Map<String, dynamic>> updateWelderPrices(
     String token,

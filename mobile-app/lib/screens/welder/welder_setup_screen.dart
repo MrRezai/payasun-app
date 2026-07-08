@@ -134,7 +134,7 @@ class _WelderSetupScreenState extends State<WelderSetupScreen> {
   void _showAddPriceBottomSheet() {
     final titleController = TextEditingController();
     final priceController = TextEditingController();
-    final unitController = TextEditingController();
+    final unitController = TextEditingController(text: 'بند');
     final bottomFormKey = GlobalKey<FormState>();
 
     showModalBottomSheet(
@@ -214,16 +214,22 @@ class _WelderSetupScreenState extends State<WelderSetupScreen> {
                       ),
                       const SizedBox(width: 12),
                       Expanded(
-                        child: TextFormField(
-                          controller: unitController,
-                          decoration: InputDecoration(
-                            labelText: 'واحد محاسبه',
-                            hintText: 'مثلاً: متر / ساعت / کیلو',
-                            filled: true,
-                            fillColor: AppColors.lightGrey,
-                            border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                        child: GestureDetector(
+                          onTap: () => _showUnitPickerBottomSheet(context, unitController),
+                          child: AbsorbPointer(
+                            child: TextFormField(
+                              controller: unitController,
+                              readOnly: true,
+                              decoration: InputDecoration(
+                                labelText: 'واحد محاسبه',
+                                filled: true,
+                                fillColor: AppColors.lightGrey,
+                                border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                                suffixIcon: const Icon(Icons.arrow_drop_down, color: AppColors.textMuted),
+                                contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 15),
+                              ),
+                            ),
                           ),
-                          validator: (val) => val == null || val.trim().isEmpty ? 'لطفاً واحد را وارد کنید' : null,
                         ),
                       ),
                     ],
@@ -257,6 +263,60 @@ class _WelderSetupScreenState extends State<WelderSetupScreen> {
                   const SizedBox(height: 24),
                 ],
               ),
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  void _showUnitPickerBottomSheet(BuildContext context, TextEditingController controller) {
+    final units = ['بند', 'متر', 'عدد', 'کیلوگرم', 'ساعت', 'روز', 'تن', 'پروژه‌ای'];
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: AppColors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (context) {
+        return Directionality(
+          textDirection: TextDirection.rtl,
+          child: SafeArea(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const SizedBox(height: 16),
+                const Text(
+                  'انتخاب واحد محاسبه',
+                  style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: AppColors.burgundy),
+                ),
+                const SizedBox(height: 12),
+                const Divider(color: AppColors.borderGrey, height: 1),
+                Flexible(
+                  child: ListView.builder(
+                    shrinkWrap: true,
+                    itemCount: units.length,
+                    itemBuilder: (context, idx) {
+                      final u = units[idx];
+                      final isSelected = controller.text == u;
+                      return ListTile(
+                        title: Text(
+                          u,
+                          style: TextStyle(
+                            fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                            color: isSelected ? AppColors.royalBlue : AppColors.textDark,
+                          ),
+                        ),
+                        trailing: isSelected ? const Icon(Icons.check_circle, color: AppColors.royalBlue) : null,
+                        onTap: () {
+                          controller.text = u;
+                          Navigator.pop(context);
+                        },
+                      );
+                    },
+                  ),
+                ),
+              ],
             ),
           ),
         );

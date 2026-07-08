@@ -261,6 +261,43 @@ class _LoginPhoneScreenState extends State<LoginPhoneScreen> {
     );
   }
 
+  Widget _buildIranFlag() {
+    return Container(
+      width: 22,
+      height: 14,
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(2),
+        border: Border.all(color: Colors.black12, width: 0.5),
+      ),
+      clipBehavior: Clip.antiAlias,
+      child: Column(
+        children: [
+          Expanded(
+            child: Container(color: const Color(0xFF239F40)), // Green
+          ),
+          Expanded(
+            child: Container(
+              color: Colors.white,
+              child: Center(
+                child: Container(
+                  width: 3,
+                  height: 3,
+                  decoration: const BoxDecoration(
+                    color: Color(0xFFDA251D), // Red emblem
+                    shape: BoxShape.circle,
+                  ),
+                ),
+              ),
+            ), // White
+          ),
+          Expanded(
+            child: Container(color: const Color(0xFFDA251D)), // Red
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _buildPhoneField() {
     return TextFormField(
       controller: _phoneController,
@@ -281,7 +318,7 @@ class _LoginPhoneScreenState extends State<LoginPhoneScreen> {
         return null;
       },
       decoration: InputDecoration(
-        labelText: 'شماره موبایل (بدون صفر)',
+        labelText: 'شماره موبایل',
         hintText: 'مثال: 9123456789',
         filled: true,
         fillColor: AppColors.lightGrey,
@@ -313,6 +350,8 @@ class _LoginPhoneScreenState extends State<LoginPhoneScreen> {
                   color: AppColors.textDark,
                 ),
               ),
+              const SizedBox(width: 8),
+              _buildIranFlag(),
             ],
           ),
         ),

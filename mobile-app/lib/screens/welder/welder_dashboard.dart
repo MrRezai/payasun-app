@@ -27,13 +27,13 @@ class _WelderDashboardState extends State<WelderDashboard> {
   Widget build(BuildContext context) {
     final auth = Provider.of<AuthProvider>(context);
     final profile = auth.profileData?['profile'] as Map<String, dynamic>?;
-    final user = auth.profileData?['user'] as Map<String, dynamic>?;
+
 
     final firstName = profile?['first_name'] ?? '';
     final lastName = profile?['last_name'] ?? '';
     final fullName = '$firstName $lastName'.trim();
     final displayName = fullName.isNotEmpty ? fullName : 'جوشکار';
-    final bio = profile?['bio'] as String? ?? '';
+
     final homeCity = profile?['home_city'] as String? ?? '';
     final homeProvince = profile?['home_province'] as String? ?? '';
     final activeProvince = profile?['active_province'] as String? ?? '';
@@ -41,7 +41,7 @@ class _WelderDashboardState extends State<WelderDashboard> {
     final totalScore = double.tryParse(profile?['total_score']?.toString() ?? '0') ?? 0;
     final completedJobs = profile?['completed_jobs_count'] ?? 0;
     final isSetupCompleted = profile?['is_setup_completed'] == true;
-    final phone = user?['phone'] ?? auth.phoneNumber;
+
     final priceList = (profile?['base_price_list'] as List<dynamic>?) ?? [];
 
     return Scaffold(
@@ -68,13 +68,7 @@ class _WelderDashboardState extends State<WelderDashboard> {
             _buildCoverageCard(activeProvince, activeCities),
             const SizedBox(height: 28),
 
-            // Bio Card
-            if (bio.isNotEmpty) ...[
-              _buildSectionHeader('درباره شما'),
-              const SizedBox(height: 14),
-              _buildBioCard(bio),
-              const SizedBox(height: 28),
-            ],
+
 
             // Price List Section
             if (priceList.isNotEmpty) ...[
@@ -84,11 +78,7 @@ class _WelderDashboardState extends State<WelderDashboard> {
               const SizedBox(height: 28),
             ],
 
-            // Contact Info
-            _buildSectionHeader('اطلاعات تماس'),
-            const SizedBox(height: 14),
-            _buildContactCard(phone, homeCity, homeProvince),
-            const SizedBox(height: 28),
+
 
             // Tips
             _buildTipsCard(),
@@ -400,25 +390,7 @@ class _WelderDashboardState extends State<WelderDashboard> {
     );
   }
 
-  Widget _buildBioCard(String bio) {
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(18),
-      decoration: BoxDecoration(
-        color: AppColors.white,
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: AppColors.borderGrey),
-      ),
-      child: Text(
-        bio,
-        style: const TextStyle(
-          fontSize: 12,
-          color: AppColors.textDark,
-          height: 1.7,
-        ),
-      ),
-    );
-  }
+
 
   Widget _buildPriceListCard(List<dynamic> priceList) {
     return Container(
@@ -468,7 +440,7 @@ class _WelderDashboardState extends State<WelderDashboard> {
                     ),
                   ),
                   Text(
-                    '$priceStr ریال',
+                    '$priceStr تومان',
                     style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: AppColors.royalBlue),
                   ),
                 ],
@@ -483,72 +455,15 @@ class _WelderDashboardState extends State<WelderDashboard> {
   }
 
   String _formatPrice(dynamic price) {
-    final num = double.tryParse(price.toString()) ?? 0;
-    if (num >= 1000000) {
-      return '${(num / 1000000).toStringAsFixed(1)}M';
-    } else if (num >= 1000) {
-      return '${(num / 1000).toStringAsFixed(0)}K';
-    }
-    return num.toStringAsFixed(0);
-  }
-
-  Widget _buildContactCard(String phone, String city, String province) {
-    final locationText = [city, province].where((s) => s.isNotEmpty).join('، ');
-
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(18),
-      decoration: BoxDecoration(
-        color: AppColors.white,
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: AppColors.borderGrey),
-      ),
-      child: Column(
-        children: [
-          Row(
-            children: [
-              Container(
-                padding: const EdgeInsets.all(8),
-                decoration: BoxDecoration(
-                  color: AppColors.royalBlue.withValues(alpha: 0.08),
-                  shape: BoxShape.circle,
-                ),
-                child: const Icon(Icons.phone_outlined, color: AppColors.royalBlue, size: 18),
-              ),
-              const SizedBox(width: 12),
-              Text(
-                phone,
-                style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: AppColors.textDark, letterSpacing: 1),
-              ),
-            ],
-          ),
-          if (locationText.isNotEmpty) ...[
-            const SizedBox(height: 12),
-            Row(
-              children: [
-                Container(
-                  padding: const EdgeInsets.all(8),
-                  decoration: BoxDecoration(
-                    color: AppColors.burgundy.withValues(alpha: 0.08),
-                    shape: BoxShape.circle,
-                  ),
-                  child: const Icon(Icons.home_outlined, color: AppColors.burgundy, size: 18),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Text(
-                    'محل سکونت: $locationText',
-                    style: const TextStyle(fontSize: 12, color: AppColors.textDark),
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                ),
-              ],
-            ),
-          ],
-        ],
-      ),
+    final numValue = double.tryParse(price.toString()) ?? 0;
+    final integerPart = numValue.toInt();
+    return integerPart.toString().replaceAllMapped(
+      RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'),
+      (Match m) => '${m[1]},',
     );
   }
+
+
 
   Widget _buildTipsCard() {
     return Container(

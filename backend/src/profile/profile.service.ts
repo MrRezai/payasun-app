@@ -104,8 +104,20 @@ export class ProfileService {
     if (dto.full_name !== undefined) {
       profile.full_name = dto.full_name;
     }
+    if (dto.province !== undefined) {
+      profile.province = dto.province;
+    }
     if (dto.city !== undefined) {
       profile.city = dto.city;
+    }
+    if (dto.company_name !== undefined) {
+      profile.company_name = dto.company_name;
+    }
+    if (dto.bio !== undefined) {
+      profile.bio = dto.bio;
+    }
+    if (dto.is_setup_completed !== undefined) {
+      profile.is_setup_completed = dto.is_setup_completed;
     }
 
     const updated = await this.employerProfileRepository.save(profile);
