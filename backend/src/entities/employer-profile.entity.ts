@@ -24,8 +24,11 @@ export class EmployerProfile {
   @JoinColumn({ name: 'user_id' })
   user: User;
 
-  @Column({ type: 'varchar', length: 255, nullable: true })
-  full_name: string | null;
+  @Column({ type: 'varchar', length: 150, nullable: true })
+  first_name: string | null;
+
+  @Column({ type: 'varchar', length: 150, nullable: true })
+  last_name: string | null;
 
   @Column({ type: 'varchar', length: 100, nullable: true })
   province: string | null;

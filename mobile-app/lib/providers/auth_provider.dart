@@ -201,7 +201,8 @@ class AuthProvider with ChangeNotifier {
 
   /// Update employer profile details.
   Future<void> updateEmployerProfile({
-    String? fullName,
+    String? firstName,
+    String? lastName,
     String? province,
     String? city,
     String? companyName,
@@ -216,7 +217,8 @@ class AuthProvider with ChangeNotifier {
     try {
       await _apiService.updateEmployerProfile(
         _token!,
-        fullName: fullName,
+        firstName: firstName,
+        lastName: lastName,
         province: province,
         city: city,
         companyName: companyName,

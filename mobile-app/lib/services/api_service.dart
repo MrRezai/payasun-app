@@ -214,10 +214,10 @@ class ApiService {
     }
   }
 
-  /// Partially update employer profile info.
   Future<Map<String, dynamic>> updateEmployerProfile(
     String token, {
-    String? fullName,
+    String? firstName,
+    String? lastName,
     String? province,
     String? city,
     String? companyName,
@@ -225,7 +225,8 @@ class ApiService {
     bool? isSetupCompleted,
   }) async {
     final bodyMap = <String, dynamic>{};
-    if (fullName != null) bodyMap['full_name'] = fullName;
+    if (firstName != null) bodyMap['first_name'] = firstName;
+    if (lastName != null) bodyMap['last_name'] = lastName;
     if (province != null) bodyMap['province'] = province;
     if (city != null) bodyMap['city'] = city;
     if (companyName != null) bodyMap['company_name'] = companyName;

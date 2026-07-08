@@ -69,6 +69,10 @@ export class ProfileService {
       const welderProfile = profile as WelderProfile;
       (welderProfile as any).full_name =
         `${welderProfile.first_name || ''} ${welderProfile.last_name || ''}`.trim();
+    } else if (role === Role.EMPLOYER) {
+      const employerProfile = profile as EmployerProfile;
+      (employerProfile as any).full_name =
+        `${employerProfile.first_name || ''} ${employerProfile.last_name || ''}`.trim();
     }
 
     return { user, profile };
@@ -101,8 +105,11 @@ export class ProfileService {
       throw new NotFoundException('Employer profile not found.');
     }
 
-    if (dto.full_name !== undefined) {
-      profile.full_name = dto.full_name;
+    if (dto.first_name !== undefined) {
+      profile.first_name = dto.first_name;
+    }
+    if (dto.last_name !== undefined) {
+      profile.last_name = dto.last_name;
     }
     if (dto.province !== undefined) {
       profile.province = dto.province;
@@ -121,17 +128,15 @@ export class ProfileService {
     }
 
     const updated = await this.employerProfileRepository.save(profile);
+    (updated as any).full_name = `${updated.first_name || ''} ${updated.last_name || ''}`.trim();
 
     // Sync name to welder profile if exists
     const welderProfile = await this.welderProfileRepository.findOne({
       where: { user_id: userId },
     });
-    if (welderProfile && updated.full_name) {
-      const nameParts = updated.full_name.trim().split(/\s+/);
-      const firstName = nameParts[0] || '';
-      const lastName = nameParts.slice(1).join(' ');
-      welderProfile.first_name = firstName;
-      welderProfile.last_name = lastName;
+    if (welderProfile) {
+      if (updated.first_name !== null) welderProfile.first_name = updated.first_name;
+      if (updated.last_name !== null) welderProfile.last_name = updated.last_name;
       await this.welderProfileRepository.save(welderProfile);
     }
 
@@ -200,7 +205,8 @@ export class ProfileService {
       where: { user_id: userId },
     });
     if (employerProfile) {
-      employerProfile.full_name = fullNameVal;
+      if (updated.first_name !== null) employerProfile.first_name = updated.first_name;
+      if (updated.last_name !== null) employerProfile.last_name = updated.last_name;
       await this.employerProfileRepository.save(employerProfile);
     }
 

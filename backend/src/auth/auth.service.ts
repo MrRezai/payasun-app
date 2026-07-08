@@ -214,9 +214,8 @@ export class AuthService {
           where: { user_id: userId },
         });
         if (welderProfile && employerProfile) {
-          const firstName = welderProfile.first_name || '';
-          const lastName = welderProfile.last_name || '';
-          employerProfile.full_name = `${firstName} ${lastName}`.trim();
+          employerProfile.first_name = welderProfile.first_name;
+          employerProfile.last_name = welderProfile.last_name;
           await this.employerProfileRepository.save(employerProfile);
         }
       } else if (targetRole === Role.WELDER) {
@@ -226,12 +225,9 @@ export class AuthService {
         const welderProfile = await this.welderProfileRepository.findOne({
           where: { user_id: userId },
         });
-        if (employerProfile && welderProfile && employerProfile.full_name) {
-          const nameParts = employerProfile.full_name.trim().split(/\s+/);
-          const firstName = nameParts[0] || '';
-          const lastName = nameParts.slice(1).join(' ');
-          welderProfile.first_name = firstName;
-          welderProfile.last_name = lastName;
+        if (employerProfile && welderProfile) {
+          welderProfile.first_name = employerProfile.first_name;
+          welderProfile.last_name = employerProfile.last_name;
           await this.welderProfileRepository.save(welderProfile);
         }
       }

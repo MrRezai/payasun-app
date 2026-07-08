@@ -6,6 +6,7 @@ import '../../constants/app_colors.dart';
 import '../../providers/auth_provider.dart';
 import '../main_shell_screen.dart';
 import '../welder/welder_setup_screen.dart';
+import '../employer/employer_setup_screen.dart';
 import '../../constants/route_transitions.dart';
 class VerifyOtpScreen extends StatefulWidget {
   final String phoneNumber;
@@ -99,12 +100,20 @@ class _VerifyOtpScreenState extends State<VerifyOtpScreen> {
     final success = await auth.verifyOtpCode(code);
 
     if (success && mounted) {
-      if (auth.isWelder && !auth.isProfileComplete) {
-        Navigator.pushAndRemoveUntil(
-          context,
-          FadePageRoute(page: const WelderSetupScreen()),
-          (route) => false,
-        );
+      if (!auth.isProfileComplete) {
+        if (auth.isWelder) {
+          Navigator.pushAndRemoveUntil(
+            context,
+            FadePageRoute(page: const WelderSetupScreen()),
+            (route) => false,
+          );
+        } else {
+          Navigator.pushAndRemoveUntil(
+            context,
+            FadePageRoute(page: const EmployerSetupScreen()),
+            (route) => false,
+          );
+        }
       } else {
         Navigator.pushAndRemoveUntil(
           context,

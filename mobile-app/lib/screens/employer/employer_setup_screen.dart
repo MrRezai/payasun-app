@@ -15,7 +15,8 @@ class EmployerSetupScreen extends StatefulWidget {
 
 class _EmployerSetupScreenState extends State<EmployerSetupScreen> {
   final _formKey = GlobalKey<FormState>();
-  final _fullNameController = TextEditingController();
+  final _firstNameController = TextEditingController();
+  final _lastNameController = TextEditingController();
   final _companyNameController = TextEditingController();
   final _bioController = TextEditingController();
 
@@ -36,6 +37,20 @@ class _EmployerSetupScreenState extends State<EmployerSetupScreen> {
   void initState() {
     super.initState();
     _loadProvinces();
+
+    // Pre-populate name from auth provider
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final auth = Provider.of<AuthProvider>(context, listen: false);
+      final profile = auth.profileData?['profile'] as Map<String, dynamic>?;
+      if (profile != null) {
+        if (profile['first_name'] != null) {
+          _firstNameController.text = profile['first_name'] as String;
+        }
+        if (profile['last_name'] != null) {
+          _lastNameController.text = profile['last_name'] as String;
+        }
+      }
+    });
   }
 
   Future<void> _loadProvinces() async {
@@ -86,7 +101,8 @@ class _EmployerSetupScreenState extends State<EmployerSetupScreen> {
 
   @override
   void dispose() {
-    _fullNameController.dispose();
+    _firstNameController.dispose();
+    _lastNameController.dispose();
     _companyNameController.dispose();
     _bioController.dispose();
     super.dispose();
@@ -120,7 +136,8 @@ class _EmployerSetupScreenState extends State<EmployerSetupScreen> {
 
     try {
       await auth.updateEmployerProfile(
-        fullName: _fullNameController.text.trim(),
+        firstName: _firstNameController.text.trim(),
+        lastName: _lastNameController.text.trim(),
         companyName: _companyNameController.text.trim().isNotEmpty ? _companyNameController.text.trim() : null,
         province: _selectedProvinceName,
         city: _selectedCityName,
@@ -262,13 +279,10 @@ class _EmployerSetupScreenState extends State<EmployerSetupScreen> {
       decoration: BoxDecoration(
         color: AppColors.white,
         borderRadius: BorderRadius.circular(size * 0.22),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.05),
-            blurRadius: size * 0.22,
-            offset: Offset(0, size * 0.11),
-          ),
-        ],
+        border: Border.all(
+          color: AppColors.royalBlue.withValues(alpha: 0.18),
+          width: 1.5,
+        ),
       ),
       child: ClipRRect(
         borderRadius: BorderRadius.circular(size * 0.2),
@@ -426,44 +440,88 @@ class _EmployerSetupScreenState extends State<EmployerSetupScreen> {
                             // Personal info card
                             _buildSectionLabel('اطلاعات کاربری', isRequired: false),
                             const SizedBox(height: 12),
-                            TextFormField(
-                              controller: _fullNameController,
-                              decoration: InputDecoration(
-                                label: RichText(
-                                  text: const TextSpan(
-                                    text: 'نام و نام خانوادگی مسئول',
-                                    style: TextStyle(color: AppColors.textDark, fontFamily: 'Vazirmatn', fontSize: 13),
-                                    children: [
-                                      TextSpan(
-                                        text: ' *',
-                                        style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold, fontSize: 14),
+                            Row(
+                              children: [
+                                Expanded(
+                                  child: TextFormField(
+                                    controller: _firstNameController,
+                                    decoration: InputDecoration(
+                                      label: RichText(
+                                        text: const TextSpan(
+                                          text: 'نام',
+                                          style: TextStyle(color: AppColors.textDark, fontFamily: 'Vazirmatn', fontSize: 13),
+                                          children: [
+                                            TextSpan(
+                                              text: ' *',
+                                              style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold, fontSize: 14),
+                                            ),
+                                          ],
+                                        ),
                                       ),
-                                    ],
+                                      prefixIcon: const Icon(Icons.person_outline, size: 20),
+                                      filled: true,
+                                      fillColor: AppColors.lightGrey,
+                                      border: OutlineInputBorder(
+                                        borderRadius: BorderRadius.circular(16),
+                                        borderSide: const BorderSide(color: AppColors.borderGrey),
+                                      ),
+                                      enabledBorder: OutlineInputBorder(
+                                        borderRadius: BorderRadius.circular(16),
+                                        borderSide: const BorderSide(color: AppColors.borderGrey),
+                                      ),
+                                      focusedBorder: OutlineInputBorder(
+                                        borderRadius: BorderRadius.circular(16),
+                                        borderSide: const BorderSide(color: AppColors.royalBlue, width: 1.5),
+                                      ),
+                                    ),
+                                    validator: (val) => val == null || val.trim().isEmpty ? 'وارد کردن نام الزامی است' : null,
                                   ),
                                 ),
-                                prefixIcon: const Icon(Icons.person_outline, size: 20),
-                                filled: true,
-                                fillColor: AppColors.lightGrey,
-                                border: OutlineInputBorder(
-                                  borderRadius: BorderRadius.circular(16),
-                                  borderSide: const BorderSide(color: AppColors.borderGrey),
+                                const SizedBox(width: 12),
+                                Expanded(
+                                  child: TextFormField(
+                                    controller: _lastNameController,
+                                    decoration: InputDecoration(
+                                      label: RichText(
+                                        text: const TextSpan(
+                                          text: 'نام خانوادگی',
+                                          style: TextStyle(color: AppColors.textDark, fontFamily: 'Vazirmatn', fontSize: 13),
+                                          children: [
+                                            TextSpan(
+                                              text: ' *',
+                                              style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold, fontSize: 14),
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                      prefixIcon: const Icon(Icons.person_outline, size: 20),
+                                      filled: true,
+                                      fillColor: AppColors.lightGrey,
+                                      border: OutlineInputBorder(
+                                        borderRadius: BorderRadius.circular(16),
+                                        borderSide: const BorderSide(color: AppColors.borderGrey),
+                                      ),
+                                      enabledBorder: OutlineInputBorder(
+                                        borderRadius: BorderRadius.circular(16),
+                                        borderSide: const BorderSide(color: AppColors.borderGrey),
+                                      ),
+                                      focusedBorder: OutlineInputBorder(
+                                        borderRadius: BorderRadius.circular(16),
+                                        borderSide: const BorderSide(color: AppColors.royalBlue, width: 1.5),
+                                      ),
+                                    ),
+                                    validator: (val) => val == null || val.trim().isEmpty ? 'وارد کردن نام خانوادگی الزامی است' : null,
+                                  ),
                                 ),
-                                enabledBorder: OutlineInputBorder(
-                                  borderRadius: BorderRadius.circular(16),
-                                  borderSide: const BorderSide(color: AppColors.borderGrey),
-                                ),
-                                focusedBorder: OutlineInputBorder(
-                                  borderRadius: BorderRadius.circular(16),
-                                  borderSide: const BorderSide(color: AppColors.royalBlue, width: 1.5),
-                                ),
-                              ),
-                              validator: (val) => val == null || val.trim().isEmpty ? 'نام و نام خانوادگی مسئول الزامی است' : null,
+                              ],
                             ),
                             const SizedBox(height: 14),
                             TextFormField(
                               controller: _companyNameController,
                               decoration: InputDecoration(
-                                labelText: 'نام شرکت یا برند (اختیاری)',
+                                labelText: 'نام پروژه، برند یا شرکت (اختیاری)',
+                                helperText: 'اگر پروژه شخصی است یا شرکت ندارید، می‌توانید این فیلد را خالی بگذارید.',
+                                helperStyle: const TextStyle(fontSize: 10, color: AppColors.textMuted),
                                 prefixIcon: const Icon(Icons.business_rounded, size: 20),
                                 filled: true,
                                 fillColor: AppColors.lightGrey,
@@ -481,7 +539,7 @@ class _EmployerSetupScreenState extends State<EmployerSetupScreen> {
                                 ),
                               ),
                             ),
-                            const SizedBox(height: 14),
+                            const SizedBox(height: 18),
 
                             // Location selector card
                             _buildSectionLabel('محل فعالیت شرکت / کارگاه', isRequired: false),

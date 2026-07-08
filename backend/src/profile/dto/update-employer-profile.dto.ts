@@ -7,13 +7,22 @@ import { IsOptional, IsString, MaxLength, IsBoolean } from 'class-validator';
  */
 export class UpdateEmployerProfileDto {
   @ApiPropertyOptional({
-    description: 'Employer full name',
-    example: 'علی رضایی',
+    description: 'Employer first name',
+    example: 'علی',
   })
   @IsOptional()
   @IsString()
-  @MaxLength(255)
-  full_name?: string;
+  @MaxLength(150)
+  first_name?: string;
+
+  @ApiPropertyOptional({
+    description: 'Employer last name',
+    example: 'رضایی',
+  })
+  @IsOptional()
+  @IsString()
+  @MaxLength(150)
+  last_name?: string;
 
   @ApiPropertyOptional({
     description: 'Employer province of operation',
