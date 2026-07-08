@@ -22,6 +22,12 @@ export class User {
   @Column({ type: 'enum', enum: Role })
   role: Role;
 
+  @Column({ type: 'enum', enum: Role, nullable: true })
+  initial_role: Role;
+
+  @Column({ type: 'jsonb', default: [] })
+  roles: Role[];
+
   @Column({ type: 'boolean', default: false })
   is_authenticated: boolean;
 

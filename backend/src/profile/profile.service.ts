@@ -122,6 +122,19 @@ export class ProfileService {
 
     const updated = await this.employerProfileRepository.save(profile);
 
+    // Sync name to welder profile if exists
+    const welderProfile = await this.welderProfileRepository.findOne({
+      where: { user_id: userId },
+    });
+    if (welderProfile && updated.full_name) {
+      const nameParts = updated.full_name.trim().split(/\s+/);
+      const firstName = nameParts[0] || '';
+      const lastName = nameParts.slice(1).join(' ');
+      welderProfile.first_name = firstName;
+      welderProfile.last_name = lastName;
+      await this.welderProfileRepository.save(welderProfile);
+    }
+
     this.logger.log(`Employer profile updated for user ${userId}`);
     return updated;
   }
@@ -179,7 +192,17 @@ export class ProfileService {
     }
 
     const updated = await this.welderProfileRepository.save(profile);
-    (updated as any).full_name = `${updated.first_name || ''} ${updated.last_name || ''}`.trim();
+    const fullNameVal = `${updated.first_name || ''} ${updated.last_name || ''}`.trim();
+    (updated as any).full_name = fullNameVal;
+
+    // Sync name to employer profile if exists
+    const employerProfile = await this.employerProfileRepository.findOne({
+      where: { user_id: userId },
+    });
+    if (employerProfile) {
+      employerProfile.full_name = fullNameVal;
+      await this.employerProfileRepository.save(employerProfile);
+    }
 
     this.logger.log(`Welder profile updated for user ${userId}`);
     return updated;

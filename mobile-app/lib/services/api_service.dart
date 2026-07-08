@@ -265,6 +265,24 @@ class ApiService {
     }
   }
 
+  /// Switch the active role of the authenticated user.
+  /// Returns the new JWT access token.
+  Future<String> switchRole(String token, String targetRole) async {
+    final response = await http.post(
+      Uri.parse('$baseUrl/auth/switch-role'),
+      headers: _getHeaders(token),
+      body: jsonEncode({'role': targetRole}),
+    );
+
+    if (response.statusCode == 200) {
+      final data = jsonDecode(response.body);
+      return data['access_token'] as String;
+    } else {
+      final error = jsonDecode(response.body);
+      throw Exception(error['message'] ?? 'خطا در تغییر نقش کاربری');
+    }
+  }
+
   /// Fetch all Iranian provinces from Geo API.
   Future<List<dynamic>> fetchProvinces() async {
     final response = await http.get(

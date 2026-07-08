@@ -1,5 +1,6 @@
-import { Body, Controller, HttpCode, HttpStatus, Post } from '@nestjs/common';
+import { Body, Controller, HttpCode, HttpStatus, Post, UseGuards } from '@nestjs/common';
 import {
+  ApiBearerAuth,
   ApiBody,
   ApiOperation,
   ApiResponse,
@@ -9,6 +10,10 @@ import {
 import { AuthService } from './auth.service';
 import { SendOtpDto } from './dto/send-otp.dto';
 import { VerifyOtpDto } from './dto/verify-otp.dto';
+import { SwitchRoleDto } from './dto/switch-role.dto';
+import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
+import { CurrentUser } from '../common/decorators/current-user.decorator';
+import { AuthenticatedUser } from './strategies/jwt.strategy';
 
 @ApiTags('Authentication')
 @Controller('auth')
@@ -113,5 +118,34 @@ export class AuthController {
     @Body() dto: VerifyOtpDto,
   ): Promise<{ access_token: string }> {
     return this.authService.verifyOtp(dto.phone_number, dto.code, dto.role);
+  }
+
+  /**
+   * POST /auth/switch-role
+   *
+   * Switches the active role of the authenticated user.
+   */
+  @Post('switch-role')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth('access-token')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary: 'Switch User Role',
+    description: 'Switches the active role of the authenticated user. If they do not possess the role, it adds it and initializes the profile.',
+  })
+  @ApiBody({ type: SwitchRoleDto })
+  @ApiResponse({
+    status: 200,
+    description: 'Role switched successfully. New JWT token returned.',
+  })
+  @ApiResponse({
+    status: 401,
+    description: 'Unauthorized — missing or invalid JWT token.',
+  })
+  async switchRole(
+    @CurrentUser() user: AuthenticatedUser,
+    @Body() dto: SwitchRoleDto,
+  ): Promise<{ access_token: string }> {
+    return this.authService.switchRole(user.id, dto.role);
   }
 }

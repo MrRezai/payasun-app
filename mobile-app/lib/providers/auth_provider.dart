@@ -50,6 +50,29 @@ class AuthProvider with ChangeNotifier {
     notifyListeners();
   }
 
+  Future<void> switchUserRole(UserRole targetRole) async {
+    if (_token == null) return;
+    _isLoading = true;
+    _errorMessage = null;
+    notifyListeners();
+
+    try {
+      final roleStr = targetRole == UserRole.employer ? 'EMPLOYER' : 'WELDER';
+      final newToken = await _apiService.switchRole(_token!, roleStr);
+      _token = newToken;
+      _currentRole = targetRole;
+      _isProfileLoaded = false;
+      await loadProfile();
+      _isLoading = false;
+      notifyListeners();
+    } catch (e) {
+      _isLoading = false;
+      _errorMessage = e.toString().replaceAll('Exception: ', '');
+      notifyListeners();
+      rethrow;
+    }
+  }
+
   void setRole(UserRole role) {
     _currentRole = role;
     notifyListeners();

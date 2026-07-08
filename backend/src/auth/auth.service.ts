@@ -4,6 +4,7 @@ import {
   Injectable,
   Logger,
   UnauthorizedException,
+  NotFoundException,
 } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { InjectRepository } from '@nestjs/typeorm';
@@ -125,21 +126,35 @@ export class AuthService {
     });
 
     if (user) {
-      // Existing user — enforce role consistency
-      if (user.role !== role) {
+      // Ensure roles is initialized
+      if (!user.roles) {
+        user.roles = [user.role];
+      }
+      if (!user.initial_role) {
+        user.initial_role = user.role;
+      }
+
+      // Check if user has the selected login role
+      const hasRole = user.roles.includes(role);
+      if (!hasRole) {
         throw new BadRequestException(
-          `This phone number is already registered as ${user.role}. You cannot switch roles.`,
+          `این شماره موبایل با نقش دیگری ثبت شده است. برای تغییر نقش ابتدا با نقش قبلی وارد شده و از داخل برنامه اقدام کنید.`,
         );
       }
+
+      // Update active role to the logged-in role
+      user.role = role;
       user.is_authenticated = true;
       user = await this.userRepository.save(user);
 
-      this.logger.log(`Existing user authenticated: ${user.id} (${user.role})`);
+      this.logger.log(`Existing user authenticated: ${user.id} (active role: ${user.role})`);
     } else {
       // New user — create user + profile
       user = this.userRepository.create({
         phone_number: phoneNumber,
         role,
+        initial_role: role,
+        roles: [role],
         is_authenticated: true,
       });
       user = await this.userRepository.save(user);
@@ -151,6 +166,82 @@ export class AuthService {
     }
 
     // Sign JWT
+    const payload = {
+      sub: user.id,
+      role: user.role,
+      phone_number: user.phone_number,
+    };
+    const access_token = this.jwtService.sign(payload);
+
+    return { access_token };
+  }
+
+  /**
+   * Switches the user's active role.
+   * If the target role is not present in their roles, it adds it and creates the blank profile.
+   */
+  async switchRole(
+    userId: string,
+    targetRole: Role,
+  ): Promise<{ access_token: string }> {
+    let user = await this.userRepository.findOne({
+      where: { id: userId },
+    });
+
+    if (!user) {
+      throw new NotFoundException('User not found.');
+    }
+
+    if (!user.roles) {
+      user.roles = [user.role];
+    }
+    if (!user.initial_role) {
+      user.initial_role = user.role;
+    }
+
+    // Add target role if not present
+    if (!user.roles.includes(targetRole)) {
+      user.roles.push(targetRole);
+      // Create empty profile
+      await this.createProfileForRole(user.id, targetRole);
+
+      // Synchronize names upon initial creation
+      if (targetRole === Role.EMPLOYER) {
+        const welderProfile = await this.welderProfileRepository.findOne({
+          where: { user_id: userId },
+        });
+        const employerProfile = await this.employerProfileRepository.findOne({
+          where: { user_id: userId },
+        });
+        if (welderProfile && employerProfile) {
+          const firstName = welderProfile.first_name || '';
+          const lastName = welderProfile.last_name || '';
+          employerProfile.full_name = `${firstName} ${lastName}`.trim();
+          await this.employerProfileRepository.save(employerProfile);
+        }
+      } else if (targetRole === Role.WELDER) {
+        const employerProfile = await this.employerProfileRepository.findOne({
+          where: { user_id: userId },
+        });
+        const welderProfile = await this.welderProfileRepository.findOne({
+          where: { user_id: userId },
+        });
+        if (employerProfile && welderProfile && employerProfile.full_name) {
+          const nameParts = employerProfile.full_name.trim().split(/\s+/);
+          const firstName = nameParts[0] || '';
+          const lastName = nameParts.slice(1).join(' ');
+          welderProfile.first_name = firstName;
+          welderProfile.last_name = lastName;
+          await this.welderProfileRepository.save(welderProfile);
+        }
+      }
+    }
+
+    // Set user's active role to targetRole
+    user.role = targetRole;
+    user = await this.userRepository.save(user);
+
+    // Sign new JWT
     const payload = {
       sub: user.id,
       role: user.role,
