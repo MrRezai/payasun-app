@@ -157,7 +157,7 @@ class _EmployerDashboardState extends State<EmployerDashboard> {
                   ),
                   child: CircleAvatar(
                     radius: 28,
-                    backgroundColor: fullPicUrl != null ? Colors.transparent : AppColors.royalBlue.withValues(alpha: 0.12),
+                    backgroundColor: fullPicUrl != null ? Colors.transparent : AppColors.white,
                     backgroundImage: fullPicUrl != null ? NetworkImage(fullPicUrl) : null,
                     child: fullPicUrl != null
                         ? null

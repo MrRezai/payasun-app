@@ -12,6 +12,7 @@ import {
   UseInterceptors,
   UploadedFile,
   BadRequestException,
+  Param,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { diskStorage } from 'multer';
@@ -244,5 +245,68 @@ export class ProfileController {
   })
   async deleteProfilePicture(@CurrentUser() user: AuthenticatedUser) {
     return this.profileService.deleteProfilePicture(user.id, user.role);
+  }
+
+  /**
+   * GET /profile/skills
+   * Returns a list of all skills configured in the platform.
+   */
+  @Get('skills')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary: 'Get All Available Skills',
+    description: 'Returns the full list of welding skills available for welders to select.',
+  })
+  async getAllSkills() {
+    return this.profileService.getAllSkills();
+  }
+
+  /**
+   * POST /profile/skills
+   * Creates a new skill in the system.
+   */
+  @Post('skills')
+  @HttpCode(HttpStatus.CREATED)
+  @ApiOperation({
+    summary: 'Create a New Skill',
+    description: 'Allows adding a new welding skill to the system.',
+  })
+  async createSkill(@Body('name') name: string) {
+    if (!name || name.trim().length === 0) {
+      throw new BadRequestException('Skill name is required.');
+    }
+    return this.profileService.createSkill(name.trim());
+  }
+
+  /**
+   * PUT /profile/skills/:id
+   * Updates an existing skill name.
+   */
+  @Put('skills/:id')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary: 'Update an Existing Skill',
+    description: 'Allows renaming a welding skill.',
+  })
+  async updateSkill(@Param('id') id: number, @Body('name') name: string) {
+    if (!name || name.trim().length === 0) {
+      throw new BadRequestException('Skill name is required.');
+    }
+    return this.profileService.updateSkill(id, name.trim());
+  }
+
+  /**
+   * DELETE /profile/skills/:id
+   * Deletes a skill from the system.
+   */
+  @Delete('skills/:id')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary: 'Delete a Skill',
+    description: 'Allows deleting a welding skill by ID.',
+  })
+  async deleteSkill(@Param('id') id: number) {
+    await this.profileService.deleteSkill(id);
+    return { message: 'Skill deleted successfully.' };
   }
 }

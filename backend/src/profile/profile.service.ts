@@ -3,22 +3,24 @@ import {
   Injectable,
   Logger,
   NotFoundException,
+  OnModuleInit,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { Repository, In } from 'typeorm';
 import { join } from 'path';
 import { existsSync, unlinkSync } from 'fs';
 
 import { User } from '../entities/user.entity';
 import { EmployerProfile } from '../entities/employer-profile.entity';
 import { WelderProfile } from '../entities/welder-profile.entity';
+import { Skill } from '../entities/skill.entity';
 import { Role } from '../common/enums/role.enum';
 import { UpdateEmployerProfileDto } from './dto/update-employer-profile.dto';
 import { UpdateWelderProfileDto } from './dto/update-welder-profile.dto';
 import { UpdateWelderPricesDto } from './dto/update-welder-prices.dto';
 
 @Injectable()
-export class ProfileService {
+export class ProfileService implements OnModuleInit {
   private readonly logger = new Logger(ProfileService.name);
 
   constructor(
@@ -30,7 +32,38 @@ export class ProfileService {
 
     @InjectRepository(WelderProfile)
     private readonly welderProfileRepository: Repository<WelderProfile>,
+
+    @InjectRepository(Skill)
+    private readonly skillRepository: Repository<Skill>,
   ) {}
+
+  async onModuleInit() {
+    await this.seedSkills();
+  }
+
+  private async seedSkills() {
+    try {
+      const count = await this.skillRepository.count();
+      if (count === 0) {
+        this.logger.log('Seeding default skills...');
+        const defaultSkills = [
+          'جوشکاری لوله گاز (خانگی / صنعتی)',
+          'جوشکاری آرگون (TIG)',
+          'جوشکاری CO2 (MIG/MAG)',
+          'جوشکاری اسکلت و سازه‌های فلزی',
+          'جوشکاری درب و پنجره و نرده',
+          'برشکاری و خم‌کاری فلزات',
+        ];
+        for (const name of defaultSkills) {
+          const skill = this.skillRepository.create({ name });
+          await this.skillRepository.save(skill);
+        }
+        this.logger.log('Default skills seeded successfully!');
+      }
+    } catch (e) {
+      this.logger.error(`Failed to seed skills: ${e.message}`);
+    }
+  }
 
   /**
    * Returns the authenticated user's core data together with their
@@ -60,6 +93,7 @@ export class ProfileService {
     } else {
       profile = await this.welderProfileRepository.findOne({
         where: { user_id: userId },
+        relations: ['skills'],
       });
     }
 
@@ -167,6 +201,7 @@ export class ProfileService {
 
     const profile = await this.welderProfileRepository.findOne({
       where: { user_id: userId },
+      relations: ['skills'],
     });
 
     if (!profile) {
@@ -197,8 +232,17 @@ export class ProfileService {
     if (dto.is_setup_completed !== undefined) {
       profile.is_setup_completed = dto.is_setup_completed;
     }
+    if (dto.skill_ids !== undefined) {
+      if (dto.skill_ids && dto.skill_ids.length > 0) {
+        const skills = await this.skillRepository.findBy({ id: In(dto.skill_ids) });
+        profile.skills = skills;
+      } else {
+        profile.skills = [];
+      }
+    }
 
     const updated = await this.welderProfileRepository.save(profile);
+    updated.skills = profile.skills;
     const fullNameVal = `${updated.first_name || ''} ${updated.last_name || ''}`.trim();
     (updated as any).full_name = fullNameVal;
 
@@ -320,6 +364,35 @@ export class ProfileService {
       }
     } catch (e) {
       this.logger.error(`Error deleting physical file ${fileUrl}: ${e}`);
+    }
+  }
+
+  async getAllSkills(): Promise<Skill[]> {
+    return this.skillRepository.find({ order: { id: 'ASC' } });
+  }
+
+  async createSkill(name: string): Promise<Skill> {
+    const existing = await this.skillRepository.findOne({ where: { name } });
+    if (existing) {
+      return existing;
+    }
+    const skill = this.skillRepository.create({ name });
+    return this.skillRepository.save(skill);
+  }
+
+  async updateSkill(id: number, name: string): Promise<Skill> {
+    const skill = await this.skillRepository.findOne({ where: { id } });
+    if (!skill) {
+      throw new NotFoundException('Skill not found.');
+    }
+    skill.name = name;
+    return this.skillRepository.save(skill);
+  }
+
+  async deleteSkill(id: number): Promise<void> {
+    const result = await this.skillRepository.delete(id);
+    if (result.affected === 0) {
+      throw new NotFoundException('Skill not found.');
     }
   }
 }

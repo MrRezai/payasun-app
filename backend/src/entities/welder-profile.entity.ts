@@ -4,8 +4,11 @@ import {
   Column,
   OneToOne,
   JoinColumn,
+  ManyToMany,
+  JoinTable,
 } from 'typeorm';
 import { User } from './user.entity';
+import { Skill } from './skill.entity';
 
 /**
  * Represents a single item in the welder's pre-configured pricing list.
@@ -89,4 +92,12 @@ export class WelderProfile {
 
   @Column({ type: 'varchar', length: 50, default: 'NONE' })
   profile_picture_status: string;
+
+  @ManyToMany(() => Skill, { onDelete: 'CASCADE' })
+  @JoinTable({
+    name: 'welder_skills',
+    joinColumn: { name: 'welder_profile_id', referencedColumnName: 'id' },
+    inverseJoinColumn: { name: 'skill_id', referencedColumnName: 'id' },
+  })
+  skills: Skill[];
 }

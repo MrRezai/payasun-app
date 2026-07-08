@@ -70,10 +70,37 @@ class _WelderSetupScreenState extends State<WelderSetupScreen> {
   bool _isLoadingCities = false;
   bool _isSaving = false;
 
+  // Welder skills states
+  List<dynamic> _availableSkills = [];
+  final List<int> _selectedSkillIds = [];
+  bool _isLoadingSkills = false;
+
   @override
   void initState() {
     super.initState();
     _loadProvinces();
+    _loadSkills();
+  }
+
+  Future<void> _loadSkills() async {
+    if (mounted) setState(() => _isLoadingSkills = true);
+    try {
+      final auth = Provider.of<AuthProvider>(context, listen: false);
+      final list = await auth.getAvailableSkills();
+      if (mounted) {
+        setState(() {
+          _availableSkills = list;
+          _isLoadingSkills = false;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() => _isLoadingSkills = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('خطا در دریافت لیست مهارت‌ها: $e'), backgroundColor: Colors.red),
+        );
+      }
+    }
   }
 
   Future<void> _loadProvinces() async {
@@ -372,6 +399,16 @@ class _WelderSetupScreenState extends State<WelderSetupScreen> {
       return;
     }
 
+    if (_selectedSkillIds.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('لطفاً حداقل یک مهارت یا تخصص جوشکاری را انتخاب کنید.'),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return;
+    }
+
     if (_selectedCities.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
@@ -408,6 +445,7 @@ class _WelderSetupScreenState extends State<WelderSetupScreen> {
         activeCities: _selectedCities,
         bio: _bioController.text.trim(),
         isSetupCompleted: true,
+        skillIds: _selectedSkillIds,
       );
 
       // 1.5 Upload profile picture if picked
@@ -768,6 +806,12 @@ class _WelderSetupScreenState extends State<WelderSetupScreen> {
                             ),
                             const SizedBox(height: 25),
                             _buildProfilePhotoSetupCard(),
+                            const SizedBox(height: 25),
+
+                            // Skills selection settings
+                            _buildSectionLabel('مهارت‌ها و تخصص‌های جوشکاری شما', isRequired: true),
+                            const SizedBox(height: 10),
+                            _buildSkillsSelectorCard(),
                             const SizedBox(height: 25),
 
                             // Geography settings
@@ -1310,6 +1354,108 @@ class _WelderSetupScreenState extends State<WelderSetupScreen> {
           },
         );
       },
+    );
+  }
+
+  Widget _buildSkillsSelectorCard() {
+    if (_isLoadingSkills) {
+      return const Center(
+        child: Padding(
+          padding: EdgeInsets.all(20.0),
+          child: CircularProgressIndicator(color: AppColors.burgundy),
+        ),
+      );
+    }
+
+    if (_availableSkills.isEmpty) {
+      return Container(
+        width: double.infinity,
+        padding: const EdgeInsets.all(20),
+        decoration: BoxDecoration(
+          color: AppColors.white,
+          borderRadius: BorderRadius.circular(24),
+          border: Border.all(color: AppColors.borderGrey),
+        ),
+        child: const Center(
+          child: Text(
+            'خطا در دریافت لیست مهارت‌ها. لطفاً دوباره تلاش کنید.',
+            style: TextStyle(fontSize: 12, color: Colors.red, fontFamily: 'Vazirmatn'),
+          ),
+        ),
+      );
+    }
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: AppColors.white,
+        borderRadius: BorderRadius.circular(24),
+        border: Border.all(color: AppColors.borderGrey),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.02),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text(
+            'تخصص‌های خود را از لیست زیر انتخاب کنید (حداقل یک مورد الزامی است):',
+            style: TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.bold,
+              color: AppColors.textDark,
+              fontFamily: 'Vazirmatn',
+            ),
+          ),
+          const SizedBox(height: 16),
+          Wrap(
+            spacing: 8.0,
+            runSpacing: 8.0,
+            children: _availableSkills.map((skill) {
+              final int id = skill['id'];
+              final String name = skill['name'];
+              final isSelected = _selectedSkillIds.contains(id);
+
+              return ChoiceChip(
+                label: Text(
+                  name,
+                  style: TextStyle(
+                    fontSize: 11,
+                    fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                    color: isSelected ? AppColors.white : AppColors.textDark,
+                    fontFamily: 'Vazirmatn',
+                  ),
+                ),
+                selected: isSelected,
+                selectedColor: AppColors.burgundy,
+                backgroundColor: AppColors.lightGrey,
+                checkmarkColor: AppColors.white,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  side: BorderSide(
+                    color: isSelected ? AppColors.burgundy : AppColors.borderGrey,
+                    width: 1,
+                  ),
+                ),
+                onSelected: (selected) {
+                  setState(() {
+                    if (selected) {
+                      _selectedSkillIds.add(id);
+                    } else {
+                      _selectedSkillIds.remove(id);
+                    }
+                  });
+                },
+              );
+            }).toList(),
+          ),
+        ],
+      ),
     );
   }
 

@@ -445,7 +445,7 @@ class _EmployerProfileScreenState extends State<EmployerProfileScreen> {
                             onTap: showPhotoOptions,
                             child: CircleAvatar(
                               radius: 42,
-                              backgroundColor: avatarImage != null ? Colors.transparent : AppColors.royalBlue.withValues(alpha: 0.12),
+                              backgroundColor: avatarImage != null ? Colors.transparent : AppColors.white,
                               backgroundImage: avatarImage,
                               child: avatarImage != null
                                   ? null
@@ -494,7 +494,7 @@ class _EmployerProfileScreenState extends State<EmployerProfileScreen> {
                             ),
                           ),
                           child: const Text(
-                            'در انتظار تایید ادمین',
+                            'در انتظار تایید مدیریت',
                             style: TextStyle(
                               fontSize: 10,
                               fontWeight: FontWeight.bold,

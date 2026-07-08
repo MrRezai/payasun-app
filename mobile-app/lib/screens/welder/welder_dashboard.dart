@@ -109,7 +109,7 @@ class _WelderDashboardState extends State<WelderDashboard> {
   }
 
   Widget _buildWelderHeaderCard(String name, String city, String province, double score, bool setupDone, String initials, String? fullPicUrl, AuthProvider auth) {
-    final locationText = [city, province].where((s) => s.isNotEmpty).join('، ');
+    final locationText = [province, city].where((s) => s.isNotEmpty).join('، ');
 
     return Container(
       width: double.infinity,

@@ -180,6 +180,21 @@ class ApiService {
     }
   }
 
+  /// Fetch all available skills configured on the server
+  Future<List<dynamic>> fetchSkills(String token) async {
+    final response = await http.get(
+      Uri.parse('$baseUrl/profile/skills'),
+      headers: _getHeaders(token),
+    );
+
+    if (response.statusCode == 200) {
+      return jsonDecode(response.body) as List<dynamic>;
+    } else {
+      final error = jsonDecode(response.body);
+      throw Exception(error['message'] ?? 'خطا در دریافت لیست مهارت‌ها');
+    }
+  }
+
   /// Partially update welder profile info.
   Future<Map<String, dynamic>> updateWelderProfile(
     String token, {
@@ -191,6 +206,7 @@ class ApiService {
     List<String>? activeCities,
     String? bio,
     bool? isSetupCompleted,
+    List<int>? skillIds,
   }) async {
     final bodyMap = <String, dynamic>{};
     if (firstName != null) bodyMap['first_name'] = firstName;
@@ -201,6 +217,7 @@ class ApiService {
     if (activeCities != null) bodyMap['active_cities'] = activeCities;
     if (bio != null) bodyMap['bio'] = bio;
     if (isSetupCompleted != null) bodyMap['is_setup_completed'] = isSetupCompleted;
+    if (skillIds != null) bodyMap['skill_ids'] = skillIds;
 
     final response = await http.patch(
       Uri.parse('$baseUrl/profile/welder'),

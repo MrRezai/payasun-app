@@ -13,6 +13,7 @@ import { User } from './entities/user.entity';
 import { EmployerProfile } from './entities/employer-profile.entity';
 import { WelderProfile } from './entities/welder-profile.entity';
 import { Inquiry } from './entities/inquiry.entity';
+import { Skill } from './entities/skill.entity';
 
 /**
  * Root application module that bootstraps:
@@ -40,7 +41,7 @@ import { Inquiry } from './entities/inquiry.entity';
         username: configService.get<string>('DB_USERNAME', 'postgres'),
         password: configService.get<string>('DB_PASSWORD', 'postgres'),
         database: configService.get<string>('DB_NAME', 'joftojoor_db'),
-        entities: [User, EmployerProfile, WelderProfile, Inquiry],
+        entities: [User, EmployerProfile, WelderProfile, Inquiry, Skill],
         synchronize: true, // Auto-create tables in dev — disable in production!
         logging: ['error', 'warn'],
       }),

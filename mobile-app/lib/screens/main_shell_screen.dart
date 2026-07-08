@@ -87,6 +87,10 @@ class _MainShellScreenState extends State<MainShellScreen> {
   }
 
   Widget _buildRoleSwitcher(AuthProvider auth) {
+    final targetText = auth.isEmployer ? 'پنل جوشکار' : 'پنل کارفرما';
+    final targetIcon = auth.isEmployer ? Icons.construction : Icons.business_center;
+    final targetColor = auth.isEmployer ? AppColors.burgundy : AppColors.royalBlue;
+
     return Container(
       decoration: BoxDecoration(
         color: AppColors.lightGrey,
@@ -129,13 +133,13 @@ class _MainShellScreenState extends State<MainShellScreen> {
               mainAxisSize: MainAxisSize.min,
               children: [
                 Icon(
-                  auth.isEmployer ? Icons.business_center : Icons.construction,
+                  targetIcon,
                   size: 16,
-                  color: AppColors.royalBlue,
+                  color: targetColor,
                 ),
                 const SizedBox(width: 8),
                 Text(
-                  auth.isEmployer ? 'پنل کارفرما' : 'پنل جوشکار',
+                  targetText,
                   style: const TextStyle(
                     color: AppColors.textDark,
                     fontWeight: FontWeight.bold,

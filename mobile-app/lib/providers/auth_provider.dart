@@ -234,6 +234,12 @@ class AuthProvider with ChangeNotifier {
     }
   }
 
+  /// Fetch all configured skills from the backend.
+  Future<List<dynamic>> getAvailableSkills() async {
+    if (_token == null) return [];
+    return _apiService.fetchSkills(_token!);
+  }
+
   /// Update welder profile details.
   Future<void> updateWelderProfile({
     String? firstName,
@@ -244,6 +250,7 @@ class AuthProvider with ChangeNotifier {
     List<String>? activeCities,
     String? bio,
     bool? isSetupCompleted,
+    List<int>? skillIds,
   }) async {
     if (_token == null) return;
     _isLoading = true;
@@ -261,8 +268,9 @@ class AuthProvider with ChangeNotifier {
         activeCities: activeCities,
         bio: bio,
         isSetupCompleted: isSetupCompleted,
+        skillIds: skillIds,
       );
-      // Reload profile
+      // Reload profile to refresh local cache
       await loadProfile();
       _isLoading = false;
       notifyListeners();

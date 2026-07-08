@@ -1,5 +1,5 @@
 import { ApiPropertyOptional } from '@nestjs/swagger';
-import { IsArray, IsOptional, IsString, MaxLength, IsBoolean } from 'class-validator';
+import { IsArray, IsOptional, IsString, MaxLength, IsBoolean, IsInt } from 'class-validator';
 
 /**
  * DTO for partially updating a welder's profile.
@@ -76,4 +76,14 @@ export class UpdateWelderProfileDto {
   @IsOptional()
   @IsBoolean()
   is_setup_completed?: boolean;
+
+  @ApiPropertyOptional({
+    description: 'Array of skill IDs selected by the welder',
+    example: [1, 2, 3],
+    type: [Number],
+  })
+  @IsOptional()
+  @IsArray()
+  @IsInt({ each: true })
+  skill_ids?: number[];
 }
