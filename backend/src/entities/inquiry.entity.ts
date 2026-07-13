@@ -5,6 +5,7 @@ export enum InquiryStatus {
   PENDING_ESTIMATION = 'PENDING_ESTIMATION',
   ESTIMATED = 'ESTIMATED',
   BROADCASTED = 'BROADCASTED',
+  REJECTED = 'REJECTED',
 }
 
 export interface InquiryItem {
@@ -46,6 +47,9 @@ export class Inquiry {
 
   @Column({ type: 'varchar', length: 500, nullable: true })
   blueprint_url: string | null;
+
+  @Column({ type: 'text', nullable: true })
+  rejection_reason: string | null;
 
   /**
    * JSONB array of estimation items.

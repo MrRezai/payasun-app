@@ -118,6 +118,38 @@ class ApiService {
     }
   }
 
+  /// Update/Resubmit a rejected or draft inquiry.
+  Future<Inquiry> updateInquiry({
+    required String token,
+    required String inquiryId,
+    required String title,
+    required String description,
+    required String city,
+    required String province,
+    required List<InquiryItem> items,
+  }) async {
+    final body = jsonEncode({
+      'title': title,
+      'description': description,
+      'city': city,
+      'province': province,
+      'items': items.map((e) => e.toJson()).toList(),
+    });
+
+    final response = await http.patch(
+      Uri.parse('$baseUrl/inquiry/$inquiryId'),
+      headers: _getHeaders(token),
+      body: body,
+    );
+
+    if (response.statusCode == 200) {
+      return Inquiry.fromJson(jsonDecode(response.body));
+    } else {
+      final error = jsonDecode(response.body);
+      throw Exception(error['message'] ?? 'خطا در ویرایش استعلام');
+    }
+  }
+
   /// Upload blueprint file.
   Future<Inquiry> uploadBlueprint({
     required String token,
@@ -394,6 +426,54 @@ class ApiService {
     } else {
       final error = jsonDecode(response.body);
       throw Exception(error['message'] ?? 'خطا در حذف عکس پروفایل');
+    }
+  }
+
+  /// Submit a price offer for an inquiry.
+  Future<void> submitOffer({
+    required String token,
+    required String inquiryId,
+    required double totalPrice,
+    required List<Map<String, dynamic>> itemsPrices,
+    required bool scaffoldChecked,
+    required bool powerChecked,
+    required bool rodChecked,
+    required bool deliveryChecked,
+  }) async {
+    final response = await http.post(
+      Uri.parse('$baseUrl/inquiry/$inquiryId/offer'),
+      headers: _getHeaders(token),
+      body: jsonEncode({
+        'total_price': totalPrice,
+        'items_prices': itemsPrices,
+        'scaffold_checked': scaffoldChecked,
+        'power_checked': powerChecked,
+        'rod_checked': rodChecked,
+        'delivery_checked': deliveryChecked,
+      }),
+    );
+
+    if (response.statusCode != 200 && response.statusCode != 201) {
+      final error = jsonDecode(response.body);
+      throw Exception(error['message'] ?? 'خطا در ثبت پیشنهاد قیمت');
+    }
+  }
+
+  /// Fetch all offers submitted for a specific inquiry.
+  Future<List<dynamic>> fetchOffers({
+    required String token,
+    required String inquiryId,
+  }) async {
+    final response = await http.get(
+      Uri.parse('$baseUrl/inquiry/$inquiryId/offers'),
+      headers: _getHeaders(token),
+    );
+
+    if (response.statusCode == 200) {
+      return jsonDecode(response.body) as List<dynamic>;
+    } else {
+      final error = jsonDecode(response.body);
+      throw Exception(error['message'] ?? 'خطا در دریافت لیست پیشنهادها');
     }
   }
 }

@@ -278,7 +278,7 @@ class _InquiryListScreenState extends State<InquiryListScreen> with SingleTicker
       case 'PENDING_ESTIMATION':
         bg = AppColors.amberOrange.withValues(alpha: 0.1);
         fg = AppColors.amberOrange;
-        label = 'در انتظار برآورد';
+        label = 'در انتظار تایید مدیریت';
         break;
       case 'ESTIMATED':
         bg = AppColors.royalBlue.withValues(alpha: 0.1);
@@ -289,6 +289,11 @@ class _InquiryListScreenState extends State<InquiryListScreen> with SingleTicker
         bg = Colors.green.withValues(alpha: 0.1);
         fg = Colors.green;
         label = 'انتشار یافته';
+        break;
+      case 'REJECTED':
+        bg = Colors.red.withValues(alpha: 0.1);
+        fg = Colors.red;
+        label = 'رد شده توسط مدیریت';
         break;
       default:
         bg = Colors.grey.withValues(alpha: 0.1);
@@ -406,7 +411,7 @@ class _InquiryListScreenState extends State<InquiryListScreen> with SingleTicker
                       ),
                       const SizedBox(height: 12),
                       const Text(
-                        'لیست اقلام زیر توسط کارشناسان برآورد شده است. در صورت تأیید، استعلام شما برای جوشکاران منتشر خواهد شد:',
+                        'لیست اقلام زیر توسط کارشناسان تایید شده است. در صورت تأیید، استعلام شما برای جوشکاران منتشر خواهد شد:',
                         style: TextStyle(fontSize: 12, color: AppColors.textMuted, height: 1.5),
                       ),
                       const SizedBox(height: 16),

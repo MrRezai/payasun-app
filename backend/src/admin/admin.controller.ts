@@ -48,6 +48,11 @@ export class AdminController {
     return this.inquiryService.estimate(id, { items });
   }
 
+  @Patch('inquiry/:id/reject')
+  async rejectInquiry(@Param('id') id: string, @Body('reason') reason: string) {
+    return this.inquiryService.reject(id, reason);
+  }
+
   @Get('skills')
   async getSkills() {
     return this.profileService.getAllSkills();

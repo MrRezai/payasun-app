@@ -2,7 +2,7 @@ export type UserRole = 'EMPLOYER' | 'WELDER';
 
 export type ProfilePictureStatus = 'PENDING' | 'APPROVED' | 'REJECTED' | 'NONE';
 
-export type InquiryStatus = 'PENDING_ESTIMATION' | 'ESTIMATED' | 'BROADCASTED' | 'CLOSED' | 'EXPIRED';
+export type InquiryStatus = 'PENDING_ESTIMATION' | 'ESTIMATED' | 'BROADCASTED' | 'CLOSED' | 'EXPIRED' | 'REJECTED';
 
 export interface Skill {
   id: number;
@@ -62,6 +62,7 @@ export interface Inquiry {
   has_blueprint: boolean;
   blueprint_url: string | null;
   status: InquiryStatus;
+  rejection_reason?: string | null;
   items: InquiryItem[];
   created_at: string;
   updated_at: string;

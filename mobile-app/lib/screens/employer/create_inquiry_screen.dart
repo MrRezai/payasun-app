@@ -4,9 +4,11 @@ import '../../constants/app_colors.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/inquiry_provider.dart';
 import '../../services/api_service.dart';
+import '../../models/inquiry.dart';
 
 class CreateInquiryScreen extends StatefulWidget {
-  const CreateInquiryScreen({super.key});
+  final Inquiry? inquiryToEdit;
+  const CreateInquiryScreen({super.key, this.inquiryToEdit});
 
   @override
   State<CreateInquiryScreen> createState() => _CreateInquiryScreenState();
@@ -37,6 +39,21 @@ class _CreateInquiryScreenState extends State<CreateInquiryScreen> {
   void initState() {
     super.initState();
     _loadProvinces();
+    if (widget.inquiryToEdit != null) {
+      _titleController.text = widget.inquiryToEdit!.title;
+      _descController.text = widget.inquiryToEdit!.description;
+      _selectedProvinceName = widget.inquiryToEdit!.province;
+      _selectedCityName = widget.inquiryToEdit!.city;
+
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        final provider = Provider.of<InquiryProvider>(context, listen: false);
+        provider.setHasBlueprint(widget.inquiryToEdit!.hasBlueprint);
+        provider.clearManualItems();
+        for (var item in widget.inquiryToEdit!.items) {
+          provider.addManualItem(item.title, item.unit, item.quantity);
+        }
+      });
+    }
   }
 
   Future<void> _loadProvinces() async {
@@ -47,6 +64,17 @@ class _CreateInquiryScreenState extends State<CreateInquiryScreen> {
         setState(() {
           _provinces = list;
           _isLoadingProvinces = false;
+
+          if (widget.inquiryToEdit != null && _selectedProvinceName != null) {
+            final matchingProv = _provinces.firstWhere(
+              (p) => p['name'] == _selectedProvinceName,
+              orElse: () => null,
+            );
+            if (matchingProv != null) {
+              _selectedProvinceId = matchingProv['id'] as int;
+              _loadCitiesForEditing(_selectedProvinceId!);
+            }
+          }
         });
       }
     } catch (e) {
@@ -65,6 +93,31 @@ class _CreateInquiryScreenState extends State<CreateInquiryScreen> {
         _isLoadingCities = true;
         _citiesOfSelectedProvince = [];
         _selectedCityName = null;
+      });
+    }
+    try {
+      final list = await _apiService.fetchCities(provinceId);
+      if (mounted) {
+        setState(() {
+          _citiesOfSelectedProvince = list;
+          _isLoadingCities = false;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() => _isLoadingCities = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('خطا در دریافت لیست شهرها: $e'), backgroundColor: Colors.red),
+        );
+      }
+    }
+  }
+
+  Future<void> _loadCitiesForEditing(int provinceId) async {
+    if (mounted) {
+      setState(() {
+        _isLoadingCities = true;
+        _citiesOfSelectedProvince = [];
       });
     }
     try {
@@ -121,13 +174,22 @@ class _CreateInquiryScreenState extends State<CreateInquiryScreen> {
       return;
     }
 
-    final result = await provider.submitInquiry(
-      token: auth.token,
-      title: _titleController.text,
-      description: _descController.text,
-      city: _selectedCityName!,
-      province: _selectedProvinceName!,
-    );
+    final result = widget.inquiryToEdit != null
+        ? await provider.updateInquiry(
+            token: auth.token,
+            inquiryId: widget.inquiryToEdit!.id,
+            title: _titleController.text,
+            description: _descController.text,
+            city: _selectedCityName!,
+            province: _selectedProvinceName!,
+          )
+        : await provider.submitInquiry(
+            token: auth.token,
+            title: _titleController.text,
+            description: _descController.text,
+            city: _selectedCityName!,
+            province: _selectedProvinceName!,
+          );
 
     if (result != null && mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -218,7 +280,7 @@ class _CreateInquiryScreenState extends State<CreateInquiryScreen> {
                     const SizedBox(height: 18),
                     const Text(
                       'انتخاب استان پروژه',
-                      style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: AppColors.royalBlue),
+                      style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: AppColors.burgundy),
                     ),
                     const SizedBox(height: 12),
 
@@ -336,7 +398,7 @@ class _CreateInquiryScreenState extends State<CreateInquiryScreen> {
                     const SizedBox(height: 18),
                     Text(
                       'انتخاب شهر ($_selectedProvinceName)',
-                      style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: AppColors.royalBlue),
+                      style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: AppColors.burgundy),
                     ),
                     const SizedBox(height: 12),
 
@@ -422,7 +484,7 @@ class _CreateInquiryScreenState extends State<CreateInquiryScreen> {
                 const SizedBox(height: 16),
                 const Text(
                   'انتخاب واحد محاسبه',
-                  style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: AppColors.royalBlue),
+                  style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: AppColors.burgundy),
                 ),
                 const SizedBox(height: 12),
                 const Divider(color: AppColors.borderGrey, height: 1),
@@ -464,28 +526,30 @@ class _CreateInquiryScreenState extends State<CreateInquiryScreen> {
   Widget build(BuildContext context) {
     final provider = Provider.of<InquiryProvider>(context);
 
-    return Scaffold(
-      backgroundColor: AppColors.lightGrey,
-      appBar: AppBar(
-        backgroundColor: AppColors.white,
-        elevation: 0,
-        scrolledUnderElevation: 0,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios_new, color: AppColors.textDark, size: 18),
-          onPressed: () => Navigator.pop(context),
-          tooltip: 'بازگشت',
-        ),
-        title: const Text(
-          'ثبت استعلام جدید',
-          style: TextStyle(
-            fontWeight: FontWeight.bold,
-            fontSize: 16,
-            color: AppColors.textDark,
-            fontFamily: 'Vazirmatn',
+    return Directionality(
+      textDirection: TextDirection.rtl,
+      child: Scaffold(
+        backgroundColor: AppColors.lightGrey,
+        appBar: AppBar(
+          backgroundColor: AppColors.white,
+          elevation: 0,
+          scrolledUnderElevation: 0,
+          leading: IconButton(
+            icon: const Icon(Icons.arrow_back_ios_new, color: AppColors.textDark, size: 18),
+            onPressed: () => Navigator.pop(context),
+            tooltip: 'بازگشت',
           ),
+          title: const Text(
+            'ثبت استعلام جدید',
+            style: TextStyle(
+              fontWeight: FontWeight.bold,
+              fontSize: 16,
+              color: AppColors.burgundy,
+              fontFamily: 'Vazirmatn',
+            ),
+          ),
+          centerTitle: true,
         ),
-        centerTitle: true,
-      ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(20.0),
         child: Form(
@@ -517,7 +581,12 @@ class _CreateInquiryScreenState extends State<CreateInquiryScreen> {
                         decoration: BoxDecoration(
                           color: AppColors.white,
                           borderRadius: BorderRadius.circular(16),
-                          border: Border.all(color: AppColors.borderGrey),
+                          border: Border.all(
+                            color: _selectedProvinceName != null
+                                ? AppColors.royalBlue.withValues(alpha: 0.5)
+                                : AppColors.borderGrey,
+                            width: _selectedProvinceName != null ? 1.5 : 1,
+                          ),
                         ),
                         child: Row(
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -547,7 +616,12 @@ class _CreateInquiryScreenState extends State<CreateInquiryScreen> {
                         decoration: BoxDecoration(
                           color: _selectedProvinceId == null ? AppColors.lightGrey : AppColors.white,
                           borderRadius: BorderRadius.circular(16),
-                          border: Border.all(color: AppColors.borderGrey),
+                          border: Border.all(
+                            color: _selectedCityName != null
+                                ? AppColors.royalBlue.withValues(alpha: 0.5)
+                                : AppColors.borderGrey,
+                            width: _selectedCityName != null ? 1.5 : 1,
+                          ),
                         ),
                         child: Row(
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -609,7 +683,7 @@ class _CreateInquiryScreenState extends State<CreateInquiryScreen> {
             width: double.infinity,
             height: 50,
             child: ElevatedButton(
-              onPressed: provider.isLoading ? null : _submit,
+              onPressed: provider.isLoading ? null : _showReviewBottomSheet,
               style: ElevatedButton.styleFrom(
                 backgroundColor: AppColors.royalBlue,
                 foregroundColor: AppColors.white,
@@ -636,6 +710,7 @@ class _CreateInquiryScreenState extends State<CreateInquiryScreen> {
           ),
         ),
       ),
+      ),
     );
   }
 
@@ -656,7 +731,7 @@ class _CreateInquiryScreenState extends State<CreateInquiryScreen> {
           style: const TextStyle(
             fontSize: 17,
             fontWeight: FontWeight.bold,
-            color: AppColors.burgundy,
+            color: AppColors.royalBlue,
           ),
         ),
       ],
@@ -720,6 +795,7 @@ class _CreateInquiryScreenState extends State<CreateInquiryScreen> {
             provider.setHasBlueprint(val);
           },
           activeThumbColor: AppColors.royalBlue,
+          activeTrackColor: AppColors.royalBlue.withValues(alpha: 0.3),
         ),
       ),
     );
@@ -867,7 +943,7 @@ class _CreateInquiryScreenState extends State<CreateInquiryScreen> {
                     _itemQtyController.clear();
                   },
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: AppColors.amberOrange,
+                    backgroundColor: AppColors.burgundy,
                     foregroundColor: AppColors.white,
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(12),
@@ -884,9 +960,30 @@ class _CreateInquiryScreenState extends State<CreateInquiryScreen> {
         const SizedBox(height: 20),
         
         if (provider.manualItems.isNotEmpty) ...[
-          const Text(
-            'اقلام اضافه شده:',
-            style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+          Row(
+            children: [
+              const Text(
+                'اقلام اضافه شده:',
+                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+              ),
+              const SizedBox(width: 8),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                decoration: BoxDecoration(
+                  color: AppColors.amberOrange,
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: Text(
+                  '${provider.manualItems.length}',
+                  style: const TextStyle(
+                    color: AppColors.white,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 11,
+                    fontFamily: 'Vazirmatn',
+                  ),
+                ),
+              ),
+            ],
           ),
           const SizedBox(height: 8),
           ListView.builder(
@@ -926,6 +1023,332 @@ class _CreateInquiryScreenState extends State<CreateInquiryScreen> {
               ),
             ),
           ),
+      ],
+    );
+  }
+
+  void _showReviewBottomSheet() {
+    if (!_formKey.currentState!.validate()) return;
+
+    if (_selectedCityName == null || _selectedCityName!.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('لطفاً شهر محل پروژه را انتخاب کنید.'),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return;
+    }
+
+    if (_selectedProvinceName == null || _selectedProvinceName!.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('لطفاً استان محل پروژه را انتخاب کنید.'),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return;
+    }
+
+    final provider = Provider.of<InquiryProvider>(context, listen: false);
+    if (provider.hasBlueprint) {
+      if (provider.selectedFileName == null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('لطفاً ابتدا فایل پلان را انتخاب کنید.'),
+            backgroundColor: Colors.red,
+          ),
+        );
+        return;
+      }
+    } else {
+      if (provider.manualItems.isEmpty) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('لطفاً حداقل یک قلم کالا یا خدمات وارد کنید.'),
+            backgroundColor: Colors.red,
+          ),
+        );
+        return;
+      }
+    }
+
+    _showInquiryPreviewBottomSheet();
+  }
+
+  void _showInquiryPreviewBottomSheet() {
+    bool termsAccepted = false;
+    final provider = Provider.of<InquiryProvider>(context, listen: false);
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: AppColors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (context) {
+        return StatefulBuilder(
+          builder: (context, setSheetState) {
+            return Directionality(
+              textDirection: TextDirection.rtl,
+              child: Padding(
+                padding: EdgeInsets.only(
+                  bottom: MediaQuery.of(context).viewInsets.bottom,
+                  top: 20,
+                  left: 20,
+                  right: 20,
+                ),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Center(
+                      child: Container(
+                        width: 40,
+                        height: 4,
+                        decoration: BoxDecoration(
+                          color: AppColors.borderGrey,
+                          borderRadius: BorderRadius.circular(2),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 18),
+                    const Row(
+                      children: [
+                        Icon(Icons.assignment_outlined, color: AppColors.royalBlue, size: 24),
+                        SizedBox(width: 8),
+                        Text(
+                          'پیش‌نویس و تایید استعلام',
+                          style: TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                            color: AppColors.burgundy,
+                            fontFamily: 'Vazirmatn',
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 16),
+                    const Text(
+                      'لطفاً اطلاعات ثبت شده را بررسی و تایید کنید:',
+                      style: TextStyle(
+                        fontSize: 13,
+                        color: AppColors.textMuted,
+                        fontFamily: 'Vazirmatn',
+                      ),
+                    ),
+                    const SizedBox(height: 14),
+
+                    Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.all(16),
+                      decoration: BoxDecoration(
+                        color: AppColors.lightGrey,
+                        borderRadius: BorderRadius.circular(16),
+                        border: Border.all(color: AppColors.borderGrey),
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          _buildPreviewItem(
+                            label: 'عنوان استعلام:',
+                            value: _titleController.text,
+                            icon: Icons.title,
+                          ),
+                          const Divider(height: 20, color: AppColors.borderGrey),
+                          _buildPreviewItem(
+                            label: 'محل پروژه:',
+                            value: '$_selectedProvinceName - $_selectedCityName',
+                            icon: Icons.location_on_outlined,
+                          ),
+                          const Divider(height: 20, color: AppColors.borderGrey),
+                          _buildPreviewItem(
+                            label: 'توضیحات پروژه:',
+                            value: _descController.text,
+                            icon: Icons.description_outlined,
+                          ),
+                          const Divider(height: 20, color: AppColors.borderGrey),
+                          if (provider.hasBlueprint)
+                            _buildPreviewItem(
+                              label: 'نقشه فنی آپلود شده:',
+                              value: provider.selectedFileName ?? '',
+                              icon: Icons.map_outlined,
+                            )
+                          else
+                            Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Row(
+                                  children: [
+                                    const Icon(Icons.format_list_bulleted, size: 18, color: AppColors.royalBlue),
+                                    const SizedBox(width: 6),
+                                    Text(
+                                      'اقلام ثبت شده (${provider.manualItems.length} قلم):',
+                                      style: const TextStyle(
+                                        fontWeight: FontWeight.bold,
+                                        fontSize: 13,
+                                        color: AppColors.textDark,
+                                        fontFamily: 'Vazirmatn',
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                                const SizedBox(height: 8),
+                                Container(
+                                  constraints: const BoxConstraints(maxHeight: 120),
+                                  child: ListView.builder(
+                                    shrinkWrap: true,
+                                    itemCount: provider.manualItems.length,
+                                    itemBuilder: (context, idx) {
+                                      final item = provider.manualItems[idx];
+                                      return Padding(
+                                        padding: const EdgeInsets.symmetric(vertical: 2),
+                                        child: Text(
+                                          '• ${item.title} - ${item.quantity} ${item.unit}',
+                                          style: const TextStyle(
+                                            fontSize: 12,
+                                            color: AppColors.textDark,
+                                            fontFamily: 'Vazirmatn',
+                                          ),
+                                        ),
+                                      );
+                                    },
+                                  ),
+                                ),
+                              ],
+                            ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 20),
+
+                    Row(
+                      children: [
+                        Checkbox(
+                          value: termsAccepted,
+                          activeColor: AppColors.royalBlue,
+                          onChanged: (val) {
+                            setSheetState(() {
+                              termsAccepted = val ?? false;
+                            });
+                          },
+                        ),
+                        const Expanded(
+                          child: Text(
+                            'قوانین و مقررات ثبت استعلام در جفت‌وجور را می‌پذیرم.',
+                            style: TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.bold,
+                              color: AppColors.textDark,
+                              fontFamily: 'Vazirmatn',
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 20),
+
+                    Row(
+                      children: [
+                        Expanded(
+                          child: ElevatedButton(
+                            onPressed: termsAccepted
+                                ? () {
+                                    Navigator.pop(context);
+                                    _submit();
+                                  }
+                                : null,
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: AppColors.royalBlue,
+                              foregroundColor: AppColors.white,
+                              disabledBackgroundColor: AppColors.borderGrey,
+                              disabledForegroundColor: AppColors.textMuted,
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(14),
+                              ),
+                              padding: const EdgeInsets.symmetric(vertical: 14),
+                              elevation: 0,
+                            ),
+                            child: const Text(
+                              'تایید نهایی و ارسال',
+                              style: TextStyle(
+                                fontSize: 14,
+                                fontWeight: FontWeight.bold,
+                                fontFamily: 'Vazirmatn',
+                              ),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: OutlinedButton(
+                            onPressed: () => Navigator.pop(context),
+                            style: OutlinedButton.styleFrom(
+                              side: const BorderSide(color: AppColors.borderGrey),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(14),
+                              ),
+                              padding: const EdgeInsets.symmetric(vertical: 14),
+                            ),
+                            child: const Text(
+                              'انصراف و ویرایش',
+                              style: TextStyle(
+                                fontSize: 14,
+                                color: AppColors.textDark,
+                                fontFamily: 'Vazirmatn',
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 24),
+                  ],
+                ),
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+
+  Widget _buildPreviewItem({
+    required String label,
+    required String value,
+    required IconData icon,
+  }) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Icon(icon, size: 18, color: AppColors.royalBlue),
+        const SizedBox(width: 8),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                label,
+                style: const TextStyle(
+                  fontSize: 12,
+                  color: AppColors.textMuted,
+                  fontWeight: FontWeight.bold,
+                  fontFamily: 'Vazirmatn',
+                ),
+              ),
+              const SizedBox(height: 2),
+              Text(
+                value,
+                style: const TextStyle(
+                  fontSize: 13,
+                  color: AppColors.textDark,
+                  fontFamily: 'Vazirmatn',
+                ),
+              ),
+            ],
+          ),
+        ),
       ],
     );
   }

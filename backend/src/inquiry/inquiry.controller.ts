@@ -33,6 +33,7 @@ import { InquiryService } from './inquiry.service';
 import { CreateInquiryDto } from './dto/create-inquiry.dto';
 import { EstimateInquiryDto } from './dto/estimate-inquiry.dto';
 import { ConfirmInquiryDto } from './dto/confirm-inquiry.dto';
+import { SubmitOfferDto } from './dto/submit-offer.dto';
 import { Inquiry } from '../entities/inquiry.entity';
 
 // Ensure uploads directory exists
@@ -66,6 +67,24 @@ export class InquiryController {
     @Body() dto: CreateInquiryDto,
   ): Promise<Inquiry> {
     return this.inquiryService.create(user.id, dto);
+  }
+
+  /**
+   * PATCH /inquiry/:id
+   * Update and resubmit inquiry (Employer only)
+   */
+  @Patch(':id')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary: 'ویرایش و ارسال مجدد استعلام',
+    description: 'استعلام را ویرایش کرده و در صورت رد شدن، مجدداً برای بررسی ادمین ارسال می‌کند.',
+  })
+  async update(
+    @Param('id') id: string,
+    @CurrentUser() user: AuthenticatedUser,
+    @Body() dto: CreateInquiryDto,
+  ): Promise<Inquiry> {
+    return this.inquiryService.update(id, user.id, dto);
   }
 
   /**
@@ -212,5 +231,38 @@ export class InquiryController {
   @ApiResponse({ status: 404, description: 'استعلام یافت نشد.' })
   async getOneInquiry(@Param('id') id: string): Promise<Inquiry> {
     return this.inquiryService.findOne(id);
+  }
+
+  /**
+   * POST /inquiry/:id/offer
+   * Submit an offer on inquiry (Welder only)
+   */
+  @Post(':id/offer')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary: 'ثبت پیشنهاد قیمت توسط جوشکار روی استعلام',
+    description: 'پیشنهاد قیمت جوشکار برای تک‌تک اقلام به همراه چک‌باکس تعهدات را ذخیره می‌کند.',
+  })
+  @ApiBody({ type: SubmitOfferDto })
+  async submitOffer(
+    @Param('id') id: string,
+    @CurrentUser() user: AuthenticatedUser,
+    @Body() dto: SubmitOfferDto,
+  ): Promise<any> {
+    return this.inquiryService.submitOffer(id, user.id, dto);
+  }
+
+  /**
+   * GET /inquiry/:id/offers
+   * Get all offers submitted for an inquiry (Employer/Owner only)
+   */
+  @Get(':id/offers')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary: 'دریافت پیشنهادهای قیمت ثبت شده برای یک استعلام',
+    description: 'لیست تمام پیشنهادهای قیمت جوشکاران را باز می‌گرداند (برای کارفرمای مالک پروژه).',
+  })
+  async getOffers(@Param('id') id: string): Promise<any[]> {
+    return this.inquiryService.getOffers(id);
   }
 }

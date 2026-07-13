@@ -14,6 +14,8 @@ class AvailableJobsScreen extends StatefulWidget {
 }
 
 class _AvailableJobsScreenState extends State<AvailableJobsScreen> {
+  String? _selectedCityFilter;
+
   @override
   void initState() {
     super.initState();
@@ -29,6 +31,10 @@ class _AvailableJobsScreenState extends State<AvailableJobsScreen> {
     final allInquiries = provider.allInquiries;
     final availableJobs = allInquiries.where((e) => e.status == 'BROADCASTED').toList();
 
+    final filteredJobs = _selectedCityFilter == null
+        ? availableJobs
+        : availableJobs.where((job) => job.city == _selectedCityFilter).toList();
+
     return Scaffold(
       backgroundColor: AppColors.lightGrey,
       appBar: AppBar(
@@ -40,6 +46,7 @@ class _AvailableJobsScreenState extends State<AvailableJobsScreen> {
             color: AppColors.royalBlue,
             fontSize: 16,
             fontWeight: FontWeight.bold,
+            fontFamily: 'Vazirmatn',
           ),
         ),
         centerTitle: true,
@@ -48,22 +55,107 @@ class _AvailableJobsScreenState extends State<AvailableJobsScreen> {
           child: Container(color: AppColors.borderGrey, height: 1),
         ),
       ),
-      body: RefreshIndicator(
-        onRefresh: () async {
-          final token = Provider.of<AuthProvider>(context, listen: false).token;
-          await provider.loadAllInquiries(token);
-        },
-        child: provider.isLoading
-            ? const Center(
-                child: CircularProgressIndicator(color: AppColors.royalBlue),
-              )
-            : _buildJobsList(availableJobs),
+      body: Column(
+        children: [
+          _buildFilterChips(availableJobs),
+          Expanded(
+            child: RefreshIndicator(
+              onRefresh: () async {
+                final token = Provider.of<AuthProvider>(context, listen: false).token;
+                await provider.loadAllInquiries(token);
+              },
+              child: provider.isLoading
+                  ? const Center(
+                      child: CircularProgressIndicator(color: AppColors.royalBlue),
+                    )
+                  : _buildJobsList(filteredJobs),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildFilterChips(List<Inquiry> availableJobs) {
+    final authProvider = Provider.of<AuthProvider>(context);
+    final profile = authProvider.profileData?['profile'];
+    final activeCities = (profile?['active_cities'] as List<dynamic>?)?.map((e) => e.toString()).toList() ?? [];
+
+    List<String> filterOptions = [];
+    if (activeCities.isNotEmpty) {
+      filterOptions = activeCities;
+    } else {
+      filterOptions = availableJobs.map((e) => e.city).where((c) => c.isNotEmpty).toSet().toList();
+    }
+
+    if (filterOptions.isEmpty) {
+      return const SizedBox.shrink();
+    }
+
+    final options = ['همه شهرها', ...filterOptions];
+
+    return Container(
+      height: 56,
+      color: AppColors.white,
+      padding: const EdgeInsets.symmetric(vertical: 10),
+      child: Directionality(
+        textDirection: TextDirection.rtl,
+        child: ListView.builder(
+          scrollDirection: Axis.horizontal,
+          padding: const EdgeInsets.symmetric(horizontal: 16),
+          itemCount: options.length,
+          itemBuilder: (context, index) {
+            final city = options[index];
+            final bool isAllOption = index == 0;
+            final bool isSelected = isAllOption 
+                ? _selectedCityFilter == null 
+                : _selectedCityFilter == city;
+
+            return Padding(
+              padding: const EdgeInsets.only(left: 8),
+              child: ChoiceChip(
+                label: Text(
+                  city,
+                  style: TextStyle(
+                    fontFamily: 'Vazirmatn',
+                    fontSize: 12,
+                    fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                    color: isSelected ? AppColors.white : AppColors.textDark,
+                  ),
+                ),
+                selected: isSelected,
+                selectedColor: AppColors.royalBlue,
+                backgroundColor: AppColors.lightGrey,
+                checkmarkColor: AppColors.white,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(20),
+                  side: BorderSide(
+                    color: isSelected ? AppColors.royalBlue : AppColors.borderGrey,
+                  ),
+                ),
+                onSelected: (selected) {
+                  setState(() {
+                    if (isAllOption) {
+                      _selectedCityFilter = null;
+                    } else {
+                      _selectedCityFilter = city;
+                    }
+                  });
+                },
+              ),
+            );
+          },
+        ),
       ),
     );
   }
 
   Widget _buildJobsList(List<Inquiry> jobs) {
     if (jobs.isEmpty) {
+      final String noJobsMsg = _selectedCityFilter != null
+          ? 'هیچ پروژه جدیدی در شهر $_selectedCityFilter یافت نشد.'
+          : 'هیچ پروژه جدیدی منتشر نشده است';
+
       return ListView(
         physics: const AlwaysScrollableScrollPhysics(),
         children: [
@@ -82,19 +174,20 @@ class _AvailableJobsScreenState extends State<AvailableJobsScreen> {
                   child: Icon(Icons.search_off_outlined, size: 48, color: Colors.grey[300]),
                 ),
                 const SizedBox(height: 18),
-                const Text(
-                  'هیچ پروژه جدیدی منتشر نشده است',
-                  style: TextStyle(
+                Text(
+                  noJobsMsg,
+                  style: const TextStyle(
                     color: AppColors.textDark,
                     fontSize: 14,
                     fontWeight: FontWeight.bold,
+                    fontFamily: 'Vazirmatn',
                   ),
                   textAlign: TextAlign.center,
                 ),
                 const SizedBox(height: 8),
                 const Text(
                   'جهت دریافت آخرین کارها صفحه را به پایین بکشید.',
-                  style: TextStyle(color: AppColors.textMuted, fontSize: 11),
+                  style: TextStyle(color: AppColors.textMuted, fontSize: 11, fontFamily: 'Vazirmatn'),
                   textAlign: TextAlign.center,
                 ),
               ],
@@ -297,8 +390,8 @@ class _AvailableJobsScreenState extends State<AvailableJobsScreen> {
   }
 
   void _showBiddingBottomSheet(Inquiry job) {
-    final bidController = TextEditingController();
     final formKey = GlobalKey<FormState>();
+    final controllers = List.generate(job.items.length, (_) => TextEditingController());
 
     showModalBottomSheet(
       context: context,
@@ -308,164 +401,356 @@ class _AvailableJobsScreenState extends State<AvailableJobsScreen> {
         borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
       builder: (context) {
-        return Directionality(
-          textDirection: TextDirection.rtl,
-          child: Padding(
-            padding: EdgeInsets.only(
-              bottom: MediaQuery.of(context).viewInsets.bottom,
-              top: 24,
-              left: 24,
-              right: 24,
-            ),
-            child: Form(
-              key: formKey,
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // Pull handler line
-                  Center(
-                    child: Container(
-                      width: 40,
-                      height: 4,
-                      decoration: BoxDecoration(
-                        color: AppColors.borderGrey,
-                        borderRadius: BorderRadius.circular(2),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 20),
+        bool isSubmitting = false;
+        bool scaffoldChecked = false;
+        bool powerChecked = false;
+        bool rodChecked = false;
+        bool deliveryChecked = false;
 
-                  // Header
-                  const Text(
-                    'ثبت پیشنهاد قیمت جدید',
-                    style: TextStyle(
-                      fontSize: 17,
-                      fontWeight: FontWeight.bold,
-                      color: AppColors.royalBlue,
-                    ),
-                  ),
-                  const SizedBox(height: 6),
-                  Text(
-                    job.title,
-                    style: const TextStyle(fontSize: 13, color: AppColors.textMuted, fontWeight: FontWeight.w500),
-                  ),
-                  const SizedBox(height: 24),
+        return StatefulBuilder(
+          builder: (context, setSheetState) {
+            double totalSum = 0;
+            for (var controller in controllers) {
+              final cleanText = Formatters.cleanNumber(controller.text);
+              final val = double.tryParse(cleanText) ?? 0.0;
+              totalSum += val;
+            }
 
-                  // Input Box
-                  TextFormField(
-                    controller: bidController,
-                    keyboardType: TextInputType.number,
-                    textAlign: TextAlign.left,
-                    inputFormatters: [
-                      PersianPriceInputFormatter(),
-                    ],
-                    validator: (val) {
-                      if (val == null || val.trim().isEmpty) {
-                        return 'لطفاً مبلغ کل را وارد کنید';
-                      }
-                      final cleaned = Formatters.cleanNumber(val);
-                      if (double.tryParse(cleaned) == null) {
-                        return 'لطفاً یک عدد معتبر وارد کنید';
-                      }
-                      return null;
-                    },
-                    decoration: InputDecoration(
-                      labelText: 'مبلغ کل پیشنهادی (تومان)',
-                      hintText: 'مثال: ۵,۰۰۰,۰۰۰',
-                      filled: true,
-                      fillColor: AppColors.lightGrey,
-                      contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 15),
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(16),
-                        borderSide: const BorderSide(color: AppColors.borderGrey),
-                      ),
-                      enabledBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(16),
-                        borderSide: const BorderSide(color: AppColors.borderGrey),
-                      ),
-                      focusedBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(16),
-                        borderSide: const BorderSide(color: AppColors.royalBlue, width: 2),
-                      ),
-                      prefixIcon: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 14),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            const Icon(Icons.monetization_on_outlined, color: AppColors.textMuted, size: 20),
-                            const SizedBox(width: 8),
-                            const Text(
-                              'تومان',
-                              style: TextStyle(fontWeight: FontWeight.bold, color: AppColors.textDark, fontSize: 13),
-                            ),
-                            const SizedBox(width: 8),
-                            Container(width: 1, height: 20, color: AppColors.borderGrey),
-                          ],
-                        ),
-                      ),
-                    ),
-                    style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
-                  ),
-                  const SizedBox(height: 24),
+            final bool allChecked = scaffoldChecked && powerChecked && rodChecked && deliveryChecked;
 
-                  // Info message
-                  Container(
-                    padding: const EdgeInsets.all(12),
-                    decoration: BoxDecoration(
-                      color: AppColors.amberOrange.withValues(alpha: 0.05),
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: const Row(
+            return Directionality(
+              textDirection: TextDirection.rtl,
+              child: Padding(
+                padding: EdgeInsets.only(
+                  bottom: MediaQuery.of(context).viewInsets.bottom + 16,
+                  top: 20,
+                  left: 20,
+                  right: 20,
+                ),
+                child: Form(
+                  key: formKey,
+                  child: SingleChildScrollView(
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Icon(Icons.info_outline, color: AppColors.amberOrange, size: 16),
-                        SizedBox(width: 8),
-                        Expanded(
-                          child: Text(
-                            'این پیشنهاد قیمت به عنوان تخمین اولیه مستقیماً برای کارفرما ارسال می‌شود.',
-                            style: TextStyle(fontSize: 10, color: AppColors.amberOrange, height: 1.5),
+                        Center(
+                          child: Container(
+                            width: 40,
+                            height: 4,
+                            decoration: BoxDecoration(
+                              color: AppColors.borderGrey,
+                              borderRadius: BorderRadius.circular(2),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 16),
+
+                        const Text(
+                          'ثبت پیشنهاد قیمت جدید',
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                            color: AppColors.royalBlue,
+                            fontFamily: 'Vazirmatn',
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          job.title,
+                          style: const TextStyle(fontSize: 12, color: AppColors.textMuted, fontFamily: 'Vazirmatn'),
+                        ),
+                        const SizedBox(height: 16),
+
+                        const Text(
+                          'لطفاً قیمت پیشنهادی خود را برای هر کدام از اقلام به صورت مجزا وارد کنید:',
+                          style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: AppColors.textDark, fontFamily: 'Vazirmatn'),
+                        ),
+                        const SizedBox(height: 12),
+
+                        ListView.separated(
+                          shrinkWrap: true,
+                          physics: const NeverScrollableScrollPhysics(),
+                          itemCount: job.items.length,
+                          separatorBuilder: (context, index) => const SizedBox(height: 12),
+                          itemBuilder: (context, index) {
+                            final item = job.items[index];
+                            return Container(
+                              padding: const EdgeInsets.all(12),
+                              decoration: BoxDecoration(
+                                color: AppColors.lightGrey,
+                                borderRadius: BorderRadius.circular(16),
+                                border: Border.all(color: AppColors.borderGrey),
+                              ),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Row(
+                                    children: [
+                                      Container(
+                                        width: 6,
+                                        height: 6,
+                                        decoration: const BoxDecoration(
+                                          color: AppColors.royalBlue,
+                                          shape: BoxShape.circle,
+                                        ),
+                                      ),
+                                      const SizedBox(width: 8),
+                                      Expanded(
+                                        child: Text(
+                                          item.title,
+                                          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: AppColors.textDark, fontFamily: 'Vazirmatn'),
+                                        ),
+                                      ),
+                                      Text(
+                                        'مقدار: ${item.quantity} ${item.unit}',
+                                        style: const TextStyle(fontSize: 12, color: AppColors.royalBlue, fontWeight: FontWeight.bold, fontFamily: 'Vazirmatn'),
+                                      ),
+                                    ],
+                                  ),
+                                  const SizedBox(height: 10),
+                                  TextFormField(
+                                    controller: controllers[index],
+                                    keyboardType: TextInputType.number,
+                                    textAlign: TextAlign.left,
+                                    inputFormatters: [
+                                      PersianPriceInputFormatter(),
+                                    ],
+                                    onChanged: (_) {
+                                      setSheetState(() {});
+                                    },
+                                    validator: (val) {
+                                      if (val == null || val.trim().isEmpty) {
+                                        return 'لطفاً مبلغ این قلم را وارد کنید';
+                                      }
+                                      final cleaned = Formatters.cleanNumber(val);
+                                      if (double.tryParse(cleaned) == null) {
+                                        return 'مبلغ نامعتبراست';
+                                      }
+                                      return null;
+                                    },
+                                    decoration: InputDecoration(
+                                      labelText: 'مبلغ پیشنهادی برای این قلم (تومان)',
+                                      hintText: 'مثال: ۱,۵۰۰,۰۰۰',
+                                      filled: true,
+                                      fillColor: AppColors.white,
+                                      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                                      border: OutlineInputBorder(
+                                        borderRadius: BorderRadius.circular(12),
+                                        borderSide: const BorderSide(color: AppColors.borderGrey),
+                                      ),
+                                      enabledBorder: OutlineInputBorder(
+                                        borderRadius: BorderRadius.circular(12),
+                                        borderSide: const BorderSide(color: AppColors.borderGrey),
+                                      ),
+                                      focusedBorder: OutlineInputBorder(
+                                        borderRadius: BorderRadius.circular(12),
+                                        borderSide: const BorderSide(color: AppColors.royalBlue, width: 2),
+                                      ),
+                                      prefixIcon: const Icon(Icons.monetization_on_outlined, color: AppColors.textMuted, size: 18),
+                                    ),
+                                    style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14, fontFamily: 'Vazirmatn'),
+                                  ),
+                                ],
+                              ),
+                            );
+                          },
+                        ),
+                        const SizedBox(height: 16),
+
+                        Container(
+                          padding: const EdgeInsets.all(16),
+                          decoration: BoxDecoration(
+                            color: AppColors.royalBlue.withValues(alpha: 0.05),
+                            borderRadius: BorderRadius.circular(16),
+                            border: Border.all(color: AppColors.royalBlue.withValues(alpha: 0.2)),
+                          ),
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              const Text(
+                                'جمع کل پیشنهادی شما:',
+                                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: AppColors.textDark, fontFamily: 'Vazirmatn'),
+                              ),
+                              Text(
+                                '${Formatters.formatPrice(totalSum.toInt())} تومان',
+                                style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15, color: AppColors.royalBlue, fontFamily: 'Vazirmatn'),
+                              ),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(height: 20),
+
+                        const Text(
+                          'تعهدات و شرایط انجام کار (تایید کلیه موارد الزامی است):',
+                          style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: AppColors.textDark, fontFamily: 'Vazirmatn'),
+                        ),
+                        const SizedBox(height: 8),
+
+                        _buildCheckboxRow(
+                          label: 'تامین زیر پایی مناسب بر عهده کارفرما است',
+                          value: scaffoldChecked,
+                          onChanged: (val) {
+                            setSheetState(() {
+                              scaffoldChecked = val ?? false;
+                            });
+                          },
+                        ),
+                        _buildCheckboxRow(
+                          label: 'تامین برق بر عهده کارفرما است',
+                          value: powerChecked,
+                          onChanged: (val) {
+                            setSheetState(() {
+                              powerChecked = val ?? false;
+                            });
+                          },
+                        ),
+                        _buildCheckboxRow(
+                          label: 'تامین سیم جوش و صفحه بر عهده کارفرما است',
+                          value: rodChecked,
+                          onChanged: (val) {
+                            setSheetState(() {
+                              rodChecked = val ?? false;
+                            });
+                          },
+                        ),
+                        _buildCheckboxRow(
+                          label: 'تحویل آهن آلات تا پای کار بر عهده کارفرما است',
+                          value: deliveryChecked,
+                          onChanged: (val) {
+                            setSheetState(() {
+                              deliveryChecked = val ?? false;
+                            });
+                          },
+                        ),
+                        const SizedBox(height: 20),
+
+                        SizedBox(
+                          width: double.infinity,
+                          height: 50,
+                          child: ElevatedButton(
+                            onPressed: (!allChecked || isSubmitting)
+                                ? null
+                                : () async {
+                                    if (!formKey.currentState!.validate()) return;
+                                    setSheetState(() {
+                                      isSubmitting = true;
+                                    });
+
+                                    final token = Provider.of<AuthProvider>(context, listen: false).token;
+                                    final inquiryProvider = Provider.of<InquiryProvider>(context, listen: false);
+
+                                    final List<Map<String, dynamic>> itemsPrices = [];
+                                    for (int i = 0; i < job.items.length; i++) {
+                                      final cleanText = Formatters.cleanNumber(controllers[i].text);
+                                      final val = double.tryParse(cleanText) ?? 0.0;
+                                      itemsPrices.add({
+                                        'title': job.items[i].title,
+                                        'price': val.toInt(),
+                                      });
+                                    }
+
+                                    final success = await inquiryProvider.submitOffer(
+                                      token: token,
+                                      inquiryId: job.id,
+                                      totalPrice: totalSum,
+                                      itemsPrices: itemsPrices,
+                                      scaffoldChecked: scaffoldChecked,
+                                      powerChecked: powerChecked,
+                                      rodChecked: rodChecked,
+                                      deliveryChecked: deliveryChecked,
+                                    );
+
+                                    if (success && context.mounted) {
+                                      Navigator.pop(context);
+                                      ScaffoldMessenger.of(context).showSnackBar(
+                                        SnackBar(
+                                          content: Text(
+                                            'پیشنهاد قیمت شما به مبلغ ${Formatters.formatPrice(totalSum.toInt())} تومان با موفقیت ثبت شد.',
+                                            style: const TextStyle(fontWeight: FontWeight.bold, fontFamily: 'Vazirmatn'),
+                                          ),
+                                          backgroundColor: Colors.green,
+                                        ),
+                                      );
+                                    } else if (context.mounted) {
+                                      setSheetState(() {
+                                        isSubmitting = false;
+                                      });
+                                      ScaffoldMessenger.of(context).showSnackBar(
+                                        SnackBar(
+                                          content: Text(
+                                            inquiryProvider.errorMessage ?? 'خطا در ثبت پیشنهاد قیمت',
+                                            style: const TextStyle(fontWeight: FontWeight.bold, fontFamily: 'Vazirmatn'),
+                                          ),
+                                          backgroundColor: Colors.red,
+                                        ),
+                                      );
+                                    }
+                                  },
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: AppColors.royalBlue,
+                              foregroundColor: AppColors.white,
+                              disabledBackgroundColor: Colors.grey[300],
+                              disabledForegroundColor: Colors.grey[500],
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                              elevation: 0,
+                            ),
+                            child: isSubmitting
+                                ? const SizedBox(
+                                    width: 20,
+                                    height: 20,
+                                    child: CircularProgressIndicator(color: AppColors.white, strokeWidth: 2),
+                                  )
+                                : const Text(
+                                    'ثبت و ارسال پیشنهاد قیمت',
+                                    style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, fontFamily: 'Vazirmatn'),
+                                  ),
                           ),
                         ),
                       ],
                     ),
                   ),
-                  const SizedBox(height: 24),
-
-                  // Submit CTA button
-                  SizedBox(
-                    width: double.infinity,
-                    height: 52,
-                    child: ElevatedButton(
-                      onPressed: () {
-                        if (!formKey.currentState!.validate()) return;
-                        final price = bidController.text.trim();
-                        Navigator.pop(context);
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(
-                            content: Text(
-                              'پیشنهاد قیمت شما به مبلغ $price تومان با موفقیت ثبت شد.',
-                              style: const TextStyle(fontWeight: FontWeight.bold),
-                            ),
-                            backgroundColor: Colors.green,
-                          ),
-                        );
-                      },
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: AppColors.royalBlue,
-                        foregroundColor: AppColors.white,
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                        elevation: 0,
-                      ),
-                      child: const Text('ثبت و ارسال پیشنهاد قیمت', style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold)),
-                    ),
-                  ),
-                  const SizedBox(height: 24),
-                ],
+                ),
               ),
-            ),
-          ),
+            );
+          },
         );
       },
+    );
+  }
+
+  Widget _buildCheckboxRow({
+    required String label,
+    required bool value,
+    required ValueChanged<bool?> onChanged,
+  }) {
+    return InkWell(
+      onTap: () => onChanged(!value),
+      borderRadius: BorderRadius.circular(8),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 4.0),
+        child: Row(
+          children: [
+            SizedBox(
+              width: 24,
+              height: 24,
+              child: Checkbox(
+                value: value,
+                onChanged: onChanged,
+                activeColor: AppColors.royalBlue,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(4)),
+              ),
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Text(
+                label,
+                style: const TextStyle(fontSize: 12, color: AppColors.textDark, fontFamily: 'Vazirmatn'),
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }

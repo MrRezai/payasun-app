@@ -15,6 +15,7 @@ class InquiryProvider with ChangeNotifier {
   // Lists
   List<Inquiry> _myInquiries = [];
   List<Inquiry> _allInquiries = [];
+  List<dynamic> _inquiryOffers = [];
   
   // Selected file state
   List<int>? _selectedFileBytes;
@@ -27,6 +28,7 @@ class InquiryProvider with ChangeNotifier {
   List<InquiryItem> get manualItems => _manualItems;
   List<Inquiry> get myInquiries => _myInquiries;
   List<Inquiry> get allInquiries => _allInquiries;
+  List<dynamic> get inquiryOffers => _inquiryOffers;
   List<int>? get selectedFileBytes => _selectedFileBytes;
   String? get selectedFileName => _selectedFileName;
 
@@ -183,6 +185,68 @@ class InquiryProvider with ChangeNotifier {
     }
   }
 
+  /// Update/Resubmit inquiry creation form and synchronize with API.
+  Future<Inquiry?> updateInquiry({
+    required String token,
+    required String inquiryId,
+    required String title,
+    required String description,
+    required String city,
+    required String province,
+  }) async {
+    _isLoading = true;
+    _errorMessage = null;
+    notifyListeners();
+
+    try {
+      if (title.trim().isEmpty) throw Exception('لطفاً عنوان استعلام را وارد کنید.');
+      if (description.trim().isEmpty) throw Exception('لطفاً توضیحات استعلام را وارد کنید.');
+      if (city.trim().isEmpty) throw Exception('لطفاً شهر محل پروژه را وارد کنید.');
+      if (province.trim().isEmpty) throw Exception('لطفاً استان محل پروژه را وارد کنید.');
+
+      if (!_hasBlueprint && _manualItems.isEmpty) {
+        throw Exception('لطفاً حداقل یک قلم کالا یا خدمات وارد کنید.');
+      }
+
+      final inquiry = await _apiService.updateInquiry(
+        token: token,
+        inquiryId: inquiryId,
+        title: title,
+        description: description,
+        city: city,
+        province: province,
+        items: _hasBlueprint ? [] : _manualItems,
+      );
+
+      if (_hasBlueprint && _selectedFileBytes != null && _selectedFileName != null) {
+        final updatedInquiry = await _apiService.uploadBlueprint(
+          token: token,
+          inquiryId: inquiry.id,
+          fileBytes: _selectedFileBytes!,
+          filename: _selectedFileName!,
+        );
+        
+        await loadMyInquiries(token);
+        _isLoading = false;
+        clearSelectedFile();
+        clearManualItems();
+        notifyListeners();
+        return updatedInquiry;
+      }
+
+      await loadMyInquiries(token);
+      _isLoading = false;
+      clearManualItems();
+      notifyListeners();
+      return inquiry;
+    } catch (e) {
+      _isLoading = false;
+      _errorMessage = e.toString().replaceAll('Exception: ', '');
+      notifyListeners();
+      return null;
+    }
+  }
+
   Future<bool> confirmInquiry({
     required String token,
     required String inquiryId,
@@ -203,6 +267,65 @@ class InquiryProvider with ChangeNotifier {
       _errorMessage = e.toString().replaceAll('Exception: ', '');
       notifyListeners();
       return false;
+    }
+  }
+
+  Future<bool> submitOffer({
+    required String token,
+    required String inquiryId,
+    required double totalPrice,
+    required List<Map<String, dynamic>> itemsPrices,
+    required bool scaffoldChecked,
+    required bool powerChecked,
+    required bool rodChecked,
+    required bool deliveryChecked,
+  }) async {
+    _isLoading = true;
+    _errorMessage = null;
+    notifyListeners();
+
+    try {
+      await _apiService.submitOffer(
+        token: token,
+        inquiryId: inquiryId,
+        totalPrice: totalPrice,
+        itemsPrices: itemsPrices,
+        scaffoldChecked: scaffoldChecked,
+        powerChecked: powerChecked,
+        rodChecked: rodChecked,
+        deliveryChecked: deliveryChecked,
+      );
+      _isLoading = false;
+      notifyListeners();
+      return true;
+    } catch (e) {
+      _isLoading = false;
+      _errorMessage = e.toString().replaceAll('Exception: ', '');
+      notifyListeners();
+      return false;
+    }
+  }
+
+  Future<void> loadInquiryOffers({
+    required String token,
+    required String inquiryId,
+  }) async {
+    _isLoading = true;
+    _errorMessage = null;
+    notifyListeners();
+
+    try {
+      _inquiryOffers = await _apiService.fetchOffers(
+        token: token,
+        inquiryId: inquiryId,
+      );
+      _isLoading = false;
+      notifyListeners();
+    } catch (e) {
+      _isLoading = false;
+      _errorMessage = e.toString().replaceAll('Exception: ', '');
+      _inquiryOffers = [];
+      notifyListeners();
     }
   }
 }

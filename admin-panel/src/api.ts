@@ -206,6 +206,16 @@ export class ApiClient {
     return await res.json();
   }
 
+  public static async rejectInquiry(id: string, reason: string): Promise<Inquiry> {
+    const res = await this.request(`${BASE_URL}/admin/inquiry/${id}/reject`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ reason }),
+    });
+    if (!res.ok) throw new Error('خطا در رد کردن پروژه.');
+    return await res.json();
+  }
+
   /* ─────────────────────────────────────────────────────────────
      USERS LIST ENDPOINT
      ───────────────────────────────────────────────────────────── */

@@ -36,6 +36,7 @@ class Inquiry {
   final String status;
   final bool hasBlueprint;
   final String? blueprintUrl;
+  final String? rejectionReason;
   final List<InquiryItem> items;
   final DateTime createdAt;
 
@@ -49,6 +50,7 @@ class Inquiry {
     required this.status,
     required this.hasBlueprint,
     this.blueprintUrl,
+    this.rejectionReason,
     required this.items,
     required this.createdAt,
   });
@@ -67,6 +69,7 @@ class Inquiry {
       status: json['status'] as String? ?? 'DRAFT',
       hasBlueprint: json['has_blueprint'] as bool? ?? false,
       blueprintUrl: json['blueprint_url'] as String?,
+      rejectionReason: json['rejection_reason'] as String?,
       items: parsedItems,
       createdAt: DateTime.parse(json['created_at'] as String? ?? DateTime.now().toIso8601String()),
     );
@@ -83,6 +86,7 @@ class Inquiry {
       'status': status,
       'has_blueprint': hasBlueprint,
       'blueprint_url': blueprintUrl,
+      'rejection_reason': rejectionReason,
       'items': items.map((e) => e.toJson()).toList(),
       'created_at': createdAt.toIso8601String(),
     };

@@ -1,12 +1,35 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import '../../constants/app_colors.dart';
 import '../../models/inquiry.dart';
 import '../../utils/formatters.dart';
+import '../../providers/auth_provider.dart';
+import '../../providers/inquiry_provider.dart';
+import 'create_inquiry_screen.dart';
 
-class InquiryDetailsScreen extends StatelessWidget {
+class InquiryDetailsScreen extends StatefulWidget {
   final Inquiry inquiry;
 
   const InquiryDetailsScreen({super.key, required this.inquiry});
+
+  @override
+  State<InquiryDetailsScreen> createState() => _InquiryDetailsScreenState();
+}
+
+class _InquiryDetailsScreenState extends State<InquiryDetailsScreen> {
+  Inquiry get inquiry => widget.inquiry;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final token = Provider.of<AuthProvider>(context, listen: false).token;
+      Provider.of<InquiryProvider>(context, listen: false).loadInquiryOffers(
+        token: token,
+        inquiryId: widget.inquiry.id,
+      );
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -44,7 +67,7 @@ class InquiryDetailsScreen extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 // Overview Card
-                _buildOverviewCard(dateStr),
+                _buildOverviewCard(context, dateStr),
                 const SizedBox(height: 16),
 
                 // Blueprint / Info Section
@@ -67,7 +90,7 @@ class InquiryDetailsScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildOverviewCard(String dateStr) {
+  Widget _buildOverviewCard(BuildContext context, String dateStr) {
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(20),
@@ -151,6 +174,74 @@ class InquiryDetailsScreen extends StatelessWidget {
               height: 1.6,
             ),
           ),
+          if (inquiry.status == 'REJECTED') ...[
+            const SizedBox(height: 16),
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: Colors.red[50],
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: Colors.red[200]!),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Row(
+                    children: [
+                      Icon(Icons.error_outline, color: Colors.red, size: 18),
+                      SizedBox(width: 8),
+                      Text(
+                        'علت رد شدن توسط ادمین:',
+                        style: TextStyle(
+                          color: Colors.red,
+                          fontWeight: FontWeight.bold,
+                          fontSize: 12,
+                          fontFamily: 'Vazirmatn',
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 6),
+                  Text(
+                    inquiry.rejectionReason ?? 'علتی توسط مدیریت ثبت نشده است.',
+                    style: const TextStyle(
+                      color: Colors.red,
+                      fontSize: 12,
+                      fontFamily: 'Vazirmatn',
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 16),
+            SizedBox(
+              width: double.infinity,
+              height: 48,
+              child: ElevatedButton.icon(
+                onPressed: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => CreateInquiryScreen(inquiryToEdit: inquiry),
+                    ),
+                  );
+                },
+                icon: const Icon(Icons.edit_note, color: AppColors.white),
+                label: const Text(
+                  'اصلاح و ارسال مجدد جهت بررسی',
+                  style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: AppColors.white, fontFamily: 'Vazirmatn'),
+                ),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.royalBlue,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  elevation: 0,
+                ),
+              ),
+            ),
+          ],
         ],
       ),
     );
@@ -290,7 +381,7 @@ class InquiryDetailsScreen extends StatelessWidget {
                     const SizedBox(height: 8),
                     Text(
                       inquiry.hasBlueprint
-                          ? 'در انتظار برآورد اقلام از روی پلان توسط کارشناس...'
+                          ? 'در انتظار تایید مدیریت...'
                           : 'هیچ قلمی ثبت نشده است.',
                       style: TextStyle(
                         fontSize: 12,
@@ -374,6 +465,8 @@ class InquiryDetailsScreen extends StatelessWidget {
 
   Widget _buildOffersSection(BuildContext context) {
     final showBids = inquiry.status == 'BROADCASTED';
+    final inquiryProvider = Provider.of<InquiryProvider>(context);
+    final offers = inquiryProvider.inquiryOffers;
 
     return Container(
       width: double.infinity,
@@ -400,16 +493,16 @@ class InquiryDetailsScreen extends StatelessWidget {
                 ),
               ),
               const SizedBox(width: 8),
-              if (showBids)
+              if (showBids && offers.isNotEmpty)
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                   decoration: BoxDecoration(
                     color: Colors.green.withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(20),
                   ),
-                  child: const Text(
-                    '۳ پیشنهاد',
-                    style: TextStyle(
+                  child: Text(
+                    '${offers.length} پیشنهاد',
+                    style: const TextStyle(
                       fontSize: 10,
                       fontWeight: FontWeight.bold,
                       color: Colors.green,
@@ -442,53 +535,40 @@ class InquiryDetailsScreen extends StatelessWidget {
                 ),
               ),
             )
+          else if (inquiryProvider.isLoading && offers.isEmpty)
+            const Center(
+              child: Padding(
+                padding: EdgeInsets.symmetric(vertical: 30),
+                child: CircularProgressIndicator(color: AppColors.royalBlue),
+              ),
+            )
           else
-            _buildBidsList(context),
+            _buildBidsList(context, offers),
         ],
       ),
     );
   }
 
-  Widget _buildBidsList(BuildContext context) {
-    // Dynamically generate mock proposals based on inquiry ID hash to keep them consistent
-    final seed = inquiry.id.hashCode;
-    final List<Map<String, dynamic>> mockBids = [
-      {
-        'name': 'علی‌رضا مرادی',
-        'rating': 4.8,
-        'projects': 18 + (seed % 5),
-        'price': '${Formatters.formatPrice(5400000 + (seed % 10) * 100000)} تومان',
-        'phone': '09123456789',
-        'initials': 'ع‌م',
-        'time': '۲ ساعت پیش',
-      },
-      {
-        'name': 'محمد امینی',
-        'rating': 4.6,
-        'projects': 9 + (seed % 3),
-        'price': '${Formatters.formatPrice(5700000 + (seed % 8) * 100000)} تومان',
-        'phone': '09129876543',
-        'initials': 'م‌ا',
-        'time': '۵ ساعت پیش',
-      },
-      {
-        'name': 'امیرحسین رضایی',
-        'rating': 4.9,
-        'projects': 34 + (seed % 10),
-        'price': '${Formatters.formatPrice(5100000 + (seed % 6) * 100000)} تومان',
-        'phone': '09125556677',
-        'initials': 'ا‌ر',
-        'time': '۱ روز پیش',
-      },
-    ];
+  Widget _buildBidsList(BuildContext context, List<dynamic> offers) {
+    if (offers.isEmpty) {
+      return const Center(
+        child: Padding(
+          padding: EdgeInsets.symmetric(vertical: 24),
+          child: Text(
+            'هنوز هیچ پیشنهادی از سوی جوشکاران ثبت نشده است.',
+            style: TextStyle(fontSize: 12, color: AppColors.textMuted, fontFamily: 'Vazirmatn'),
+          ),
+        ),
+      );
+    }
 
     return ListView.separated(
       shrinkWrap: true,
       physics: const NeverScrollableScrollPhysics(),
-      itemCount: mockBids.length,
+      itemCount: offers.length,
       separatorBuilder: (context, index) => const SizedBox(height: 12),
       itemBuilder: (context, index) {
-        final bid = mockBids[index];
+        final bid = offers[index];
 
         return Container(
           decoration: BoxDecoration(
@@ -505,7 +585,6 @@ class InquiryDetailsScreen extends StatelessWidget {
                   Row(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      // Welder Avatar
                       CircleAvatar(
                         radius: 22,
                         backgroundColor: AppColors.royalBlue.withValues(alpha: 0.1),
@@ -520,7 +599,6 @@ class InquiryDetailsScreen extends StatelessWidget {
                         ),
                       ),
                       const SizedBox(width: 12),
-                      // Welder Details
                       Expanded(
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
@@ -603,7 +681,7 @@ class InquiryDetailsScreen extends StatelessWidget {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           const Text(
-                            'مبلغ کل پیشنهادی:',
+                            'مبلغ پیشنهادی کارشناسی شده:',
                             style: TextStyle(
                               fontSize: 10,
                               color: AppColors.textMuted,
@@ -612,11 +690,11 @@ class InquiryDetailsScreen extends StatelessWidget {
                           ),
                           const SizedBox(height: 4),
                           Text(
-                            bid['price'] as String,
+                            '${Formatters.formatPrice(int.tryParse(bid['price']) ?? 0)} تومان',
                             style: const TextStyle(
                               fontSize: 14,
                               fontWeight: FontWeight.bold,
-                              color: AppColors.burgundy,
+                              color: AppColors.royalBlue,
                               fontFamily: 'Vazirmatn',
                             ),
                           ),
@@ -624,7 +702,6 @@ class InquiryDetailsScreen extends StatelessWidget {
                       ),
                       Row(
                         children: [
-                          // Contact Button
                           Material(
                             color: Colors.transparent,
                             child: InkWell(
@@ -643,7 +720,6 @@ class InquiryDetailsScreen extends StatelessWidget {
                             ),
                           ),
                           const SizedBox(width: 8),
-                          // View Profile CTA
                           ElevatedButton(
                             onPressed: () {
                               _showProfilePreviewDialog(context, bid);
@@ -798,6 +874,55 @@ class InquiryDetailsScreen extends StatelessWidget {
                 ),
                 const SizedBox(height: 20),
                 const Divider(color: AppColors.borderGrey, height: 1),
+                const SizedBox(height: 12),
+                const Align(
+                  alignment: Alignment.centerRight,
+                  child: Text(
+                    'جزئیات قیمت پیشنهادی برای هر قلم:',
+                    style: TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 12,
+                      color: AppColors.royalBlue,
+                      fontFamily: 'Vazirmatn',
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Container(
+                  constraints: const BoxConstraints(maxHeight: 120),
+                  width: double.infinity,
+                  decoration: BoxDecoration(
+                    color: AppColors.lightGrey,
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: AppColors.borderGrey),
+                  ),
+                  child: ListView.separated(
+                    shrinkWrap: true,
+                    padding: const EdgeInsets.all(8),
+                    itemCount: (bid['items_prices'] as List<dynamic>?)?.length ?? 0,
+                    separatorBuilder: (context, index) => const Divider(height: 12, color: AppColors.borderGrey),
+                    itemBuilder: (context, index) {
+                      final item = bid['items_prices'][index];
+                      return Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Expanded(
+                            child: Text(
+                              item['title'] as String? ?? '',
+                              style: const TextStyle(fontSize: 11, color: AppColors.textDark, fontFamily: 'Vazirmatn'),
+                            ),
+                          ),
+                          Text(
+                            '${Formatters.formatPrice(item['price'] as int? ?? 0)} تومان',
+                            style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: AppColors.royalBlue, fontFamily: 'Vazirmatn'),
+                          ),
+                        ],
+                      );
+                    },
+                  ),
+                ),
+                const SizedBox(height: 16),
+                const Divider(color: AppColors.borderGrey, height: 1),
                 const SizedBox(height: 16),
                 const Text(
                   'مهارت‌ها و تجهیزات:',
@@ -870,7 +995,7 @@ class InquiryDetailsScreen extends StatelessWidget {
       case 'PENDING_ESTIMATION':
         bgColor = Colors.amber[100]!;
         textColor = Colors.amber[800]!;
-        label = 'در انتظار برآورد';
+        label = 'در انتظار تایید مدیریت';
         break;
       case 'ESTIMATED':
         bgColor = AppColors.royalBlue.withValues(alpha: 0.1);
@@ -881,6 +1006,11 @@ class InquiryDetailsScreen extends StatelessWidget {
         bgColor = Colors.green[100]!;
         textColor = Colors.green[800]!;
         label = 'انتشار یافته';
+        break;
+      case 'REJECTED':
+        bgColor = Colors.red[100]!;
+        textColor = Colors.red[800]!;
+        label = 'رد شده توسط مدیریت';
         break;
       default:
         bgColor = Colors.grey[200]!;
