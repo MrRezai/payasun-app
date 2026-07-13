@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { ApiClient } from './api';
+import { ApiClient, BASE_URL } from './api';
 import { Skill, Inquiry, InquiryItem } from './types';
 
 // Simple toast notifications type
@@ -10,11 +10,19 @@ interface Toast {
 }
 
 export default function App() {
+  const [isAuthenticated, setIsAuthenticated] = useState(ApiClient.isAuthenticated());
   const [activeTab, setActiveTab] = useState<'overview' | 'approvals' | 'estimations' | 'skills' | 'settings'>('overview');
   const [isOnline, setIsOnline] = useState(false);
   const [toasts, setToasts] = useState<Toast[]>([]);
   
-  // Data lists
+  // Login form states (Username & Password)
+  const [username, setUsername] = useState('');
+  const [password, setPassword] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
+
+  // Data lists & Statistics
+  const [weldersCount, setWeldersCount] = useState(0);
+  const [employersCount, setEmployersCount] = useState(0);
   const [skills, setSkills] = useState<Skill[]>([]);
   const [pendingVerifications, setPendingVerifications] = useState<any[]>([]);
   const [inquiries, setInquiries] = useState<Inquiry[]>([]);
@@ -38,7 +46,7 @@ export default function App() {
 
   // Trigger Toast helper
   const showToast = (message: string, type: 'success' | 'warning' = 'success') => {
-    const id = Date.now();
+    const id = Date.now() + Math.random();
     setToasts(prev => [...prev, { id, message, type }]);
     setTimeout(() => {
       setToasts(prev => prev.filter(t => t.id !== id));
@@ -49,17 +57,13 @@ export default function App() {
   useEffect(() => {
     const handleStatusChange = (status: boolean) => {
       setIsOnline(status);
-      if (status) {
-        showToast('اتصال به سرور NestJS برقرار شد.', 'success');
-      } else {
-        showToast('سرور متصل نیست. حالت شبیه‌ساز محلی فعال شد.', 'warning');
-      }
     };
     
     ApiClient.addStatusListener(handleStatusChange);
     
-    // Initial fetch
-    refreshAllData();
+    if (isAuthenticated) {
+      refreshAllData();
+    }
 
     // Ping check every 5 seconds
     const interval = setInterval(() => {
@@ -70,10 +74,16 @@ export default function App() {
       ApiClient.removeStatusListener(handleStatusChange);
       clearInterval(interval);
     };
-  }, []);
+  }, [isAuthenticated]);
 
   const refreshAllData = async () => {
     try {
+      const weldersNum = await ApiClient.getWeldersCount();
+      setWeldersCount(weldersNum);
+      
+      const employersNum = await ApiClient.getEmployersCount();
+      setEmployersCount(employersNum);
+
       const skillsData = await ApiClient.getSkills();
       setSkills(skillsData);
       
@@ -85,6 +95,35 @@ export default function App() {
     } catch (e) {
       console.error('Error refreshing dashboard data', e);
     }
+  };
+
+  /* ─────────────────────────────────────────────────────────────
+     ADMIN LOGIN FLOW (Username / Password)
+     ───────────────────────────────────────────────────────────── */
+  const handleAdminLogin = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!username.trim() || !password.trim()) {
+      showToast('لطفا نام کاربری و کلمه عبور را وارد کنید.', 'warning');
+      return;
+    }
+    setIsLoading(true);
+    try {
+      await ApiClient.verifyAdminLogin(username.trim(), password.trim());
+      setIsAuthenticated(true);
+      showToast('خوش آمدید! ورود به پنل مدیریت با موفقیت انجام شد.', 'success');
+    } catch (e: any) {
+      showToast(e.message || 'خطا در احراز هویت ادمین.', 'warning');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleLogout = () => {
+    ApiClient.setToken(null);
+    setIsAuthenticated(false);
+    setUsername('');
+    setPassword('');
+    showToast('شما با موفقیت از حساب کاربری خارج شدید.', 'success');
   };
 
   /* ─────────────────────────────────────────────────────────────
@@ -192,11 +231,82 @@ export default function App() {
   /* ─────────────────────────────────────────────────────────────
      METRICS COMPUTATIONS
      ───────────────────────────────────────────────────────────── */
-  const totalWeldersCount = 4; // Mock standard
-  const totalEmployersCount = 3;
   const pendingPicsCount = pendingVerifications.length;
   const pendingEstimationsCount = inquiries.filter(i => i.status === 'PENDING_ESTIMATION').length;
 
+  /* ─────────────────────────────────────────────────────────────
+     UNAUTHENTICATED (LOGIN SCREEN WITH USER & PASSWORD)
+     ───────────────────────────────────────────────────────────── */
+  if (!isAuthenticated) {
+    return (
+      <div style={{ display: 'flex', minHeight: '100vh', alignItems: 'center', justifyContent: 'center', backgroundColor: '#F8FAFC', padding: '16px' }}>
+        <div className="glass-card" style={{ width: '100%', maxWidth: '420px', padding: '32px', boxShadow: '0 10px 30px rgba(15, 23, 42, 0.08)' }}>
+          <div style={{ textAlign: 'center', marginBottom: '24px' }}>
+            <img src="/src/assets/logo/joftojoor.png" alt="جفت و جور" style={{ width: '64px', height: '64px', marginBottom: '12px' }} />
+            <h2 style={{ fontSize: '20px', fontWeight: '800', color: 'var(--text-primary)' }}>ورود به پنل مدیریت جفت‌وجور</h2>
+            <p style={{ fontSize: '12px', color: 'var(--text-secondary)', marginTop: '6px' }}>
+              احراز هویت کنترل ادمین سیستم
+            </p>
+          </div>
+
+          <form onSubmit={handleAdminLogin}>
+            <div className="form-group">
+              <label htmlFor="adminUser">نام کاربری ادمین (Username)</label>
+              <input 
+                type="text" 
+                id="adminUser"
+                className="input-control"
+                placeholder="نام کاربری را وارد کنید"
+                value={username}
+                onChange={(e) => setUsername(e.target.value)}
+                disabled={isLoading}
+                required
+              />
+            </div>
+            
+            <div className="form-group">
+              <label htmlFor="adminPass">رمز عبور (Password)</label>
+              <input 
+                type="password" 
+                id="adminPass"
+                className="input-control"
+                placeholder="رمز عبور را وارد کنید"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                disabled={isLoading}
+                required
+              />
+            </div>
+
+            <button type="submit" className="btn btn-primary" style={{ width: '100%', height: '44px', marginTop: '8px' }} disabled={isLoading}>
+              {isLoading ? 'در حال بررسی...' : 'ورود به پنل مدیریت'}
+            </button>
+          </form>
+
+          <div style={{ marginTop: '24px', paddingTop: '16px', borderTop: '1px solid var(--border)', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
+            <span className={`badge-dot ${isOnline ? 'pulse' : ''}`} style={{ backgroundColor: isOnline ? 'var(--success)' : 'var(--warning)' }}></span>
+            <span style={{ fontSize: '11px', color: 'var(--text-secondary)' }}>
+              {isOnline ? 'سیستم آنلاین و متصل به دیتابیس است' : 'سیستم در حالت شبیه‌ساز آفلاین است'}
+            </span>
+          </div>
+        </div>
+
+        {/* TOAST SYSTEM RENDERER */}
+        <div className="toast-overlay">
+          {toasts.map(toast => (
+            <div key={toast.id} className={`toast ${toast.type}`}>
+              <span className="badge-dot"></span>
+              <span>{toast.message}</span>
+            </div>
+          ))}
+        </div>
+      </div>
+    );
+  }
+
+  /* ─────────────────────────────────────────────────────────────
+     AUTHENTICATED (MAIN PANEL APP)
+     ───────────────────────────────────────────────────────────── */
   return (
     <div className="app-container">
       {/* Sidebar Navigation */}
@@ -262,7 +372,9 @@ export default function App() {
         </nav>
         
         <div style={{ marginTop: 'auto', padding: '12px', borderTop: '1px solid var(--border)', fontSize: '11px', color: 'var(--text-secondary)', textAlign: 'center' }}>
-          نسخه وب ۱.۰.۰
+          <button className="btn btn-secondary" style={{ padding: '6px 12px', width: '100%', fontSize: '11px' }} onClick={handleLogout}>
+            خروج از حساب ادمین
+          </button>
         </div>
       </aside>
 
@@ -306,7 +418,7 @@ export default function App() {
               <div className="glass-card metric-card">
                 <div className="metric-info">
                   <h3>جوشکاران فعال</h3>
-                  <div className="value">{totalWeldersCount}</div>
+                  <div className="value">{weldersCount}</div>
                 </div>
                 <div className="metric-icon">
                   <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" width="24" height="24">
@@ -318,7 +430,7 @@ export default function App() {
               <div className="glass-card metric-card">
                 <div className="metric-info">
                   <h3>کارفرمایان ثبت‌شده</h3>
-                  <div className="value">{totalEmployersCount}</div>
+                  <div className="value">{employersCount}</div>
                 </div>
                 <div className="metric-icon success">
                   <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" width="24" height="24">
@@ -359,19 +471,15 @@ export default function App() {
                 <div className="chart-container">
                   <div className="chart-bar-wrapper">
                     <div className="chart-bar" style={{ height: '110px' }}></div>
-                    <span className="chart-label">انتظار کارشناسی (۲)</span>
+                    <span className="chart-label">انتظار کارشناسی ({pendingEstimationsCount})</span>
                   </div>
                   <div className="chart-bar-wrapper">
                     <div className="chart-bar" style={{ height: '55px', background: 'linear-gradient(to top, var(--secondary), rgba(245,158,11,0.3))' }}></div>
-                    <span className="chart-label">برآورد شده (۱)</span>
+                    <span className="chart-label">برآورد مالی شده</span>
                   </div>
                   <div className="chart-bar-wrapper">
                     <div className="chart-bar" style={{ height: '70px', background: 'linear-gradient(to top, var(--success), rgba(16,185,129,0.3))' }}></div>
-                    <span className="chart-label">انتشار یافته (۱)</span>
-                  </div>
-                  <div className="chart-bar-wrapper">
-                    <div className="chart-bar" style={{ height: '20px', background: 'rgba(255,255,255,0.1)' }}></div>
-                    <span className="chart-label">بسته‌شده (۰)</span>
+                    <span className="chart-label">انتشار یافته</span>
                   </div>
                 </div>
               </div>
@@ -384,7 +492,7 @@ export default function App() {
                       <span>استان تهران (۷۵٪)</span>
                       <span>۳ استعلام</span>
                     </div>
-                    <div style={{ width: '100%', height: '6px', backgroundColor: 'rgba(255,255,255,0.05)', borderRadius: '3px', overflow: 'hidden' }}>
+                    <div style={{ width: '100%', height: '6px', backgroundColor: 'rgba(0,0,0,0.05)', borderRadius: '3px', overflow: 'hidden' }}>
                       <div style={{ width: '75%', height: '100%', backgroundColor: 'var(--primary)' }}></div>
                     </div>
                   </div>
@@ -394,7 +502,7 @@ export default function App() {
                       <span>استان البرز (۲۵٪)</span>
                       <span>۱ استعلام</span>
                     </div>
-                    <div style={{ width: '100%', height: '6px', backgroundColor: 'rgba(255,255,255,0.05)', borderRadius: '3px', overflow: 'hidden' }}>
+                    <div style={{ width: '100%', height: '6px', backgroundColor: 'rgba(0,0,0,0.05)', borderRadius: '3px', overflow: 'hidden' }}>
                       <div style={{ width: '25%', height: '100%', backgroundColor: 'var(--secondary)' }}></div>
                     </div>
                   </div>
@@ -467,11 +575,19 @@ export default function App() {
                         </td>
                         <td>{user.phone}</td>
                         <td>
-                          <img 
-                            src={user.pending_url} 
-                            alt="Pending Preview" 
-                            style={{ width: '42px', height: '42px', borderRadius: '8px', objectFit: 'cover', border: '1px solid var(--border)' }}
-                          />
+                          {user.pending_url ? (
+                            <img 
+                              src={`${BASE_URL}${user.pending_url}`} 
+                              alt="Pending Preview" 
+                              style={{ width: '42px', height: '42px', borderRadius: '8px', objectFit: 'cover', border: '1px solid var(--border)' }}
+                              onError={(e) => {
+                                // Fallback if uploaded file is locally relative or offline preview
+                                e.currentTarget.src = user.pending_url;
+                              }}
+                            />
+                          ) : (
+                            <span style={{ color: 'var(--text-secondary)' }}>فاقد فایل</span>
+                          )}
                         </td>
                         <td>
                           <button 
@@ -522,7 +638,7 @@ export default function App() {
                         <tr key={inq.id}>
                           <td style={{ fontWeight: 'bold' }}>{inq.title}</td>
                           <td>{inq.province}، {inq.city}</td>
-                          <td>{inq.employer_name}</td>
+                          <td>{inq.employer_name || 'کارفرما'}</td>
                           <td>
                             {inq.has_blueprint ? (
                               <span style={{ color: 'var(--primary)', fontSize: '12px', fontWeight: 'bold' }}>دارای نقشه فنی</span>
@@ -732,19 +848,26 @@ export default function App() {
             </div>
             
             <div style={{ textAlign: 'center', marginBottom: '20px' }}>
-              <img 
-                src={selectedVerification.pending_url} 
-                alt="Enlarged User Profile" 
-                style={{ width: '220px', height: '220px', borderRadius: '16px', objectFit: 'cover', border: '2px solid var(--border)', boxShadow: '0 8px 24px rgba(0,0,0,0.3)' }}
-              />
+              {selectedVerification.pending_url ? (
+                <img 
+                  src={`${BASE_URL}${selectedVerification.pending_url}`} 
+                  alt="Enlarged User Profile" 
+                  style={{ width: '220px', height: '220px', borderRadius: '16px', objectFit: 'cover', border: '2px solid var(--border)', boxShadow: '0 8px 24px rgba(0,0,0,0.1)' }}
+                  onError={(e) => {
+                    e.currentTarget.src = selectedVerification.pending_url;
+                  }}
+                />
+              ) : (
+                <div style={{ padding: '40px', backgroundColor: 'var(--bg-dark)', borderRadius: '12px' }}>فاقد تصویر ارسالی</div>
+              )}
             </div>
 
-            <div style={{ marginBottom: '24px', backgroundColor: 'rgba(255,255,255,0.02)', padding: '14px', borderRadius: '8px', border: '1px solid var(--border)' }}>
+            <div style={{ marginBottom: '24px', backgroundColor: 'rgba(0,0,0,0.02)', padding: '14px', borderRadius: '8px', border: '1px solid var(--border)' }}>
               <p style={{ fontSize: '13px', color: 'var(--text-secondary)', marginBottom: '8px' }}>
-                کاربر: <strong style={{ color: 'white' }}>{selectedVerification.name}</strong> ({selectedVerification.role === 'WELDER' ? 'جوشکار' : 'کارفرما'})
+                کاربر: <strong style={{ color: 'var(--text-primary)' }}>{selectedVerification.name}</strong> ({selectedVerification.role === 'WELDER' ? 'جوشکار' : 'کارفرما'})
               </p>
               <p style={{ fontSize: '13px', color: 'var(--text-secondary)' }}>
-                بیوگرافی/توضیحات: <span style={{ color: 'white', fontStyle: 'italic' }}>{selectedVerification.bio || 'توضیحاتی وارد نشده است.'}</span>
+                بیوگرافی/توضیحات: <span style={{ color: 'var(--text-primary)', fontStyle: 'italic' }}>{selectedVerification.bio || 'توضیحاتی وارد نشده است.'}</span>
               </p>
             </div>
 
@@ -790,12 +913,15 @@ export default function App() {
                 {selectedInquiry.has_blueprint ? (
                   <div style={{ position: 'relative', height: '220px', borderRadius: '12px', overflow: 'hidden', border: '1px solid var(--border)' }}>
                     <img 
-                      src={selectedInquiry.blueprint_url || ''} 
+                      src={selectedInquiry.blueprint_url ? `${BASE_URL}${selectedInquiry.blueprint_url}` : ''} 
                       alt="Project Blueprint" 
                       style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                      onError={(e) => {
+                        if (selectedInquiry.blueprint_url) e.currentTarget.src = selectedInquiry.blueprint_url;
+                      }}
                     />
                     <a 
-                      href={selectedInquiry.blueprint_url || ''} 
+                      href={selectedInquiry.blueprint_url ? `${BASE_URL}${selectedInquiry.blueprint_url}` : '#'} 
                       target="_blank" 
                       rel="noreferrer"
                       style={{ position: 'absolute', bottom: '12px', left: '12px', backgroundColor: 'rgba(0,0,0,0.7)', color: 'white', padding: '4px 10px', borderRadius: '6px', fontSize: '11px', textDecoration: 'none' }}
@@ -804,7 +930,7 @@ export default function App() {
                     </a>
                   </div>
                 ) : (
-                  <div style={{ height: '220px', borderRadius: '12px', backgroundColor: 'rgba(255,255,255,0.01)', border: '1px dashed var(--border)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-secondary)' }}>
+                  <div style={{ height: '220px', borderRadius: '12px', backgroundColor: 'rgba(0,0,0,0.01)', border: '1px dashed var(--border)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-secondary)' }}>
                     بدون نقشه ارسالی
                   </div>
                 )}
@@ -814,14 +940,14 @@ export default function App() {
               <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
                 <h4 style={{ fontSize: '14px', fontWeight: 'bold' }}>{selectedInquiry.title}</h4>
                 <p style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>
-                  کارفرما: <strong>{selectedInquiry.employer_name}</strong>
+                  کارفرما: <strong>{selectedInquiry.employer_name || 'کارفرما'}</strong>
                 </p>
                 <p style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>
                   موقعیت: <strong>{selectedInquiry.province}، {selectedInquiry.city}</strong>
                 </p>
-                <div style={{ flex: 1, overflowY: 'auto', maxHeight: '120px', backgroundColor: 'rgba(255,255,255,0.02)', padding: '10px', borderRadius: '8px', border: '1px solid var(--border)' }}>
+                <div style={{ flex: 1, overflowY: 'auto', maxHeight: '120px', backgroundColor: 'rgba(0,0,0,0.01)', padding: '10px', borderRadius: '8px', border: '1px solid var(--border)' }}>
                   <p style={{ fontSize: '12px', color: 'var(--text-secondary)', lineHeight: '1.6' }}>
-                    توضیحات پروژه: <span style={{ color: 'white' }}>{selectedInquiry.description}</span>
+                    توضیحات پروژه: <span style={{ color: 'var(--text-primary)' }}>{selectedInquiry.description}</span>
                   </p>
                 </div>
               </div>

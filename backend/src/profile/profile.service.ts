@@ -395,4 +395,75 @@ export class ProfileService implements OnModuleInit {
       throw new NotFoundException('Skill not found.');
     }
   }
+
+  // Admin and profile list methods
+  async getWeldersCount(): Promise<number> {
+    return this.welderProfileRepository.count();
+  }
+
+  async getEmployersCount(): Promise<number> {
+    return this.employerProfileRepository.count();
+  }
+
+  async getPendingVerifications(): Promise<any[]> {
+    const welders = await this.welderProfileRepository.find({
+      where: { profile_picture_status: 'PENDING' },
+    });
+    const employers = await this.employerProfileRepository.find({
+      where: { profile_picture_status: 'PENDING' },
+    });
+
+    const pendingWelders = welders.map((w) => {
+      const name = w.first_name || w.last_name 
+        ? `${w.first_name || ''} ${w.last_name || ''}`.trim() 
+        : 'نامشخص (جوشکار)';
+      return {
+        id: w.user_id,
+        name,
+        role: 'WELDER',
+        pending_url: w.pending_profile_picture_url,
+        bio: w.bio || 'توضیحات ندارد.',
+        phone: 'ثبت شده در سیستم',
+      };
+    });
+
+    const pendingEmployers = employers.map((e) => {
+      const contact = e.first_name || e.last_name 
+        ? `${e.first_name || ''} ${e.last_name || ''}`.trim() 
+        : 'کارفرما';
+      return {
+        id: e.user_id,
+        name: `${e.company_name || 'شخصی'} (${contact})`,
+        role: 'EMPLOYER',
+        pending_url: e.pending_profile_picture_url,
+        bio: 'ثبت شده به عنوان کارفرما در پلتفرم جفت‌وجور.',
+        phone: 'ثبت شده در سیستم',
+      };
+    });
+
+    return [...pendingWelders, ...pendingEmployers];
+  }
+
+  async verifyPicture(userId: string, role: string, approve: boolean): Promise<void> {
+    if (role === 'WELDER') {
+      const profile = await this.welderProfileRepository.findOne({ where: { user_id: userId } });
+      if (!profile) throw new NotFoundException('جوشکار یافت نشد.');
+      profile.profile_picture_status = approve ? 'APPROVED' : 'REJECTED';
+      if (approve && profile.pending_profile_picture_url) {
+        profile.profile_picture_url = profile.pending_profile_picture_url;
+      }
+      profile.pending_profile_picture_url = null;
+      await this.welderProfileRepository.save(profile);
+    } else {
+      const profile = await this.employerProfileRepository.findOne({ where: { user_id: userId } });
+      if (!profile) throw new NotFoundException('کارفرما یافت نشد.');
+      profile.profile_picture_status = approve ? 'APPROVED' : 'REJECTED';
+      if (approve && profile.pending_profile_picture_url) {
+        profile.profile_picture_url = profile.pending_profile_picture_url;
+      }
+      profile.pending_profile_picture_url = null;
+      await this.employerProfileRepository.save(profile);
+    }
+  }
 }
+

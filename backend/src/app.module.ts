@@ -8,6 +8,7 @@ import { ProfileModule } from './profile/profile.module';
 import { SmsModule } from './sms/sms.module';
 import { InquiryModule } from './inquiry/inquiry.module';
 import { GeoModule } from './geo/geo.module';
+import { AdminModule } from './admin/admin.module';
 
 import { User } from './entities/user.entity';
 import { EmployerProfile } from './entities/employer-profile.entity';
@@ -60,6 +61,7 @@ import { Skill } from './entities/skill.entity';
     ProfileModule,
     InquiryModule,
     GeoModule,
+    AdminModule,
   ],
 })
 export class AppModule {}
