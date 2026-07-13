@@ -294,7 +294,7 @@ class _EmployerDashboardState extends State<EmployerDashboard> {
           _buildVerticalDivider(),
           Expanded(
             child: _buildMetricItem(
-              'انتظار برآورد',
+              'انتظار تایید',
               '$pending',
               Icons.hourglass_empty,
               AppColors.amberOrange,
@@ -303,7 +303,7 @@ class _EmployerDashboardState extends State<EmployerDashboard> {
           _buildVerticalDivider(),
           Expanded(
             child: _buildMetricItem(
-              'برآورد شده',
+              'تایید شده',
               '$estimated',
               Icons.check_circle_outline,
               AppColors.royalBlue,
@@ -567,10 +567,10 @@ class _EmployerDashboardState extends State<EmployerDashboard> {
                       const Spacer(),
                       const Icon(Icons.people_outline, size: 14, color: Colors.green),
                       const SizedBox(width: 4),
-                      const Text(
-                        '۳ پیشنهاد',
-                        style: TextStyle(color: Colors.green, fontSize: 11, fontWeight: FontWeight.bold, fontFamily: 'Vazirmatn'),
-                      ),
+                    Text(
+                      '${inquiry.offers?.length ?? 0} پیشنهاد',
+                      style: const TextStyle(color: Colors.green, fontSize: 11, fontWeight: FontWeight.bold, fontFamily: 'Vazirmatn'),
+                    ),
                     ],
                   ],
                 ),
@@ -593,12 +593,12 @@ class _EmployerDashboardState extends State<EmployerDashboard> {
       case 'PENDING_ESTIMATION':
         bg = AppColors.amberOrange.withValues(alpha: 0.08);
         fg = AppColors.amberOrange;
-        label = 'انتظار برآورد';
+        label = 'انتظار تایید';
         break;
       case 'ESTIMATED':
         bg = AppColors.royalBlue.withValues(alpha: 0.08);
         fg = AppColors.royalBlue;
-        label = 'برآورد شده';
+        label = 'تایید شده';
         break;
       case 'BROADCASTED':
         bg = Colors.green.withValues(alpha: 0.08);

@@ -212,7 +212,7 @@ class _CreateInquiryScreenState extends State<CreateInquiryScreen> {
       provider.clearManualItems();
       
       // Go back to the inquiries list screen
-      Navigator.pop(context);
+      Navigator.pop(context, true);
     } else if (provider.errorMessage != null && mounted) {
       showDialog(
         context: context,

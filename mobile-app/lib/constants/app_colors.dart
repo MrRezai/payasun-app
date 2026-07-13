@@ -4,7 +4,7 @@ class AppColors {
   // Royal Blue: Primary actions, active tabs, success states
   static const Color royalBlue = Color(0xFF4169E1);
 
-  // Amber/Orange: Warning badges, pending statuses (e.g. "در انتظار برآورد"), highlights
+  // Amber/Orange: Warning badges, pending statuses (e.g. "در انتظار تایید"), highlights
   static const Color amberOrange = Color(0xFFF59E0B);
 
   // Deep Burgundy: Welder metrics, premium tags, distinctive dark text headers

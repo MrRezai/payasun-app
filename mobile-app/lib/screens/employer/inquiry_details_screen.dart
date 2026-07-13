@@ -1007,7 +1007,7 @@ class _InquiryDetailsScreenState extends State<InquiryDetailsScreen> {
       case 'ESTIMATED':
         bgColor = AppColors.royalBlue.withValues(alpha: 0.1);
         textColor = AppColors.royalBlue;
-        label = 'برآورد شده';
+        label = 'تایید شده';
         break;
       case 'BROADCASTED':
         bgColor = Colors.green[100]!;

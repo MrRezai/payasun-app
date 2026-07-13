@@ -240,10 +240,41 @@ export class InquiryService {
   /**
    * Retrieves all inquiries owned by a specific Employer.
    */
-  async findByEmployer(employerId: string): Promise<Inquiry[]> {
-    return this.inquiryRepository.find({
+  async findByEmployer(employerId: string): Promise<any[]> {
+    const inquiries = await this.inquiryRepository.find({
       where: { employerId },
       order: { created_at: 'DESC' },
+    });
+
+    // Fetch all offers
+    const offers = await this.offerRepository.find({
+      relations: ['welder']
+    });
+
+    // Map offers by inquiry_id
+    const offerMap = new Map<string, any[]>();
+    offers.forEach(o => {
+      const list = offerMap.get(o.inquiry_id) || [];
+      list.push({
+        id: o.id,
+        welder_id: o.welder_id,
+        welder_user_id: o.welder?.user_id,
+        total_price: o.total_price,
+        items_prices: o.items_prices,
+        scaffold_checked: o.scaffold_checked,
+        power_checked: o.power_checked,
+        rod_checked: o.rod_checked,
+        delivery_checked: o.delivery_checked,
+        created_at: o.created_at
+      });
+      offerMap.set(o.inquiry_id, list);
+    });
+
+    return inquiries.map((inq: any) => {
+      return {
+        ...inq,
+        offers: offerMap.get(inq.id) || []
+      };
     });
   }
 

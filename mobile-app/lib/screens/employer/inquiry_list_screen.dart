@@ -90,13 +90,16 @@ class _InquiryListScreenState extends State<InquiryListScreen> with SingleTicker
               ],
             ),
       floatingActionButton: FloatingActionButton.extended(
-        onPressed: () {
-          Navigator.push(
+        onPressed: () async {
+          final result = await Navigator.push<bool>(
             context,
             MaterialPageRoute(
               builder: (context) => const CreateInquiryScreen(),
             ),
           );
+          if (result == true && mounted) {
+            _tabController.animateTo(0);
+          }
         },
         backgroundColor: AppColors.royalBlue,
         foregroundColor: AppColors.white,
@@ -241,9 +244,9 @@ class _InquiryListScreenState extends State<InquiryListScreen> with SingleTicker
                     const Spacer(),
                     const Icon(Icons.people_outline, size: 14, color: Colors.green),
                     const SizedBox(width: 4),
-                    const Text(
-                      '۳ پیشنهاد',
-                      style: TextStyle(color: Colors.green, fontSize: 11, fontWeight: FontWeight.bold, fontFamily: 'Vazirmatn'),
+                    Text(
+                      '${inquiry.offers?.length ?? 0} پیشنهاد',
+                      style: const TextStyle(color: Colors.green, fontSize: 11, fontWeight: FontWeight.bold, fontFamily: 'Vazirmatn'),
                     ),
                   ],
                 ],
@@ -283,7 +286,7 @@ class _InquiryListScreenState extends State<InquiryListScreen> with SingleTicker
       case 'ESTIMATED':
         bg = AppColors.royalBlue.withValues(alpha: 0.1);
         fg = AppColors.royalBlue;
-        label = 'برآورد شده';
+        label = 'تایید شده';
         break;
       case 'BROADCASTED':
         bg = Colors.green.withValues(alpha: 0.1);
