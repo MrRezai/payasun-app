@@ -40,6 +40,8 @@ class Inquiry {
   final List<InquiryItem> items;
   final DateTime createdAt;
 
+  final List<dynamic>? offers;
+
   Inquiry({
     required this.id,
     required this.employerId,
@@ -53,6 +55,7 @@ class Inquiry {
     this.rejectionReason,
     required this.items,
     required this.createdAt,
+    this.offers,
   });
 
   factory Inquiry.fromJson(Map<String, dynamic> json) {
@@ -72,6 +75,7 @@ class Inquiry {
       rejectionReason: json['rejection_reason'] as String?,
       items: parsedItems,
       createdAt: DateTime.parse(json['created_at'] as String? ?? DateTime.now().toIso8601String()),
+      offers: json['offers'] as List<dynamic>?,
     );
   }
 
@@ -89,6 +93,7 @@ class Inquiry {
       'rejection_reason': rejectionReason,
       'items': items.map((e) => e.toJson()).toList(),
       'created_at': createdAt.toIso8601String(),
+      'offers': offers,
     };
   }
 }

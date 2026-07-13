@@ -131,13 +131,37 @@ export class InquiryService {
     // Fetch all employer profiles to map names
     const profiles = await this.inquiryRepository.manager.getRepository(EmployerProfile).find();
     
+    // Fetch all offers
+    const offers = await this.offerRepository.find({
+      relations: ['welder']
+    });
+
     // Map profiles by user_id
     const profileMap = new Map<string, EmployerProfile>();
     profiles.forEach(p => {
       profileMap.set(p.user_id, p);
     });
+
+    // Map offers by inquiry_id
+    const offerMap = new Map<string, any[]>();
+    offers.forEach(o => {
+      const list = offerMap.get(o.inquiry_id) || [];
+      list.push({
+        id: o.id,
+        welder_id: o.welder_id,
+        welder_user_id: o.welder?.user_id,
+        total_price: o.total_price,
+        items_prices: o.items_prices,
+        scaffold_checked: o.scaffold_checked,
+        power_checked: o.power_checked,
+        rod_checked: o.rod_checked,
+        delivery_checked: o.delivery_checked,
+        created_at: o.created_at
+      });
+      offerMap.set(o.inquiry_id, list);
+    });
     
-    // Map inquiries to include employer name
+    // Map inquiries to include employer name and offers
     return inquiries.map((inq: any) => {
       const profile = profileMap.get(inq.employerId);
       let employer_name = 'کارفرمای پلتفرم';
@@ -151,7 +175,8 @@ export class InquiryService {
       }
       return {
         ...inq,
-        employer_name
+        employer_name,
+        offers: offerMap.get(inq.id) || []
       };
     });
   }

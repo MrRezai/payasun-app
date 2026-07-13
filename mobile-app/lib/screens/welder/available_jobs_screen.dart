@@ -209,6 +209,17 @@ class _AvailableJobsScreenState extends State<AvailableJobsScreen> {
 
   Widget _buildJobCard(Inquiry job) {
     final dateStr = Formatters.toPersianDate(job.createdAt);
+    final authProvider = Provider.of<AuthProvider>(context, listen: false);
+    final welderUserId = authProvider.profileData?['id'] as String?;
+    final welderProfileId = authProvider.profileData?['profile']?['id'] as String?;
+
+    final hasBid = job.offers?.any((o) => 
+      o['welder_id'] == welderProfileId || o['welder_user_id'] == welderUserId
+    ) ?? false;
+
+    final myOffer = hasBid 
+        ? job.offers?.firstWhere((o) => o['welder_id'] == welderProfileId || o['welder_user_id'] == welderUserId)
+        : null;
 
     return Container(
       margin: const EdgeInsets.only(bottom: 16),
@@ -249,17 +260,38 @@ class _AvailableJobsScreenState extends State<AvailableJobsScreen> {
                       ),
                     ),
                     const SizedBox(width: 8),
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                      decoration: BoxDecoration(
-                        color: Colors.green.withValues(alpha: 0.08),
-                        borderRadius: BorderRadius.circular(20),
+                    if (hasBid)
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: AppColors.royalBlue.withValues(alpha: 0.08),
+                          borderRadius: BorderRadius.circular(20),
+                          border: Border.all(color: AppColors.royalBlue.withValues(alpha: 0.2)),
+                        ),
+                        child: const Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(Icons.check, size: 10, color: AppColors.royalBlue),
+                            SizedBox(width: 4),
+                            Text(
+                              'پیشنهاد ثبت شده',
+                              style: TextStyle(color: AppColors.royalBlue, fontSize: 9, fontWeight: FontWeight.bold, fontFamily: 'Vazirmatn'),
+                            ),
+                          ],
+                        ),
+                      )
+                    else
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: Colors.green.withValues(alpha: 0.08),
+                          borderRadius: BorderRadius.circular(20),
+                        ),
+                        child: const Text(
+                          'درخواست فعال',
+                          style: TextStyle(color: Colors.green, fontSize: 9, fontWeight: FontWeight.bold, fontFamily: 'Vazirmatn'),
+                        ),
                       ),
-                      child: const Text(
-                        'درخواست فعال',
-                        style: TextStyle(color: Colors.green, fontSize: 9, fontWeight: FontWeight.bold),
-                      ),
-                    ),
                   ],
                 ),
                 const SizedBox(height: 12),
@@ -323,17 +355,24 @@ class _AvailableJobsScreenState extends State<AvailableJobsScreen> {
               height: 46,
               child: ElevatedButton(
                 onPressed: () {
-                  _showBiddingBottomSheet(job);
+                  if (hasBid) {
+                    _showOfferDetailsBottomSheet(job, myOffer);
+                  } else {
+                    _showBiddingBottomSheet(job);
+                  }
                 },
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: AppColors.royalBlue,
-                  foregroundColor: AppColors.white,
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  backgroundColor: hasBid ? Colors.white : AppColors.royalBlue,
+                  foregroundColor: hasBid ? AppColors.royalBlue : AppColors.white,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    side: hasBid ? const BorderSide(color: AppColors.royalBlue) : BorderSide.none,
+                  ),
                   elevation: 0,
                 ),
-                child: const Text(
-                  'مشاهده جزئیات و ثبت قیمت پیشنهادی',
-                  style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
+                child: Text(
+                  hasBid ? 'مشاهده جزئیات پیشنهاد شما' : 'مشاهده جزئیات و ثبت قیمت پیشنهادی',
+                  style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, fontFamily: 'Vazirmatn'),
                 ),
               ),
             ),
@@ -750,6 +789,174 @@ class _AvailableJobsScreenState extends State<AvailableJobsScreen> {
             ),
           ],
         ),
+      ),
+    );
+  }
+
+  void _showOfferDetailsBottomSheet(Inquiry job, Map<String, dynamic>? offer) {
+    if (offer == null) return;
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: AppColors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (context) {
+        final totalSum = (offer['total_price'] as num?)?.toDouble() ?? 0.0;
+        final itemsPrices = offer['items_prices'] as List<dynamic>? ?? [];
+
+        return Directionality(
+          textDirection: TextDirection.rtl,
+          child: Padding(
+            padding: EdgeInsets.only(
+              bottom: MediaQuery.of(context).viewInsets.bottom,
+              left: 20,
+              right: 20,
+              top: 20,
+            ),
+            child: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Center(
+                    child: Container(
+                      width: 40,
+                      height: 4,
+                      decoration: BoxDecoration(
+                        color: Colors.grey[300],
+                        borderRadius: BorderRadius.circular(2),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  
+                  const Row(
+                    children: [
+                      Icon(Icons.check_circle_outline, color: AppColors.royalBlue, size: 24),
+                      SizedBox(width: 10),
+                      Expanded(
+                        child: Text(
+                          'جزئیات پیشنهاد قیمت شما',
+                          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: AppColors.textDark, fontFamily: 'Vazirmatn'),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    'این پیشنهاد پیش‌تر با موفقیت برای پروژه «${job.title}» ثبت شده است.',
+                    style: const TextStyle(fontSize: 11, color: AppColors.textMuted, fontFamily: 'Vazirmatn'),
+                  ),
+                  const SizedBox(height: 20),
+
+                  const Text(
+                    'دستمزد پیشنهادی تفکیک‌شده به ازای هر قلم:',
+                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: AppColors.royalBlue, fontFamily: 'Vazirmatn'),
+                  ),
+                  const SizedBox(height: 10),
+                  ListView.separated(
+                    shrinkWrap: true,
+                    physics: const NeverScrollableScrollPhysics(),
+                    itemCount: itemsPrices.length,
+                    separatorBuilder: (context, index) => const Divider(height: 12, color: AppColors.borderGrey),
+                    itemBuilder: (context, index) {
+                      final item = itemsPrices[index];
+                      return Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Expanded(
+                            child: Text(
+                              item['title'] as String? ?? '',
+                              style: const TextStyle(fontSize: 12, color: AppColors.textDark, fontFamily: 'Vazirmatn'),
+                            ),
+                          ),
+                          Text(
+                            '${Formatters.formatPrice((item['price'] as num?)?.toInt() ?? 0)} تومان',
+                            style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: AppColors.royalBlue, fontFamily: 'Vazirmatn'),
+                          ),
+                        ],
+                      );
+                    },
+                  ),
+                  const SizedBox(height: 20),
+
+                  Container(
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      color: AppColors.royalBlue.withValues(alpha: 0.05),
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(color: AppColors.royalBlue.withValues(alpha: 0.2)),
+                    ),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        const Text(
+                          'جمع کل دستمزد پیشنهادی شما:',
+                          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12, color: AppColors.textDark, fontFamily: 'Vazirmatn'),
+                        ),
+                        Text(
+                          '${Formatters.formatPrice(totalSum.toInt())} تومان',
+                          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15, color: AppColors.royalBlue, fontFamily: 'Vazirmatn'),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 20),
+
+                  const Text(
+                    'تعهدات پذیرفته‌شده کارفرما:',
+                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12, color: AppColors.textDark, fontFamily: 'Vazirmatn'),
+                  ),
+                  const SizedBox(height: 10),
+                  _buildAgreedConditionItem('تامین داربست یا زیرپایی مناسب بر عهده کارفرما است.'),
+                  _buildAgreedConditionItem('تامین برق مورد نیاز بر عهده کارفرما است.'),
+                  _buildAgreedConditionItem('تامین سیم‌جوش و صفحه برش بر عهده کارفرما است.'),
+                  _buildAgreedConditionItem('تحویل آهن‌آلات تا پای کار بر عهده کارفرما است.'),
+                  const SizedBox(height: 24),
+
+                  SizedBox(
+                    width: double.infinity,
+                    height: 48,
+                    child: ElevatedButton(
+                      onPressed: () => Navigator.pop(context),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppColors.royalBlue,
+                        foregroundColor: AppColors.white,
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                        elevation: 0,
+                      ),
+                      child: const Text(
+                        'بستن',
+                        style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, fontFamily: 'Vazirmatn'),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 20),
+                ],
+              ),
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildAgreedConditionItem(String label) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 6),
+      child: Row(
+        children: [
+          const Icon(Icons.check_circle, color: Colors.green, size: 16),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(
+              label,
+              style: const TextStyle(fontSize: 11, color: AppColors.textDark, fontFamily: 'Vazirmatn'),
+            ),
+          ),
+        ],
       ),
     );
   }
