@@ -28,9 +28,9 @@ export class InquiryService {
     const hasBlueprint = dto.has_blueprint ?? false;
     let initialStatus = InquiryStatus.DRAFT;
 
-    // If manual items are provided immediately without blueprint, set status to BROADCASTED
+    // If manual items are provided immediately without blueprint, set status to PENDING_ESTIMATION (waiting for admin review)
     if (!hasBlueprint && dto.items && dto.items.length > 0) {
-      initialStatus = InquiryStatus.BROADCASTED;
+      initialStatus = InquiryStatus.PENDING_ESTIMATION;
     } else if (hasBlueprint) {
       initialStatus = InquiryStatus.DRAFT; // Awaiting blueprint upload
     }
@@ -86,7 +86,7 @@ export class InquiryService {
     }
 
     inquiry.items = dto.items;
-    inquiry.status = InquiryStatus.BROADCASTED;
+    inquiry.status = InquiryStatus.ESTIMATED;
 
     return this.inquiryRepository.save(inquiry);
   }

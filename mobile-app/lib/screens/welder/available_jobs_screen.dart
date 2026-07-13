@@ -803,7 +803,7 @@ class _AvailableJobsScreenState extends State<AvailableJobsScreen> {
         borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
       builder: (context) {
-        final totalSum = (offer['total_price'] as num?)?.toDouble() ?? 0.0;
+        final totalSum = double.tryParse(offer['total_price']?.toString() ?? '0') ?? 0.0;
         final itemsPrices = offer['items_prices'] as List<dynamic>? ?? [];
 
         return Directionality(
@@ -856,29 +856,27 @@ class _AvailableJobsScreenState extends State<AvailableJobsScreen> {
                     style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: AppColors.royalBlue, fontFamily: 'Vazirmatn'),
                   ),
                   const SizedBox(height: 10),
-                  ListView.separated(
-                    shrinkWrap: true,
-                    physics: const NeverScrollableScrollPhysics(),
-                    itemCount: itemsPrices.length,
-                    separatorBuilder: (context, index) => const Divider(height: 12, color: AppColors.borderGrey),
-                    itemBuilder: (context, index) {
-                      final item = itemsPrices[index];
-                      return Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Expanded(
-                            child: Text(
-                              item['title'] as String? ?? '',
-                              style: const TextStyle(fontSize: 12, color: AppColors.textDark, fontFamily: 'Vazirmatn'),
+                  Column(
+                    children: [
+                      for (int index = 0; index < itemsPrices.length; index++) ...[
+                        if (index > 0) const Divider(height: 12, color: AppColors.borderGrey),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Expanded(
+                              child: Text(
+                                itemsPrices[index]['title'] as String? ?? '',
+                                style: const TextStyle(fontSize: 12, color: AppColors.textDark, fontFamily: 'Vazirmatn'),
+                              ),
                             ),
-                          ),
-                          Text(
-                            '${Formatters.formatPrice((item['price'] as num?)?.toInt() ?? 0)} تومان',
-                            style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: AppColors.royalBlue, fontFamily: 'Vazirmatn'),
-                          ),
-                        ],
-                      );
-                    },
+                            Text(
+                              '${Formatters.formatPrice((itemsPrices[index]['price'] as num?)?.toInt() ?? 0)} تومان',
+                              style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: AppColors.royalBlue, fontFamily: 'Vazirmatn'),
+                            ),
+                          ],
+                        ),
+                      ]
+                    ],
                   ),
                   const SizedBox(height: 20),
 

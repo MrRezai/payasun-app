@@ -562,194 +562,200 @@ class _InquiryDetailsScreenState extends State<InquiryDetailsScreen> {
       );
     }
 
-    return ListView.separated(
-      shrinkWrap: true,
-      physics: const NeverScrollableScrollPhysics(),
-      itemCount: offers.length,
-      separatorBuilder: (context, index) => const SizedBox(height: 12),
-      itemBuilder: (context, index) {
-        final bid = offers[index];
+    return Column(
+      children: [
+        for (int index = 0; index < offers.length; index++) ...[
+          if (index > 0) const SizedBox(height: 12),
+          _buildBidItem(context, offers[index]),
+        ]
+      ],
+    );
+  }
 
-        return Container(
-          decoration: BoxDecoration(
-            color: AppColors.white,
-            borderRadius: BorderRadius.circular(16),
-            border: Border.all(color: AppColors.borderGrey),
-          ),
-          child: ClipRRect(
-            borderRadius: BorderRadius.circular(16),
-            child: Padding(
-              padding: const EdgeInsets.all(16.0),
-              child: Column(
+  Widget _buildBidItem(BuildContext context, dynamic bid) {
+    return Container(
+      decoration: BoxDecoration(
+        color: AppColors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: AppColors.borderGrey),
+      ),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(16),
+        child: Padding(
+          padding: const EdgeInsets.all(16.0),
+          child: Column(
+            children: [
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      CircleAvatar(
-                        radius: 22,
-                        backgroundColor: AppColors.royalBlue.withValues(alpha: 0.1),
-                        child: Text(
-                          bid['initials'] as String,
-                          style: const TextStyle(
-                            color: AppColors.royalBlue,
-                            fontWeight: FontWeight.bold,
-                            fontSize: 13,
-                            fontFamily: 'Vazirmatn',
-                          ),
-                        ),
+                  CircleAvatar(
+                    radius: 22,
+                    backgroundColor: AppColors.royalBlue.withValues(alpha: 0.1),
+                    child: Text(
+                      bid['initials'] as String,
+                      style: const TextStyle(
+                        color: AppColors.royalBlue,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 13,
+                        fontFamily: 'Vazirmatn',
                       ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
                           children: [
-                            Row(
-                              children: [
-                                Text(
-                                  bid['name'] as String,
-                                  style: const TextStyle(
-                                    fontWeight: FontWeight.bold,
-                                    fontSize: 13,
-                                    color: AppColors.textDark,
-                                    fontFamily: 'Vazirmatn',
-                                  ),
-                                ),
-                                const SizedBox(width: 8),
-                                Container(
-                                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
-                                  decoration: BoxDecoration(
-                                    color: AppColors.royalBlue.withValues(alpha: 0.08),
-                                    borderRadius: BorderRadius.circular(4),
-                                  ),
-                                  child: const Text(
-                                    'جوشکار تأیید شده',
-                                    style: TextStyle(
-                                      color: AppColors.royalBlue,
-                                      fontSize: 9,
-                                      fontWeight: FontWeight.bold,
-                                      fontFamily: 'Vazirmatn',
-                                    ),
-                                  ),
-                                ),
-                              ],
+                            Text(
+                              bid['name'] as String,
+                              style: const TextStyle(
+                                fontWeight: FontWeight.bold,
+                                fontSize: 13,
+                                color: AppColors.textDark,
+                                fontFamily: 'Vazirmatn',
+                              ),
                             ),
-                            const SizedBox(height: 6),
-                            Row(
-                              children: [
-                                const Icon(Icons.star, color: Colors.amber, size: 14),
-                                const SizedBox(width: 4),
-                                Text(
-                                  '${bid['rating']}',
-                                  style: const TextStyle(
-                                    fontWeight: FontWeight.bold,
-                                    fontSize: 11,
-                                    color: AppColors.textDark,
-                                    fontFamily: 'Vazirmatn',
-                                  ),
+                            const SizedBox(width: 8),
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
+                              decoration: BoxDecoration(
+                                color: AppColors.royalBlue.withValues(alpha: 0.08),
+                                borderRadius: BorderRadius.circular(4),
+                              ),
+                              child: const Text(
+                                'جوشکار تأیید شده',
+                                style: TextStyle(
+                                  color: AppColors.royalBlue,
+                                  fontSize: 9,
+                                  fontWeight: FontWeight.bold,
+                                  fontFamily: 'Vazirmatn',
                                 ),
-                                const SizedBox(width: 8),
-                                Text(
-                                  '(${bid['projects']} پروژه موفق)',
-                                  style: const TextStyle(
-                                    fontSize: 10,
-                                    color: AppColors.textMuted,
-                                    fontFamily: 'Vazirmatn',
-                                  ),
-                                ),
-                              ],
+                              ),
                             ),
                           ],
                         ),
-                      ),
-                      Text(
-                        bid['time'] as String,
-                        style: const TextStyle(
+                        const SizedBox(height: 6),
+                        Row(
+                          children: [
+                            const Icon(Icons.star, color: Colors.amber, size: 14),
+                            const SizedBox(width: 4),
+                            Text(
+                              '${bid['rating']}',
+                              style: const TextStyle(
+                                fontWeight: FontWeight.bold,
+                                fontSize: 11,
+                                color: AppColors.textDark,
+                                fontFamily: 'Vazirmatn',
+                                decoration: TextDecoration.none,
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            Text(
+                              '(${bid['projects']} پروژه موفق)',
+                              style: const TextStyle(
+                                fontSize: 10,
+                                color: AppColors.textMuted,
+                                fontFamily: 'Vazirmatn',
+                                decoration: TextDecoration.none,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+                  Text(
+                    bid['time'] as String,
+                    style: const TextStyle(
+                      fontSize: 10,
+                      color: AppColors.textMuted,
+                      fontFamily: 'Vazirmatn',
+                      decoration: TextDecoration.none,
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 16),
+              const Divider(color: AppColors.borderGrey, height: 1),
+              const SizedBox(height: 12),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text(
+                        'مبلغ پیشنهادی کارشناسی شده:',
+                        style: TextStyle(
                           fontSize: 10,
                           color: AppColors.textMuted,
                           fontFamily: 'Vazirmatn',
+                          decoration: TextDecoration.none,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        '${Formatters.formatPrice(int.tryParse(bid['price']) ?? 0)} تومان',
+                        style: const TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.bold,
+                          color: AppColors.royalBlue,
+                          fontFamily: 'Vazirmatn',
+                          decoration: TextDecoration.none,
                         ),
                       ),
                     ],
                   ),
-                  const SizedBox(height: 16),
-                  const Divider(color: AppColors.borderGrey, height: 1),
-                  const SizedBox(height: 12),
                   Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          const Text(
-                            'مبلغ پیشنهادی کارشناسی شده:',
-                            style: TextStyle(
-                              fontSize: 10,
-                              color: AppColors.textMuted,
-                              fontFamily: 'Vazirmatn',
-                            ),
-                          ),
-                          const SizedBox(height: 4),
-                          Text(
-                            '${Formatters.formatPrice(int.tryParse(bid['price']) ?? 0)} تومان',
-                            style: const TextStyle(
-                              fontSize: 14,
-                              fontWeight: FontWeight.bold,
-                              color: AppColors.royalBlue,
-                              fontFamily: 'Vazirmatn',
-                            ),
-                          ),
-                        ],
-                      ),
-                      Row(
-                        children: [
-                          Material(
-                            color: Colors.transparent,
-                            child: InkWell(
+                      Material(
+                        color: Colors.transparent,
+                        child: InkWell(
+                          borderRadius: BorderRadius.circular(10),
+                          onTap: () {
+                            _showCallPreviewDialog(context, bid['name'] as String, bid['phone'] as String);
+                          },
+                          child: Container(
+                            padding: const EdgeInsets.all(10),
+                            decoration: BoxDecoration(
+                              border: Border.all(color: AppColors.borderGrey),
                               borderRadius: BorderRadius.circular(10),
-                              onTap: () {
-                                _showCallPreviewDialog(context, bid['name'] as String, bid['phone'] as String);
-                              },
-                              child: Container(
-                                padding: const EdgeInsets.all(10),
-                                decoration: BoxDecoration(
-                                  border: Border.all(color: AppColors.borderGrey),
-                                  borderRadius: BorderRadius.circular(10),
-                                ),
-                                child: const Icon(Icons.phone_in_talk_outlined, color: AppColors.royalBlue, size: 18),
-                              ),
                             ),
+                            child: const Icon(Icons.phone_in_talk_outlined, color: AppColors.royalBlue, size: 18),
                           ),
-                          const SizedBox(width: 8),
-                          ElevatedButton(
-                            onPressed: () {
-                              _showProfilePreviewDialog(context, bid);
-                            },
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: AppColors.royalBlue,
-                              foregroundColor: AppColors.white,
-                              elevation: 0,
-                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-                            ),
-                            child: const Text(
-                              'مشاهده پروفایل',
-                              style: TextStyle(
-                                fontSize: 11,
-                                fontWeight: FontWeight.bold,
-                                fontFamily: 'Vazirmatn',
-                              ),
-                            ),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      ElevatedButton(
+                        onPressed: () {
+                          _showProfilePreviewDialog(context, bid);
+                        },
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: AppColors.royalBlue,
+                          foregroundColor: AppColors.white,
+                          elevation: 0,
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                        ),
+                        child: const Text(
+                          'مشاهده پروفایل',
+                          style: TextStyle(
+                            fontSize: 11,
+                            fontWeight: FontWeight.bold,
+                            fontFamily: 'Vazirmatn',
                           ),
-                        ],
+                        ),
                       ),
                     ],
                   ),
                 ],
               ),
-            ),
+            ],
           ),
-        );
-      },
+        ),
+      ),
     );
   }
 
@@ -810,119 +816,119 @@ class _InquiryDetailsScreenState extends State<InquiryDetailsScreen> {
           child: AlertDialog(
             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
             contentPadding: const EdgeInsets.all(24),
-            content: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                CircleAvatar(
-                  radius: 30,
-                  backgroundColor: AppColors.royalBlue.withValues(alpha: 0.1),
-                  child: Text(
-                    bid['initials'] as String,
+            content: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  CircleAvatar(
+                    radius: 30,
+                    backgroundColor: AppColors.royalBlue.withValues(alpha: 0.1),
+                    child: Text(
+                      bid['initials'] as String,
+                      style: const TextStyle(
+                        color: AppColors.royalBlue,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 18,
+                        fontFamily: 'Vazirmatn',
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 14),
+                  Text(
+                    bid['name'] as String,
                     style: const TextStyle(
-                      color: AppColors.royalBlue,
                       fontWeight: FontWeight.bold,
-                      fontSize: 18,
+                      fontSize: 16,
+                      color: AppColors.textDark,
                       fontFamily: 'Vazirmatn',
                     ),
                   ),
-                ),
-                const SizedBox(height: 14),
-                Text(
-                  bid['name'] as String,
-                  style: const TextStyle(
-                    fontWeight: FontWeight.bold,
-                    fontSize: 16,
-                    color: AppColors.textDark,
-                    fontFamily: 'Vazirmatn',
-                  ),
-                ),
-                const SizedBox(height: 4),
-                const Text(
-                  'متخصص جوشکاری اسکلت و لوله‌کشی گاز',
-                  style: TextStyle(
-                    fontSize: 11,
-                    color: AppColors.textMuted,
-                    fontFamily: 'Vazirmatn',
-                  ),
-                ),
-                const SizedBox(height: 16),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    const Icon(Icons.star, color: Colors.amber, size: 16),
-                    const SizedBox(width: 4),
-                    Text(
-                      '${bid['rating']} از ۵',
-                      style: const TextStyle(
-                        fontWeight: FontWeight.bold,
-                        fontSize: 12,
-                        fontFamily: 'Vazirmatn',
-                      ),
-                    ),
-                    const SizedBox(width: 16),
-                    const Icon(Icons.check_circle_outline, color: Colors.green, size: 16),
-                    const SizedBox(width: 4),
-                    Text(
-                      '${bid['projects']} پروژه انجام‌شده',
-                      style: const TextStyle(
-                        fontWeight: FontWeight.bold,
-                        fontSize: 12,
-                        fontFamily: 'Vazirmatn',
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 20),
-                const Divider(color: AppColors.borderGrey, height: 1),
-                const SizedBox(height: 12),
-                const Align(
-                  alignment: Alignment.centerRight,
-                  child: Text(
-                    'جزئیات قیمت پیشنهادی برای هر قلم:',
+                  const SizedBox(height: 4),
+                  const Text(
+                    'متخصص جوشکاری اسکلت و لوله‌کشی گاز',
                     style: TextStyle(
-                      fontWeight: FontWeight.bold,
-                      fontSize: 12,
-                      color: AppColors.royalBlue,
+                      fontSize: 11,
+                      color: AppColors.textMuted,
                       fontFamily: 'Vazirmatn',
                     ),
                   ),
-                ),
-                const SizedBox(height: 8),
-                Container(
-                  constraints: const BoxConstraints(maxHeight: 120),
-                  width: double.infinity,
-                  decoration: BoxDecoration(
-                    color: AppColors.lightGrey,
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: AppColors.borderGrey),
+                  const SizedBox(height: 16),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      const Icon(Icons.star, color: Colors.amber, size: 16),
+                      const SizedBox(width: 4),
+                      Text(
+                        '${bid['rating']} از ۵',
+                        style: const TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 12,
+                          fontFamily: 'Vazirmatn',
+                        ),
+                      ),
+                      const SizedBox(width: 16),
+                      const Icon(Icons.check_circle_outline, color: Colors.green, size: 16),
+                      const SizedBox(width: 4),
+                      Text(
+                        '${bid['projects']} پروژه انجام‌شده',
+                        style: const TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 12,
+                          fontFamily: 'Vazirmatn',
+                        ),
+                      ),
+                    ],
                   ),
-                  child: ListView.separated(
-                    shrinkWrap: true,
-                    padding: const EdgeInsets.all(8),
-                    itemCount: (bid['items_prices'] as List<dynamic>?)?.length ?? 0,
-                    separatorBuilder: (context, index) => const Divider(height: 12, color: AppColors.borderGrey),
-                    itemBuilder: (context, index) {
-                      final item = bid['items_prices'][index];
-                      return Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Expanded(
-                            child: Text(
-                              item['title'] as String? ?? '',
-                              style: const TextStyle(fontSize: 11, color: AppColors.textDark, fontFamily: 'Vazirmatn'),
-                            ),
-                          ),
-                          Text(
-                            '${Formatters.formatPrice(item['price'] as int? ?? 0)} تومان',
-                            style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: AppColors.royalBlue, fontFamily: 'Vazirmatn'),
-                          ),
-                        ],
-                      );
-                    },
+                  const SizedBox(height: 20),
+                  const Divider(color: AppColors.borderGrey, height: 1),
+                  const SizedBox(height: 12),
+                  const Align(
+                    alignment: Alignment.centerRight,
+                    child: Text(
+                      'جزئیات قیمت پیشنهادی برای هر قلم:',
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 12,
+                        color: AppColors.royalBlue,
+                        fontFamily: 'Vazirmatn',
+                      ),
+                    ),
                   ),
-                ),
-                const SizedBox(height: 16),
-                const Divider(color: AppColors.borderGrey, height: 1),
+                  const SizedBox(height: 8),
+                  Container(
+                    padding: const EdgeInsets.all(12),
+                    width: double.infinity,
+                    decoration: BoxDecoration(
+                      color: AppColors.lightGrey,
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: AppColors.borderGrey),
+                    ),
+                    child: Column(
+                      children: ((bid['items_prices'] as List<dynamic>?) ?? []).map<Widget>((item) {
+                        final itemPriceVal = int.tryParse(item['price']?.toString() ?? '0') ?? 0;
+                        return Padding(
+                          padding: const EdgeInsets.symmetric(vertical: 4.0),
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Expanded(
+                                child: Text(
+                                  item['title'] as String? ?? '',
+                                  style: const TextStyle(fontSize: 11, color: AppColors.textDark, fontFamily: 'Vazirmatn'),
+                                ),
+                              ),
+                              Text(
+                                '${Formatters.formatPrice(itemPriceVal)} تومان',
+                                style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: AppColors.royalBlue, fontFamily: 'Vazirmatn'),
+                              ),
+                            ],
+                          ),
+                        );
+                      }).toList(),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  const Divider(color: AppColors.borderGrey, height: 1),
                 const SizedBox(height: 16),
                 const Text(
                   'مهارت‌ها و تجهیزات:',
@@ -961,10 +967,11 @@ class _InquiryDetailsScreenState extends State<InquiryDetailsScreen> {
               ],
             ),
           ),
-        );
-      },
-    );
-  }
+        ),
+      );
+    },
+  );
+}
 
   Widget _buildSkillChip(String label) {
     return Container(
