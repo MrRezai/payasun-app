@@ -11,7 +11,7 @@ interface Toast {
 
 export default function App() {
   const [isAuthenticated, setIsAuthenticated] = useState(ApiClient.isAuthenticated());
-  const [activeTab, setActiveTab] = useState<'overview' | 'approvals' | 'estimations' | 'skills' | 'settings'>('overview');
+  const [activeTab, setActiveTab] = useState<'overview' | 'users' | 'approvals' | 'estimations' | 'skills'>('overview');
   const [isOnline, setIsOnline] = useState(false);
   const [toasts, setToasts] = useState<Toast[]>([]);
   
@@ -20,12 +20,16 @@ export default function App() {
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
 
-  // Data lists & Statistics
+  // Lazy tab-loading states
+  const [tabLoading, setTabLoading] = useState(false);
+
+  // Data lists & Statistics loaded dynamically per tab
   const [weldersCount, setWeldersCount] = useState(0);
   const [employersCount, setEmployersCount] = useState(0);
   const [skills, setSkills] = useState<Skill[]>([]);
   const [pendingVerifications, setPendingVerifications] = useState<any[]>([]);
   const [inquiries, setInquiries] = useState<Inquiry[]>([]);
+  const [usersList, setUsersList] = useState<any[]>([]);
   
   // Modals & Selected states
   const [selectedVerification, setSelectedVerification] = useState<any | null>(null);
@@ -38,11 +42,6 @@ export default function App() {
   const [newSkillName, setNewSkillName] = useState('');
   const [editingSkillId, setEditingSkillId] = useState<number | null>(null);
   const [editingSkillName, setEditingSkillName] = useState('');
-  
-  // Server settings mock config
-  const [dbHost, setDbHost] = useState('localhost');
-  const [dbPort, setDbPort] = useState('5432');
-  const [dbName, setDbName] = useState('joftojoor_db');
 
   // Trigger Toast helper
   const showToast = (message: string, type: 'success' | 'warning' = 'success') => {
@@ -53,7 +52,68 @@ export default function App() {
     }, 4000);
   };
 
-  // Status and data sync
+  // Lazy load tab data robustly with sequential error catches and UNAUTHORIZED intercept
+  const loadTabData = async (tabName: string) => {
+    setTabLoading(true);
+    try {
+      if (tabName === 'overview') {
+        try {
+          const weldersNum = await ApiClient.getWeldersCount();
+          setWeldersCount(weldersNum);
+        } catch (err: any) {
+          if (err.message === 'UNAUTHORIZED') throw err;
+          console.error('Failed to load welders count:', err);
+        }
+
+        try {
+          const employersNum = await ApiClient.getEmployersCount();
+          setEmployersCount(employersNum);
+        } catch (err: any) {
+          if (err.message === 'UNAUTHORIZED') throw err;
+          console.error('Failed to load employers count:', err);
+        }
+
+        try {
+          const inquiriesData = await ApiClient.getInquiries();
+          setInquiries(inquiriesData);
+        } catch (err: any) {
+          if (err.message === 'UNAUTHORIZED') throw err;
+          console.error('Failed to load inquiries:', err);
+        }
+
+        try {
+          const usersData = await ApiClient.getUsers();
+          setUsersList(usersData);
+        } catch (err: any) {
+          if (err.message === 'UNAUTHORIZED') throw err;
+          console.error('Failed to load users list:', err);
+        }
+      } else if (tabName === 'users') {
+        const usersData = await ApiClient.getUsers();
+        setUsersList(usersData);
+      } else if (tabName === 'approvals') {
+        const pendingData = await ApiClient.getPendingVerifications();
+        setPendingVerifications(pendingData);
+      } else if (tabName === 'estimations') {
+        const inquiriesData = await ApiClient.getInquiries();
+        setInquiries(inquiriesData);
+      } else if (tabName === 'skills') {
+        const skillsData = await ApiClient.getSkills();
+        setSkills(skillsData);
+      }
+    } catch (e: any) {
+      if (e.message === 'UNAUTHORIZED') {
+        setIsAuthenticated(false);
+        showToast('جلسه کاری شما منقضی شده است. لطفا دوباره وارد شوید.', 'warning');
+      } else {
+        showToast(e.message || 'خطا در دریافت اطلاعات از سرور.', 'warning');
+      }
+    } finally {
+      setTabLoading(false);
+    }
+  };
+
+  // Status and data sync on tab active
   useEffect(() => {
     const handleStatusChange = (status: boolean) => {
       setIsOnline(status);
@@ -62,7 +122,7 @@ export default function App() {
     ApiClient.addStatusListener(handleStatusChange);
     
     if (isAuthenticated) {
-      refreshAllData();
+      loadTabData(activeTab);
     }
 
     // Ping check every 5 seconds
@@ -74,27 +134,10 @@ export default function App() {
       ApiClient.removeStatusListener(handleStatusChange);
       clearInterval(interval);
     };
-  }, [isAuthenticated]);
+  }, [isAuthenticated, activeTab]);
 
-  const refreshAllData = async () => {
-    try {
-      const weldersNum = await ApiClient.getWeldersCount();
-      setWeldersCount(weldersNum);
-      
-      const employersNum = await ApiClient.getEmployersCount();
-      setEmployersCount(employersNum);
-
-      const skillsData = await ApiClient.getSkills();
-      setSkills(skillsData);
-      
-      const pendingData = await ApiClient.getPendingVerifications();
-      setPendingVerifications(pendingData);
-      
-      const inquiriesData = await ApiClient.getInquiries();
-      setInquiries(inquiriesData);
-    } catch (e) {
-      console.error('Error refreshing dashboard data', e);
-    }
+  const switchTab = (tabName: typeof activeTab) => {
+    setActiveTab(tabName);
   };
 
   /* ─────────────────────────────────────────────────────────────
@@ -139,9 +182,14 @@ export default function App() {
         approve ? 'success' : 'warning'
       );
       setSelectedVerification(null);
-      refreshAllData();
-    } catch (e) {
-      showToast('خطا در انجام احراز هویت.', 'warning');
+      loadTabData('approvals');
+    } catch (e: any) {
+      if (e.message === 'UNAUTHORIZED') {
+        setIsAuthenticated(false);
+        showToast('جلسه کاری شما منقضی شده است. لطفا دوباره وارد شوید.', 'warning');
+      } else {
+        showToast(e.message || 'خطا در انجام احراز هویت.', 'warning');
+      }
     }
   };
 
@@ -178,9 +226,14 @@ export default function App() {
       showToast('لیست اقلام کارشناسی با موفقیت ثبت و برای کارفرما ارسال گردید.', 'success');
       setSelectedInquiry(null);
       setEstimationItems([{ title: '', unit: 'متر', quantity: 1, price: 0 }]);
-      refreshAllData();
-    } catch (e) {
-      showToast('خطا در ثبت برآورد پروژه.', 'warning');
+      loadTabData('estimations');
+    } catch (e: any) {
+      if (e.message === 'UNAUTHORIZED') {
+        setIsAuthenticated(false);
+        showToast('جلسه کاری شما منقضی شده است. لطفا دوباره وارد شوید.', 'warning');
+      } else {
+        showToast(e.message || 'خطا در ثبت برآورد پروژه.', 'warning');
+      }
     }
   };
 
@@ -194,9 +247,14 @@ export default function App() {
       await ApiClient.createSkill(newSkillName.trim());
       showToast('تخصص جدید با موفقیت به سیستم اضافه شد.', 'success');
       setNewSkillName('');
-      refreshAllData();
-    } catch (e) {
-      showToast('خطا در ثبت تخصص.', 'warning');
+      loadTabData('skills');
+    } catch (e: any) {
+      if (e.message === 'UNAUTHORIZED') {
+        setIsAuthenticated(false);
+        showToast('جلسه کاری شما منقضی شده است. لطفا دوباره وارد شوید.', 'warning');
+      } else {
+        showToast(e.message || 'خطا در ثبت تخصص.', 'warning');
+      }
     }
   };
 
@@ -211,9 +269,14 @@ export default function App() {
       await ApiClient.updateSkill(id, editingSkillName.trim());
       showToast('نام تخصص با موفقیت ویرایش شد.', 'success');
       setEditingSkillId(null);
-      refreshAllData();
-    } catch (e) {
-      showToast('خطا در ویرایش تخصص.', 'warning');
+      loadTabData('skills');
+    } catch (e: any) {
+      if (e.message === 'UNAUTHORIZED') {
+        setIsAuthenticated(false);
+        showToast('جلسه کاری شما منقضی شده است. لطفا دوباره وارد شوید.', 'warning');
+      } else {
+        showToast(e.message || 'خطا در ویرایش تخصص.', 'warning');
+      }
     }
   };
 
@@ -222,17 +285,96 @@ export default function App() {
     try {
       await ApiClient.deleteSkill(id);
       showToast('تخصص مربوطه از سیستم حذف گردید.', 'warning');
-      refreshAllData();
-    } catch (e) {
-      showToast('خطا در حذف تخصص.', 'warning');
+      loadTabData('skills');
+    } catch (e: any) {
+      if (e.message === 'UNAUTHORIZED') {
+        setIsAuthenticated(false);
+        showToast('جلسه کاری شما منقضی شده است. لطفا دوباره وارد شوید.', 'warning');
+      } else {
+        showToast(e.message || 'خطا در حذف تخصص.', 'warning');
+      }
     }
   };
 
   /* ─────────────────────────────────────────────────────────────
-     METRICS COMPUTATIONS
+     STATS AND EVENTS GENERATION (100% Real from Live DB State)
      ───────────────────────────────────────────────────────────── */
-  const pendingPicsCount = pendingVerifications.length;
   const pendingEstimationsCount = inquiries.filter(i => i.status === 'PENDING_ESTIMATION').length;
+  const estimatedCount = inquiries.filter(i => i.status === 'ESTIMATED').length;
+  const broadcastedCount = inquiries.filter(i => i.status === 'BROADCASTED').length;
+  const closedCount = inquiries.filter(i => i.status === 'CLOSED' || i.status === 'EXPIRED').length;
+  const pendingPicsCount = pendingVerifications.length;
+
+  const maxChartCount = Math.max(pendingEstimationsCount, estimatedCount, broadcastedCount, closedCount, 1);
+  const pendingBarHeight = `${Math.round((pendingEstimationsCount / maxChartCount) * 140)}px`;
+  const estimatedBarHeight = `${Math.round((estimatedCount / maxChartCount) * 140)}px`;
+  const broadcastedBarHeight = `${Math.round((broadcastedCount / maxChartCount) * 140)}px`;
+  const closedBarHeight = `${Math.round((closedCount / maxChartCount) * 140)}px`;
+
+  // Dynamic Event Compilation
+  const compileRecentEvents = () => {
+    const events: { id: string; time: string; message: string; color: string; timestamp: number }[] = [];
+    
+    // Process Inquiries
+    inquiries.forEach(i => {
+      const dateObj = new Date(i.updated_at || i.created_at || Date.now());
+      const dateStr = dateObj.toLocaleDateString('fa-IR');
+      if (i.status === 'PENDING_ESTIMATION') {
+        events.push({
+          id: `inq-pending-${i.id}`,
+          time: dateStr,
+          message: `استعلام جدید با عنوان «${i.title}» ثبت شد و در انتظار کارشناسی نقشه است.`,
+          color: 'var(--primary)',
+          timestamp: dateObj.getTime(),
+        });
+      } else if (i.status === 'ESTIMATED') {
+        events.push({
+          id: `inq-estimated-${i.id}`,
+          time: dateStr,
+          message: `برآورد فنی و کارشناسی پروژه «${i.title}» به مبلغ کل ثبت شد و منتظر تایید نهایی کارفرماست.`,
+          color: 'var(--warning)',
+          timestamp: dateObj.getTime(),
+        });
+      } else if (i.status === 'BROADCASTED') {
+        events.push({
+          id: `inq-broadcasted-${i.id}`,
+          time: dateStr,
+          message: `استعلام «${i.title}» تایید و در پلتفرم منتشر گردید.`,
+          color: 'var(--success)',
+          timestamp: dateObj.getTime(),
+        });
+      }
+    });
+
+    // Process Users
+    usersList.forEach(u => {
+      const dateObj = new Date(u.created_at || Date.now());
+      const dateStr = dateObj.toLocaleDateString('fa-IR');
+      const roleLabel = u.role === 'WELDER' ? 'جوشکار' : 'کارفرما';
+      events.push({
+        id: `usr-reg-${u.id}`,
+        time: dateStr,
+        message: `کاربر جدید (${roleLabel}) با نام «${u.name}» و شماره ${u.phone_number} در سامانه عضو شد.`,
+        color: 'var(--text-secondary)',
+        timestamp: dateObj.getTime(),
+      });
+    });
+
+    // Sort by timestamp (descending)
+    events.sort((a, b) => b.timestamp - a.timestamp);
+
+    return events.slice(0, 5);
+  };
+
+  const recentEvents = compileRecentEvents();
+
+  // Tab Loader Element
+  const TabLoader = () => (
+    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minHeight: '220px', gap: '14px' }}>
+      <div className="spinner"></div>
+      <span style={{ fontSize: '13px', color: 'var(--text-secondary)', fontWeight: '500' }}>در حال دریافت اطلاعات زنده از دیتابیس...</span>
+    </div>
+  );
 
   /* ─────────────────────────────────────────────────────────────
      UNAUTHENTICATED (LOGIN SCREEN WITH USER & PASSWORD)
@@ -319,7 +461,7 @@ export default function App() {
         <nav className="menu-section">
           <button 
             className={`menu-item ${activeTab === 'overview' ? 'active' : ''}`}
-            onClick={() => setActiveTab('overview')}
+            onClick={() => switchTab('overview')}
           >
             <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6a2 2 0 012-2h2a2 2 0 012 2v4a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v4a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v4a2 2 0 01-2 2H6a2 2 0 01-2-2v-4zM14 16a2 2 0 012-2h2a2 2 0 012 2v4a2 2 0 01-2 2h-2a2 2 0 01-2-2v-4z" />
@@ -328,8 +470,18 @@ export default function App() {
           </button>
 
           <button 
+            className={`menu-item ${activeTab === 'users' ? 'active' : ''}`}
+            onClick={() => switchTab('users')}
+          >
+            <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a3 3 0 11-6 0 3 3 0 016 0z" />
+            </svg>
+            <span>لیست کاربران</span>
+          </button>
+
+          <button 
             className={`menu-item ${activeTab === 'approvals' ? 'active' : ''}`}
-            onClick={() => setActiveTab('approvals')}
+            onClick={() => switchTab('approvals')}
           >
             <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
@@ -340,7 +492,7 @@ export default function App() {
 
           <button 
             className={`menu-item ${activeTab === 'estimations' ? 'active' : ''}`}
-            onClick={() => setActiveTab('estimations')}
+            onClick={() => switchTab('estimations')}
           >
             <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
@@ -351,23 +503,12 @@ export default function App() {
 
           <button 
             className={`menu-item ${activeTab === 'skills' ? 'active' : ''}`}
-            onClick={() => setActiveTab('skills')}
+            onClick={() => switchTab('skills')}
           >
             <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
             </svg>
             <span>مدیریت تخصص‌ها</span>
-          </button>
-
-          <button 
-            className={`menu-item ${activeTab === 'settings' ? 'active' : ''}`}
-            onClick={() => setActiveTab('settings')}
-          >
-            <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-            </svg>
-            <span>تنظیمات سرور</span>
           </button>
         </nav>
         
@@ -384,10 +525,10 @@ export default function App() {
           <div className="topbar-title">
             <h1>
               {activeTab === 'overview' && 'داشبورد عمومی مدیریت'}
+              {activeTab === 'users' && 'لیست کامل کاربران پلتفرم'}
               {activeTab === 'approvals' && 'تایید و صحت‌سنجی مدارک'}
               {activeTab === 'estimations' && 'کارشناسی و برآورد فنی اقلام'}
               {activeTab === 'skills' && 'تنظیمات تخصص‌ها و مهارت‌ها'}
-              {activeTab === 'settings' && 'تنظیمات ارتباطی پایگاه داده'}
             </h1>
           </div>
           
@@ -395,7 +536,7 @@ export default function App() {
             {isOnline ? (
               <div className="server-badge online">
                 <span className="badge-dot pulse"></span>
-                <span>متصل به سرور NestJS</span>
+                <span>متصل به سرور</span>
               </div>
             ) : (
               <div className="server-badge offline">
@@ -412,427 +553,465 @@ export default function App() {
 
         {/* TAB 1: OVERVIEW */}
         {activeTab === 'overview' && (
-          <div style={{ animation: 'fadeIn 0.3s ease-out' }}>
-            {/* Stats Metrics Cards */}
-            <div className="grid-metrics">
-              <div className="glass-card metric-card">
-                <div className="metric-info">
-                  <h3>جوشکاران فعال</h3>
-                  <div className="value">{weldersCount}</div>
+          tabLoading ? <TabLoader /> : (
+            <div style={{ animation: 'fadeIn 0.3s ease-out' }}>
+              {/* Stats Metrics Cards */}
+              <div className="grid-metrics">
+                <div className="glass-card metric-card">
+                  <div className="metric-info">
+                    <h3>جوشکاران فعال</h3>
+                    <div className="value">{weldersCount}</div>
+                  </div>
+                  <div className="metric-icon">
+                    <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" width="24" height="24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+                    </svg>
+                  </div>
                 </div>
-                <div className="metric-icon">
-                  <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" width="24" height="24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
-                  </svg>
+
+                <div className="glass-card metric-card">
+                  <div className="metric-info">
+                    <h3>کارفرمایان ثبت‌شده</h3>
+                    <div className="value">{employersCount}</div>
+                  </div>
+                  <div className="metric-icon success">
+                    <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" width="24" height="24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+                    </svg>
+                  </div>
+                </div>
+
+                <div className="glass-card metric-card">
+                  <div className="metric-info">
+                    <h3>تصاویر معلق تایید</h3>
+                    <div className="value">{pendingPicsCount}</div>
+                  </div>
+                  <div className={`metric-icon ${pendingPicsCount > 0 ? 'warning' : ''}`}>
+                    <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" width="24" height="24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                    </svg>
+                  </div>
+                </div>
+
+                <div className="glass-card metric-card">
+                  <div className="metric-info">
+                    <h3>انتظار برای کارشناسی</h3>
+                    <div className="value">{pendingEstimationsCount}</div>
+                  </div>
+                  <div className={`metric-icon ${pendingEstimationsCount > 0 ? 'danger' : ''}`}>
+                    <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" width="24" height="24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                    </svg>
+                  </div>
                 </div>
               </div>
 
-              <div className="glass-card metric-card">
-                <div className="metric-info">
-                  <h3>کارفرمایان ثبت‌شده</h3>
-                  <div className="value">{employersCount}</div>
+              {/* Visual Charts Section */}
+              <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '24px', marginBottom: '28px' }}>
+                <div className="glass-card">
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+                    <h3 style={{ fontSize: '15px', fontWeight: '700' }}>آمار وضعیت استعلام‌های پروژه</h3>
+                    <span style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>تعداد کل پروژه‌ها: {inquiries.length} عدد</span>
+                  </div>
+                  <div className="chart-container" style={{ minHeight: '180px' }}>
+                    <div className="chart-bar-wrapper">
+                      <div className="chart-bar" style={{ height: pendingBarHeight }}></div>
+                      <span className="chart-label">انتظار کارشناسی ({pendingEstimationsCount})</span>
+                    </div>
+                    <div className="chart-bar-wrapper">
+                      <div className="chart-bar" style={{ height: estimatedBarHeight, background: 'linear-gradient(to top, var(--secondary), rgba(245,158,11,0.3))' }}></div>
+                      <span className="chart-label">برآورد شده ({estimatedCount})</span>
+                    </div>
+                    <div className="chart-bar-wrapper">
+                      <div className="chart-bar" style={{ height: broadcastedBarHeight, background: 'linear-gradient(to top, var(--success), rgba(16,185,129,0.3))' }}></div>
+                      <span className="chart-label">انتشار یافته ({broadcastedCount})</span>
+                    </div>
+                    <div className="chart-bar-wrapper">
+                      <div className="chart-bar" style={{ height: closedBarHeight, background: 'rgba(0, 0, 0, 0.05)' }}></div>
+                      <span className="chart-label">بسته‌شده ({closedCount})</span>
+                    </div>
+                  </div>
                 </div>
-                <div className="metric-icon success">
-                  <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" width="24" height="24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
-                  </svg>
+
+                <div className="glass-card" style={{ display: 'flex', flexDirection: 'column' }}>
+                  <h3 style={{ fontSize: '15px', fontWeight: '700', marginBottom: '16px' }}>توزیع جغرافیایی پروژه‌ها</h3>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '14px', flex: 1, justifyContent: 'center' }}>
+                    {inquiries.length === 0 ? (
+                      <div style={{ fontSize: '12px', color: 'var(--text-secondary)', textAlign: 'center' }}>اطلاعات موقعیتی ثبت نشده است.</div>
+                    ) : (
+                      // Computes dynamic state distributions from real database
+                      Array.from(new Set(inquiries.map(i => i.province))).slice(0, 3).map(prov => {
+                        const count = inquiries.filter(i => i.province === prov).length;
+                        const pct = Math.round((count / inquiries.length) * 100);
+                        return (
+                          <div key={prov}>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', marginBottom: '4px' }}>
+                              <span>استان {prov} ({pct}٪)</span>
+                              <span>{count} استعلام</span>
+                            </div>
+                            <div style={{ width: '100%', height: '6px', backgroundColor: 'rgba(0,0,0,0.05)', borderRadius: '3px', overflow: 'hidden' }}>
+                              <div style={{ width: `${pct}%`, height: '100%', backgroundColor: prov === 'تهران' ? 'var(--primary)' : 'var(--secondary)' }}></div>
+                            </div>
+                          </div>
+                        );
+                      })
+                    )}
+                  </div>
                 </div>
               </div>
 
-              <div className="glass-card metric-card">
-                <div className="metric-info">
-                  <h3>تصاویر معلق تایید</h3>
-                  <div className="value">{pendingPicsCount}</div>
-                </div>
-                <div className={`metric-icon ${pendingPicsCount > 0 ? 'warning' : ''}`}>
-                  <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" width="24" height="24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                  </svg>
-                </div>
-              </div>
-
-              <div className="glass-card metric-card">
-                <div className="metric-info">
-                  <h3>انتظار برای کارشناسی</h3>
-                  <div className="value">{pendingEstimationsCount}</div>
-                </div>
-                <div className={`metric-icon ${pendingEstimationsCount > 0 ? 'danger' : ''}`}>
-                  <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" width="24" height="24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                  </svg>
-                </div>
-              </div>
-            </div>
-
-            {/* Visual Charts Section */}
-            <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '24px', marginBottom: '28px' }}>
+              {/* Dynamic Live Event Reports */}
               <div className="glass-card">
-                <h3 style={{ fontSize: '15px', fontWeight: '700', marginBottom: '16px' }}>آمار وضعیت استعلام‌های پروژه</h3>
-                <div className="chart-container">
-                  <div className="chart-bar-wrapper">
-                    <div className="chart-bar" style={{ height: '110px' }}></div>
-                    <span className="chart-label">انتظار کارشناسی ({pendingEstimationsCount})</span>
-                  </div>
-                  <div className="chart-bar-wrapper">
-                    <div className="chart-bar" style={{ height: '55px', background: 'linear-gradient(to top, var(--secondary), rgba(245,158,11,0.3))' }}></div>
-                    <span className="chart-label">برآورد مالی شده</span>
-                  </div>
-                  <div className="chart-bar-wrapper">
-                    <div className="chart-bar" style={{ height: '70px', background: 'linear-gradient(to top, var(--success), rgba(16,185,129,0.3))' }}></div>
-                    <span className="chart-label">انتشار یافته</span>
-                  </div>
-                </div>
-              </div>
-
-              <div className="glass-card" style={{ display: 'flex', flexDirection: 'column' }}>
-                <h3 style={{ fontSize: '15px', fontWeight: '700', marginBottom: '16px' }}>توزیع جغرافیایی پروژه‌ها</h3>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '14px', flex: 1, justifyContent: 'center' }}>
-                  <div>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', marginBottom: '4px' }}>
-                      <span>استان تهران (۷۵٪)</span>
-                      <span>۳ استعلام</span>
-                    </div>
-                    <div style={{ width: '100%', height: '6px', backgroundColor: 'rgba(0,0,0,0.05)', borderRadius: '3px', overflow: 'hidden' }}>
-                      <div style={{ width: '75%', height: '100%', backgroundColor: 'var(--primary)' }}></div>
-                    </div>
-                  </div>
-
-                  <div>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', marginBottom: '4px' }}>
-                      <span>استان البرز (۲۵٪)</span>
-                      <span>۱ استعلام</span>
-                    </div>
-                    <div style={{ width: '100%', height: '6px', backgroundColor: 'rgba(0,0,0,0.05)', borderRadius: '3px', overflow: 'hidden' }}>
-                      <div style={{ width: '25%', height: '100%', backgroundColor: 'var(--secondary)' }}></div>
-                    </div>
-                  </div>
+                <h3 style={{ fontSize: '15px', fontWeight: '700', marginBottom: '16px' }}>گزارش رویدادهای اخیر پلتفرم</h3>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                  {recentEvents.length === 0 ? (
+                    <div style={{ fontSize: '12px', color: 'var(--text-secondary)', textAlign: 'center' }}>رویدادی ثبت نشده است.</div>
+                  ) : (
+                    recentEvents.map((evt) => (
+                      <div key={evt.id} style={{ display: 'flex', gap: '12px', fontSize: '13px', borderBottom: '1px solid var(--border)', paddingBottom: '12px' }}>
+                        <span style={{ color: evt.color, fontWeight: 'bold', width: '100px', display: 'inline-block' }}>{evt.time}</span>
+                        <span>{evt.message}</span>
+                      </div>
+                    ))
+                  )}
                 </div>
               </div>
             </div>
+          )
+        )}
 
-            {/* Recent Log Activities */}
-            <div className="glass-card">
-              <h3 style={{ fontSize: '15px', fontWeight: '700', marginBottom: '16px' }}>گزارش رویدادهای اخیر پلتفرم</h3>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                <div style={{ display: 'flex', gap: '12px', fontSize: '13px', borderBottom: '1px solid var(--border)', paddingBottom: '12px' }}>
-                  <span style={{ color: 'var(--primary)', fontWeight: 'bold' }}>۱۰:۳۰</span>
-                  <span>کارفرما <strong>سازه‌گستر البرز</strong> استعلام جدیدی با عنوان <strong>«لوله‌کشی گاز رایزر ساختمان ۵ طبقه»</strong> ثبت کرد و فایل نقشه بارگذاری شد.</span>
-                </div>
-                <div style={{ display: 'flex', gap: '12px', fontSize: '13px', borderBottom: '1px solid var(--border)', paddingBottom: '12px' }}>
-                  <span style={{ color: 'var(--success)', fontWeight: 'bold' }}>دیروز</span>
-                  <span>تصویر پروفایل جوشکار <strong>امیرحسین رضایی</strong> توسط ادمین احراز هویت و تایید گردید.</span>
-                </div>
-                <div style={{ display: 'flex', gap: '12px', fontSize: '13px' }}>
-                  <span style={{ color: 'var(--text-secondary)' }}>۲ روز پیش</span>
-                  <span>جوشکار جدید <strong>سجاد محمدی</strong> با شماره تماس ۰۹۱۲۴۴۴۴۴۴۴ ثبت‌نام اولیه خود را انجام داد.</span>
-                </div>
+        {/* TAB 1.5: USERS LIST */}
+        {activeTab === 'users' && (
+          tabLoading ? <TabLoader /> : (
+            <div className="glass-card" style={{ animation: 'fadeIn 0.3s ease-out' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '18px' }}>
+                <h3 style={{ fontSize: '16px', fontWeight: '700' }}>لیست کامل کاربران پلتفرم جفت‌وجور</h3>
+                <span style={{ fontSize: '13px', color: 'var(--text-secondary)' }}>
+                  تعداد کل کاربران: <strong>{usersList.length} نفر</strong>
+                </span>
               </div>
+              
+              {usersList.length === 0 ? (
+                <div style={{ padding: '40px 0', textAlign: 'center', color: 'var(--text-secondary)' }}>
+                  هیچ کاربری یافت نشد.
+                </div>
+              ) : (
+                <div className="table-responsive">
+                  <table className="custom-table">
+                    <thead>
+                      <tr>
+                        <th>نام کاربر</th>
+                        <th>شماره همراه</th>
+                        <th>نقش فعال فعلی</th>
+                        <th>محدوده جغرافیایی</th>
+                        <th>نقش‌های ثبت شده</th>
+                        <th>تاریخ عضویت</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {usersList.map((usr) => (
+                        <tr key={usr.id}>
+                          <td>
+                            <div className="user-info-cell">
+                              <div className="avatar">
+                                {usr.profile_picture_url ? (
+                                  <img 
+                                    src={`${BASE_URL}${usr.profile_picture_url}`} 
+                                    alt={usr.name}
+                                    onError={(e) => {
+                                      e.currentTarget.src = '';
+                                    }} 
+                                  />
+                                ) : (
+                                  <span>{usr.name.substring(0, 2)}</span>
+                                )}
+                              </div>
+                              <div className="user-details">
+                                <h4>{usr.name}</h4>
+                              </div>
+                            </div>
+                          </td>
+                          <td style={{ direction: 'ltr' }}>{usr.phone_number}</td>
+                          <td>
+                            <span className={`status-chip ${usr.role === 'WELDER' ? 'pending' : 'approved'}`} style={{ fontSize: '11px' }}>
+                              {usr.role === 'WELDER' ? 'جوشکار' : 'کارفرما'}
+                            </span>
+                          </td>
+                          <td>
+                            {usr.province || usr.city ? `${usr.province || ''}، ${usr.city || ''}` : 'نامشخص'}
+                          </td>
+                          <td>
+                            <div style={{ display: 'flex', gap: '4px' }}>
+                              {(usr.roles || []).map((r: string) => (
+                                <span key={r} style={{ fontSize: '10px', padding: '2px 6px', borderRadius: '4px', backgroundColor: 'var(--bg-dark)', border: '1px solid var(--border)', color: 'var(--text-secondary)' }}>
+                                  {r === 'WELDER' ? 'جوشکار' : 'کارفرما'}
+                                </span>
+                              ))}
+                            </div>
+                          </td>
+                          <td>
+                            {new Date(usr.created_at).toLocaleDateString('fa-IR')}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
             </div>
-          </div>
+          )
         )}
 
         {/* TAB 2: PROFILE PICTURE APPROVALS */}
         {activeTab === 'approvals' && (
-          <div className="glass-card">
-            <h3 style={{ fontSize: '16px', fontWeight: '700', marginBottom: '16px' }}>کاربران معلق احراز هویت تصویر پروفایل</h3>
-            
-            {pendingVerifications.length === 0 ? (
-              <div style={{ padding: '40px 0', textAlign: 'center', color: 'var(--text-secondary)' }}>
-                <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" width="48" height="48" style={{ marginBottom: '12px', opacity: 0.5 }}>
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
-                <p>در حال حاضر هیچ کاربر معلقی برای تایید تصویر پروفایل وجود ندارد.</p>
-              </div>
-            ) : (
-              <div className="table-responsive">
-                <table className="custom-table">
-                  <thead>
-                    <tr>
-                      <th>کاربر</th>
-                      <th>نقش کاربری</th>
-                      <th>شماره تماس</th>
-                      <th>تصویر ارسالی</th>
-                      <th>عملیات بررسی</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {pendingVerifications.map((user) => (
-                      <tr key={user.id}>
-                        <td>
-                          <div className="user-info-cell">
-                            <div className="avatar">
-                              <span>{user.name.substring(0, 2)}</span>
-                            </div>
-                            <div className="user-details">
-                              <h4>{user.name}</h4>
-                            </div>
-                          </div>
-                        </td>
-                        <td>
-                          <span style={{ fontSize: '12px', fontWeight: 'bold', color: user.role === 'WELDER' ? 'var(--primary)' : 'var(--success)' }}>
-                            {user.role === 'WELDER' ? 'جوشکار' : 'کارفرما'}
-                          </span>
-                        </td>
-                        <td>{user.phone}</td>
-                        <td>
-                          {user.pending_url ? (
-                            <img 
-                              src={`${BASE_URL}${user.pending_url}`} 
-                              alt="Pending Preview" 
-                              style={{ width: '42px', height: '42px', borderRadius: '8px', objectFit: 'cover', border: '1px solid var(--border)' }}
-                              onError={(e) => {
-                                // Fallback if uploaded file is locally relative or offline preview
-                                e.currentTarget.src = user.pending_url;
-                              }}
-                            />
-                          ) : (
-                            <span style={{ color: 'var(--text-secondary)' }}>فاقد فایل</span>
-                          )}
-                        </td>
-                        <td>
-                          <button 
-                            className="btn btn-secondary" 
-                            onClick={() => setSelectedVerification(user)}
-                          >
-                            بررسی تصویر
-                          </button>
-                        </td>
+          tabLoading ? <TabLoader /> : (
+            <div className="glass-card">
+              <h3 style={{ fontSize: '16px', fontWeight: '700', marginBottom: '16px' }}>کاربران معلق احراز هویت تصویر پروفایل</h3>
+              
+              {pendingVerifications.length === 0 ? (
+                <div style={{ padding: '40px 0', textAlign: 'center', color: 'var(--text-secondary)' }}>
+                  <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" width="48" height="48" style={{ marginBottom: '12px', opacity: 0.5 }}>
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                  <p>در حال حاضر هیچ کاربر معلقی برای تایید تصویر پروفایل وجود ندارد.</p>
+                </div>
+              ) : (
+                <div className="table-responsive">
+                  <table className="custom-table">
+                    <thead>
+                      <tr>
+                        <th>کاربر</th>
+                        <th>نقش کاربری</th>
+                        <th>شماره تماس</th>
+                        <th>تصویر ارسالی</th>
+                        <th>عملیات بررسی</th>
                       </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            )}
-          </div>
-        )}
-
-        {/* TAB 3: INQUIRIES & ESTIMATIONS */}
-        {activeTab === 'estimations' && (
-          <div className="glass-card">
-            <h3 style={{ fontSize: '16px', fontWeight: '700', marginBottom: '16px' }}>استعلام‌های ثبت‌شده بدون برآورد مالی</h3>
-            
-            {inquiries.filter(i => i.status === 'PENDING_ESTIMATION').length === 0 ? (
-              <div style={{ padding: '40px 0', textAlign: 'center', color: 'var(--text-secondary)' }}>
-                <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" width="48" height="48" style={{ marginBottom: '12px', opacity: 0.5 }}>
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                </svg>
-                <p>تمامی استعلام‌های پروژه‌ها با موفقیت برآورد شده‌اند!</p>
-              </div>
-            ) : (
-              <div className="table-responsive">
-                <table className="custom-table">
-                  <thead>
-                    <tr>
-                      <th>عنوان پروژه</th>
-                      <th>محدوده جغرافیایی</th>
-                      <th>کارفرما</th>
-                      <th>فایل نقشه</th>
-                      <th>وضعیت برآورد</th>
-                      <th>اقدام</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {inquiries
-                      .filter(i => i.status === 'PENDING_ESTIMATION')
-                      .map((inq) => (
-                        <tr key={inq.id}>
-                          <td style={{ fontWeight: 'bold' }}>{inq.title}</td>
-                          <td>{inq.province}، {inq.city}</td>
-                          <td>{inq.employer_name || 'کارفرما'}</td>
+                    </thead>
+                    <tbody>
+                      {pendingVerifications.map((user) => (
+                        <tr key={user.id}>
                           <td>
-                            {inq.has_blueprint ? (
-                              <span style={{ color: 'var(--primary)', fontSize: '12px', fontWeight: 'bold' }}>دارای نقشه فنی</span>
+                            <div className="user-info-cell">
+                              <div className="avatar">
+                                <span>{user.name.substring(0, 2)}</span>
+                              </div>
+                              <div className="user-details">
+                                <h4>{user.name}</h4>
+                              </div>
+                            </div>
+                          </td>
+                          <td>
+                            <span style={{ fontSize: '12px', fontWeight: 'bold', color: user.role === 'WELDER' ? 'var(--primary)' : 'var(--success)' }}>
+                              {user.role === 'WELDER' ? 'جوشکار' : 'کارفرما'}
+                            </span>
+                          </td>
+                          <td>{user.phone}</td>
+                          <td>
+                            {user.pending_url ? (
+                              <img 
+                                src={`${BASE_URL}${user.pending_url}`} 
+                                alt="Pending Preview" 
+                                style={{ width: '42px', height: '42px', borderRadius: '8px', objectFit: 'cover', border: '1px solid var(--border)' }}
+                                onError={(e) => {
+                                  e.currentTarget.src = user.pending_url;
+                                }}
+                              />
                             ) : (
-                              <span style={{ color: 'var(--text-secondary)', fontSize: '12px' }}>ثبت دستی اقلام</span>
+                              <span style={{ color: 'var(--text-secondary)' }}>فاقد فایل</span>
                             )}
                           </td>
                           <td>
-                            <span className="status-chip pending">در انتظار کارشناسی</span>
-                          </td>
-                          <td>
                             <button 
-                              className="btn btn-primary" 
-                              onClick={() => {
-                                setSelectedInquiry(inq);
-                                setEstimationItems([{ title: '', unit: 'متر', quantity: 1, price: 0 }]);
-                              }}
+                              className="btn btn-secondary" 
+                              onClick={() => setSelectedVerification(user)}
                             >
-                              کارشناسی نقشه
+                              بررسی تصویر
                             </button>
                           </td>
                         </tr>
                       ))}
-                  </tbody>
-                </table>
-              </div>
-            )}
-          </div>
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </div>
+          )
+        )}
+
+        {/* TAB 3: INQUIRIES & ESTIMATIONS */}
+        {activeTab === 'estimations' && (
+          tabLoading ? <TabLoader /> : (
+            <div className="glass-card">
+              <h3 style={{ fontSize: '16px', fontWeight: '700', marginBottom: '16px' }}>استعلام‌های ثبت‌شده بدون برآورد مالی</h3>
+              
+              {inquiries.filter(i => i.status === 'PENDING_ESTIMATION').length === 0 ? (
+                <div style={{ padding: '40px 0', textAlign: 'center', color: 'var(--text-secondary)' }}>
+                  <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" width="48" height="48" style={{ marginBottom: '12px', opacity: 0.5 }}>
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                  </svg>
+                  <p>تمامی استعلام‌های پروژه‌ها با موفقیت برآورد شده‌اند!</p>
+                </div>
+              ) : (
+                <div className="table-responsive">
+                  <table className="custom-table">
+                    <thead>
+                      <tr>
+                        <th>عنوان پروژه</th>
+                        <th>محدوده جغرافیایی</th>
+                        <th>کارفرما</th>
+                        <th>فایل نقشه</th>
+                        <th>وضعیت برآورد</th>
+                        <th>اقدام</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {inquiries
+                        .filter(i => i.status === 'PENDING_ESTIMATION')
+                        .map((inq) => (
+                          <tr key={inq.id}>
+                            <td style={{ fontWeight: 'bold' }}>{inq.title}</td>
+                            <td>{inq.province}، {inq.city}</td>
+                            <td>{inq.employer_name || 'کارفرما'}</td>
+                            <td>
+                              {inq.has_blueprint ? (
+                                <span style={{ color: 'var(--primary)', fontSize: '12px', fontWeight: 'bold' }}>دارای نقشه فنی</span>
+                              ) : (
+                                <span style={{ color: 'var(--text-secondary)', fontSize: '12px' }}>ثبت دستی اقلام</span>
+                              )}
+                            </td>
+                            <td>
+                              <span className="status-chip pending">در انتظار کارشناسی</span>
+                            </td>
+                            <td>
+                              <button 
+                                className="btn btn-primary" 
+                                onClick={() => {
+                                  setSelectedInquiry(inq);
+                                  setEstimationItems([{ title: '', unit: 'متر', quantity: 1, price: 0 }]);
+                                }}
+                              >
+                                کارشناسی نقشه
+                              </button>
+                            </td>
+                          </tr>
+                        ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </div>
+          )
         )}
 
         {/* TAB 4: SKILLS CRUD MANAGEMENT */}
         {activeTab === 'skills' && (
-          <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 2fr', gap: '24px', alignItems: 'start' }}>
-            {/* Create Skill Form */}
-            <div className="glass-card">
-              <h3 style={{ fontSize: '15px', fontWeight: '700', marginBottom: '18px' }}>افزودن تخصص جوشکاری جدید</h3>
-              <form onSubmit={handleAddSkill}>
-                <div className="form-group">
-                  <label htmlFor="skillName">عنوان تخصص (فارسی)</label>
-                  <input 
-                    type="text" 
-                    id="skillName"
-                    className="input-control"
-                    placeholder="مثال: جوشکاری آرگون تحت فشار"
-                    value={newSkillName}
-                    onChange={(e) => setNewSkillName(e.target.value)}
-                    required
-                  />
-                </div>
-                <button type="submit" className="btn btn-primary" style={{ width: '100%', height: '42px' }}>
-                  ثبت تخصص جدید
-                </button>
-              </form>
-            </div>
+          tabLoading ? <TabLoader /> : (
+            <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 2fr', gap: '24px', alignItems: 'start' }}>
+              {/* Create Skill Form */}
+              <div className="glass-card">
+                <h3 style={{ fontSize: '15px', fontWeight: '700', marginBottom: '18px' }}>افزودن تخصص جوشکاری جدید</h3>
+                <form onSubmit={handleAddSkill}>
+                  <div className="form-group">
+                    <label htmlFor="skillName">عنوان تخصص (فارسی)</label>
+                    <input 
+                      type="text" 
+                      id="skillName"
+                      className="input-control"
+                      placeholder="مثال: جوشکاری آرگون تحت فشار"
+                      value={newSkillName}
+                      onChange={(e) => setNewSkillName(e.target.value)}
+                      required
+                    />
+                  </div>
+                  <button type="submit" className="btn btn-primary" style={{ width: '100%', height: '42px' }}>
+                    ثبت تخصص جدید
+                  </button>
+                </form>
+              </div>
 
-            {/* Skills Table List */}
-            <div className="glass-card">
-              <h3 style={{ fontSize: '15px', fontWeight: '700', marginBottom: '16px' }}>لیست کل تخصص‌های مجاز پلتفرم</h3>
-              
-              <div className="table-responsive">
-                <table className="custom-table">
-                  <thead>
-                    <tr>
-                      <th style={{ width: '80px' }}>شناسه</th>
-                      <th>عنوان تخصص</th>
-                      <th style={{ width: '160px', textAlign: 'left' }}>عملیات مدیریتی</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {skills.map((skill) => (
-                      <tr key={skill.id}>
-                        <td>#{skill.id}</td>
-                        <td>
-                          {editingSkillId === skill.id ? (
-                            <input 
-                              type="text" 
-                              className="input-control" 
-                              style={{ padding: '4px 8px', fontSize: '13px' }}
-                              value={editingSkillName}
-                              onChange={(e) => setEditingSkillName(e.target.value)}
-                              onKeyDown={(e) => {
-                                if (e.key === 'Enter') handleSaveEditSkill(skill.id);
-                                else if (e.key === 'Escape') setEditingSkillId(null);
-                              }}
-                            />
-                          ) : (
-                            <span style={{ fontWeight: '500' }}>{skill.name}</span>
-                          )}
-                        </td>
-                        <td style={{ textAlign: 'left' }}>
-                          {editingSkillId === skill.id ? (
-                            <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
-                              <button 
-                                className="btn btn-success" 
-                                style={{ padding: '4px 10px', fontSize: '11px' }}
-                                onClick={() => handleSaveEditSkill(skill.id)}
-                              >
-                                ذخیره
-                              </button>
-                              <button 
-                                className="btn btn-secondary" 
-                                style={{ padding: '4px 10px', fontSize: '11px' }}
-                                onClick={() => setEditingSkillId(null)}
-                              >
-                                انصراف
-                              </button>
-                            </div>
-                          ) : (
-                            <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
-                              <button 
-                                className="btn btn-secondary" 
-                                style={{ padding: '4px 10px', fontSize: '11px' }}
-                                onClick={() => handleStartEditSkill(skill)}
-                              >
-                                ویرایش
-                              </button>
-                              <button 
-                                className="btn btn-danger" 
-                                style={{ padding: '4px 10px', fontSize: '11px' }}
-                                onClick={() => handleDeleteSkill(skill.id)}
-                              >
-                                حذف
-                              </button>
-                            </div>
-                          )}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
+              {/* Skills Table List */}
+              <div className="glass-card">
+                <h3 style={{ fontSize: '15px', fontWeight: '700', marginBottom: '16px' }}>لیست کل تخصص‌های مجاز پلتفرم</h3>
+                
+                {skills.length === 0 ? (
+                  <div style={{ padding: '30px 0', textAlign: 'center', color: 'var(--text-secondary)' }}>هیچ تخصصی در سیستم ثبت نشده است.</div>
+                ) : (
+                  <div className="table-responsive">
+                    <table className="custom-table">
+                      <thead>
+                        <tr>
+                          <th style={{ width: '80px' }}>شناسه</th>
+                          <th>عنوان تخصص</th>
+                          <th style={{ width: '160px', textAlign: 'left' }}>عملیات مدیریتی</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {skills.map((skill) => (
+                          <tr key={skill.id}>
+                            <td>#{skill.id}</td>
+                            <td>
+                              {editingSkillId === skill.id ? (
+                                <input 
+                                  type="text" 
+                                  className="input-control" 
+                                  style={{ padding: '4px 8px', fontSize: '13px' }}
+                                  value={editingSkillName}
+                                  onChange={(e) => setEditingSkillName(e.target.value)}
+                                  onKeyDown={(e) => {
+                                    if (e.key === 'Enter') handleSaveEditSkill(skill.id);
+                                    else if (e.key === 'Escape') setEditingSkillId(null);
+                                  }}
+                                />
+                              ) : (
+                                <span style={{ fontWeight: '500' }}>{skill.name}</span>
+                              )}
+                            </td>
+                            <td style={{ textAlign: 'left' }}>
+                              {editingSkillId === skill.id ? (
+                                <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
+                                  <button 
+                                    className="btn btn-success" 
+                                    style={{ padding: '4px 10px', fontSize: '11px' }}
+                                    onClick={() => handleSaveEditSkill(skill.id)}
+                                  >
+                                    ذخیره
+                                  </button>
+                                  <button 
+                                    className="btn btn-secondary" 
+                                    style={{ padding: '4px 10px', fontSize: '11px' }}
+                                    onClick={() => setEditingSkillId(null)}
+                                  >
+                                    انصراف
+                                  </button>
+                                </div>
+                              ) : (
+                                <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
+                                  <button 
+                                    className="btn btn-secondary" 
+                                    style={{ padding: '4px 10px', fontSize: '11px' }}
+                                    onClick={() => handleStartEditSkill(skill)}
+                                  >
+                                    ویرایش
+                                  </button>
+                                  <button 
+                                    className="btn btn-danger" 
+                                    style={{ padding: '4px 10px', fontSize: '11px' }}
+                                    onClick={() => handleDeleteSkill(skill.id)}
+                                  >
+                                    حذف
+                                  </button>
+                                </div>
+                              )}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
               </div>
             </div>
-          </div>
-        )}
-
-        {/* TAB 5: SERVER SETTINGS */}
-        {activeTab === 'settings' && (
-          <div className="glass-card" style={{ maxWidth: '600px', margin: '0 auto' }}>
-            <h3 style={{ fontSize: '16px', fontWeight: '700', marginBottom: '18px' }}>پیکربندی دیتابیس و ارتباط با بک‌اند (NestJS)</h3>
-            
-            <div className="form-group">
-              <label>آدرس هاست دیتابیس (PostgreSQL Host)</label>
-              <input 
-                type="text" 
-                className="input-control" 
-                value={dbHost} 
-                onChange={(e) => setDbHost(e.target.value)}
-              />
-            </div>
-
-            <div className="form-group">
-              <label>پورت اتصال (PostgreSQL Port)</label>
-              <input 
-                type="text" 
-                className="input-control" 
-                value={dbPort} 
-                onChange={(e) => setDbPort(e.target.value)}
-              />
-            </div>
-
-            <div className="form-group">
-              <label>نام پایگاه داده (Database Name)</label>
-              <input 
-                type="text" 
-                className="input-control" 
-                value={dbName} 
-                onChange={(e) => setDbName(e.target.value)}
-              />
-            </div>
-
-            <div style={{ display: 'flex', gap: '12px', marginTop: '24px' }}>
-              <button 
-                className="btn btn-primary" 
-                onClick={() => {
-                  showToast('تنظیمات پایگاه داده ذخیره شد. سرور در حال راه‌اندازی مجدد است...', 'success');
-                }}
-              >
-                ذخیره تنظیمات دیتابیس
-              </button>
-              <button 
-                className="btn btn-secondary" 
-                onClick={async () => {
-                  const alive = await ApiClient.ping();
-                  if (alive) {
-                    showToast('تست اتصال موفقیت‌آمیز بود! ارتباط با NestJS فعال است.', 'success');
-                  } else {
-                    showToast('تست اتصال ناموفق بود. از روشن بودن سرور بک‌اند اطمینان حاصل کنید.', 'warning');
-                  }
-                }}
-              >
-                تست اتصال مجدد
-              </button>
-            </div>
-          </div>
+          )
         )}
       </main>
 

@@ -68,4 +68,9 @@ export class AdminController {
     await this.profileService.deleteSkill(id);
     return { message: 'تخصص با موفقیت حذف شد.' };
   }
+
+  @Get('users')
+  async getUsers() {
+    return this.profileService.getUsersList();
+  }
 }

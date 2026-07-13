@@ -1,43 +1,11 @@
-import { Skill, WelderProfile, EmployerProfile, Inquiry, InquiryItem } from './types';
-import * as mockData from './mockData';
+import { Skill, Inquiry, InquiryItem } from './types';
 
 export const BASE_URL = 'https://api.joftojoor.com';
-
-// Local storage keys for offline state persistence
-const STORAGE_KEYS = {
-  SKILLS: 'payasun_admin_skills',
-  WELDERS: 'payasun_admin_welders',
-  EMPLOYERS: 'payasun_admin_employers',
-  INQUIRIES: 'payasun_admin_inquiries',
-  TOKEN: 'payasun_admin_token',
-};
-
-// Initialize localStorage with mock data if not present
-const initLocalStorage = () => {
-  if (!localStorage.getItem(STORAGE_KEYS.SKILLS)) {
-    localStorage.setItem(STORAGE_KEYS.SKILLS, JSON.stringify(mockData.mockSkills));
-  }
-  if (!localStorage.getItem(STORAGE_KEYS.WELDERS)) {
-    localStorage.setItem(STORAGE_KEYS.WELDERS, JSON.stringify(mockData.mockWelders));
-  }
-  if (!localStorage.getItem(STORAGE_KEYS.EMPLOYERS)) {
-    localStorage.setItem(STORAGE_KEYS.EMPLOYERS, JSON.stringify(mockData.mockEmployers));
-  }
-  if (!localStorage.getItem(STORAGE_KEYS.INQUIRIES)) {
-    localStorage.setItem(STORAGE_KEYS.INQUIRIES, JSON.stringify(mockData.mockInquiries));
-  }
-};
-
-initLocalStorage();
-
-// LocalStorage helpers for mock fallback
-const getLocal = <T>(key: string): T => JSON.parse(localStorage.getItem(key) || '[]');
-const setLocal = (key: string, data: any) => localStorage.setItem(key, JSON.stringify(data));
 
 export class ApiClient {
   private static isOnline = false;
   private static listeners: ((status: boolean) => void)[] = [];
-  private static token: string | null = localStorage.getItem(STORAGE_KEYS.TOKEN);
+  private static token: string | null = localStorage.getItem('payasun_admin_token');
 
   public static addStatusListener(cb: (status: boolean) => void) {
     this.listeners.push(cb);
@@ -59,9 +27,9 @@ export class ApiClient {
   public static setToken(token: string | null) {
     this.token = token;
     if (token) {
-      localStorage.setItem(STORAGE_KEYS.TOKEN, token);
+      localStorage.setItem('payasun_admin_token', token);
     } else {
-      localStorage.removeItem(STORAGE_KEYS.TOKEN);
+      localStorage.removeItem('payasun_admin_token');
     }
   }
 
@@ -79,6 +47,25 @@ export class ApiClient {
       headers['Authorization'] = `Bearer ${this.token}`;
     }
     return headers;
+  }
+
+  private static async request(url: string, init?: RequestInit): Promise<Response> {
+    try {
+      const res = await fetch(url, {
+        ...init,
+        headers: this.getHeaders(init?.headers as Record<string, string>),
+      });
+      if (res.status === 401) {
+        this.setToken(null);
+        throw new Error('UNAUTHORIZED');
+      }
+      return res;
+    } catch (err: any) {
+      if (err.message === 'UNAUTHORIZED') {
+        throw err;
+      }
+      throw new Error('خطا در برقراری ارتباط با سرور.');
+    }
   }
 
   /**
@@ -112,14 +99,12 @@ export class ApiClient {
      ───────────────────────────────────────────────────────────── */
 
   public static async verifyAdminLogin(username: string, password: string): Promise<string> {
-    // Read from Vite's import.meta.env
     const expectedUser = (import.meta as any).env.VITE_ADMIN_USERNAME || 'admin';
     const expectedPass = (import.meta as any).env.VITE_ADMIN_PASSWORD || 'adminpassword';
 
     if (username === expectedUser && password === expectedPass) {
       const token = 'payasun_admin_secret_token_12345';
       this.setToken(token);
-      // Run quick ping to synchronize state
       await this.ping();
       return token;
     } else {
@@ -132,39 +117,17 @@ export class ApiClient {
      ───────────────────────────────────────────────────────────── */
 
   public static async getWeldersCount(): Promise<number> {
-    const isUp = await this.ping();
-    if (isUp) {
-      try {
-        const res = await fetch(`${BASE_URL}/admin/welders-count`, {
-          headers: this.getHeaders(),
-        });
-        if (res.ok) {
-          const data = await res.json();
-          return data.count;
-        }
-      } catch (e) {
-        console.error('Error fetching welders count', e);
-      }
-    }
-    return getLocal<WelderProfile[]>(STORAGE_KEYS.WELDERS).length;
+    const res = await this.request(`${BASE_URL}/admin/welders-count`);
+    if (!res.ok) throw new Error('خطا در دریافت آمار جوشکاران.');
+    const data = await res.json();
+    return data.count;
   }
 
   public static async getEmployersCount(): Promise<number> {
-    const isUp = await this.ping();
-    if (isUp) {
-      try {
-        const res = await fetch(`${BASE_URL}/admin/employers-count`, {
-          headers: this.getHeaders(),
-        });
-        if (res.ok) {
-          const data = await res.json();
-          return data.count;
-        }
-      } catch (e) {
-        console.error('Error fetching employers count', e);
-      }
-    }
-    return getLocal<EmployerProfile[]>(STORAGE_KEYS.EMPLOYERS).length;
+    const res = await this.request(`${BASE_URL}/admin/employers-count`);
+    if (!res.ok) throw new Error('خطا در دریافت آمار کارفرمایان.');
+    const data = await res.json();
+    return data.count;
   }
 
   /* ─────────────────────────────────────────────────────────────
@@ -172,90 +135,36 @@ export class ApiClient {
      ───────────────────────────────────────────────────────────── */
 
   public static async getSkills(): Promise<Skill[]> {
-    const isUp = await this.ping();
-    if (isUp) {
-      try {
-        const res = await fetch(`${BASE_URL}/admin/skills`, {
-          headers: this.getHeaders(),
-        });
-        if (res.ok) return await res.json();
-      } catch (e) {
-        console.error('Error fetching skills from Admin API, falling back', e);
-      }
-    }
-    return getLocal<Skill[]>(STORAGE_KEYS.SKILLS);
+    const res = await this.request(`${BASE_URL}/admin/skills`);
+    if (!res.ok) throw new Error('خطا در دریافت لیست تخصص‌ها.');
+    return await res.json();
   }
 
   public static async createSkill(name: string): Promise<Skill> {
-    if (this.isOnline) {
-      try {
-        const res = await fetch(`${BASE_URL}/admin/skills`, {
-          method: 'POST',
-          headers: this.getHeaders({ 'Content-Type': 'application/json' }),
-          body: JSON.stringify({ name }),
-        });
-        if (res.ok) {
-          const newSkill = await res.json();
-          const local = getLocal<Skill[]>(STORAGE_KEYS.SKILLS);
-          setLocal(STORAGE_KEYS.SKILLS, [...local, newSkill]);
-          return newSkill;
-        }
-      } catch (e) {
-        console.error(e);
-      }
-    }
-    
-    const local = getLocal<Skill[]>(STORAGE_KEYS.SKILLS);
-    const newId = local.length > 0 ? Math.max(...local.map(s => s.id)) + 1 : 1;
-    const newSkill: Skill = { id: newId, name };
-    setLocal(STORAGE_KEYS.SKILLS, [...local, newSkill]);
-    return newSkill;
+    const res = await this.request(`${BASE_URL}/admin/skills`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name }),
+    });
+    if (!res.ok) throw new Error('خطا در افزودن تخصص جدید.');
+    return await res.json();
   }
 
   public static async updateSkill(id: number, name: string): Promise<Skill> {
-    if (this.isOnline) {
-      try {
-        const res = await fetch(`${BASE_URL}/admin/skills/${id}`, {
-          method: 'PUT',
-          headers: this.getHeaders({ 'Content-Type': 'application/json' }),
-          body: JSON.stringify({ name }),
-        });
-        if (res.ok) {
-          const updated = await res.json();
-          const local = getLocal<Skill[]>(STORAGE_KEYS.SKILLS);
-          setLocal(STORAGE_KEYS.SKILLS, local.map(s => s.id === id ? updated : s));
-          return updated;
-        }
-      } catch (e) {
-        console.error(e);
-      }
-    }
-
-    const local = getLocal<Skill[]>(STORAGE_KEYS.SKILLS);
-    const updated: Skill = { id, name };
-    setLocal(STORAGE_KEYS.SKILLS, local.map(s => s.id === id ? updated : s));
-    return updated;
+    const res = await this.request(`${BASE_URL}/admin/skills/${id}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name }),
+    });
+    if (!res.ok) throw new Error('خطا در ویرایش تخصص.');
+    return await res.json();
   }
 
   public static async deleteSkill(id: number): Promise<void> {
-    if (this.isOnline) {
-      try {
-        const res = await fetch(`${BASE_URL}/admin/skills/${id}`, {
-          method: 'DELETE',
-          headers: this.getHeaders(),
-        });
-        if (res.ok) {
-          const local = getLocal<Skill[]>(STORAGE_KEYS.SKILLS);
-          setLocal(STORAGE_KEYS.SKILLS, local.filter(s => s.id !== id));
-          return;
-        }
-      } catch (e) {
-        console.error(e);
-      }
-    }
-
-    const local = getLocal<Skill[]>(STORAGE_KEYS.SKILLS);
-    setLocal(STORAGE_KEYS.SKILLS, local.filter(s => s.id !== id));
+    const res = await this.request(`${BASE_URL}/admin/skills/${id}`, {
+      method: 'DELETE',
+    });
+    if (!res.ok) throw new Error('خطا در حذف تخصص.');
   }
 
   /* ─────────────────────────────────────────────────────────────
@@ -263,90 +172,18 @@ export class ApiClient {
      ───────────────────────────────────────────────────────────── */
 
   public static async getPendingVerifications(): Promise<any[]> {
-    const isUp = await this.ping();
-    if (isUp) {
-      try {
-        const res = await fetch(`${BASE_URL}/admin/pending-verifications`, {
-          headers: this.getHeaders(),
-        });
-        if (res.ok) return await res.json();
-      } catch (e) {
-        console.error('Error fetching pending verifications from Admin API', e);
-      }
-    }
-
-    const welders = getLocal<WelderProfile[]>(STORAGE_KEYS.WELDERS);
-    const employers = getLocal<EmployerProfile[]>(STORAGE_KEYS.EMPLOYERS);
-
-    const pendingWelders = welders
-      .filter(w => w.profile_picture_status === 'PENDING')
-      .map(w => ({
-        id: w.user_id,
-        name: w.full_name || 'نامشخص (جوشکار)',
-        role: 'WELDER',
-        pending_url: w.pending_profile_picture_url,
-        bio: w.bio,
-        phone: '۰۹۱۲-XXX-XXXX',
-      }));
-
-    const pendingEmployers = employers
-      .filter(e => e.profile_picture_status === 'PENDING')
-      .map(e => ({
-        id: e.user_id,
-        name: `${e.company_name || 'شخصی'} (${e.contact_person || 'کارفرما'})`,
-        role: 'EMPLOYER',
-        pending_url: e.pending_profile_picture_url,
-        bio: 'ثبت شده به عنوان کارفرما در پلتفرم جفت‌وجور.',
-        phone: '۰۹۱۲-XXX-XXXX',
-      }));
-
-    return [...pendingWelders, ...pendingEmployers];
+    const res = await this.request(`${BASE_URL}/admin/pending-verifications`);
+    if (!res.ok) throw new Error('خطا در دریافت تصاویر معلق تایید.');
+    return await res.json();
   }
 
   public static async verifyPicture(userId: string, role: 'WELDER' | 'EMPLOYER', approve: boolean): Promise<void> {
-    if (this.isOnline) {
-      try {
-        const res = await fetch(`${BASE_URL}/admin/verify-picture/${userId}`, {
-          method: 'PATCH',
-          headers: this.getHeaders({ 'Content-Type': 'application/json' }),
-          body: JSON.stringify({ role, approve }),
-        });
-        if (res.ok) return;
-      } catch (e) {
-        console.error('Error verifying profile picture', e);
-      }
-    }
-
-    // Local Fallback
-    if (role === 'WELDER') {
-      const list = getLocal<WelderProfile[]>(STORAGE_KEYS.WELDERS);
-      const updated = list.map(w => {
-        if (w.user_id === userId) {
-          return {
-            ...w,
-            profile_picture_status: approve ? 'APPROVED' : 'REJECTED',
-            profile_picture_url: approve ? w.pending_profile_picture_url : w.profile_picture_url,
-            pending_profile_picture_url: null,
-          } as WelderProfile;
-        }
-        return w;
-      });
-      setLocal(STORAGE_KEYS.WELDERS, updated);
-    } else {
-      const list = getLocal<EmployerProfile[]>(STORAGE_KEYS.EMPLOYERS);
-      const updated = list.map(e => {
-        if (e.user_id === userId) {
-          return {
-            ...e,
-            profile_picture_status: approve ? 'APPROVED' : 'REJECTED',
-            profile_picture_url: approve ? e.pending_profile_picture_url : e.profile_picture_url,
-            pending_profile_picture_url: null,
-          } as EmployerProfile;
-        }
-        return e;
-      });
-      setLocal(STORAGE_KEYS.EMPLOYERS, updated);
-    }
+    const res = await this.request(`${BASE_URL}/admin/verify-picture/${userId}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ role, approve }),
+    });
+    if (!res.ok) throw new Error('خطا در ثبت وضعیت بررسی تصویر.');
   }
 
   /* ─────────────────────────────────────────────────────────────
@@ -354,59 +191,28 @@ export class ApiClient {
      ───────────────────────────────────────────────────────────── */
 
   public static async getInquiries(): Promise<Inquiry[]> {
-    const isUp = await this.ping();
-    if (isUp) {
-      try {
-        const res = await fetch(`${BASE_URL}/admin/inquiries`, {
-          headers: this.getHeaders(),
-        });
-        if (res.ok) return await res.json();
-      } catch (e) {
-        console.error('Error fetching inquiries from Admin API', e);
-      }
-    }
-    return getLocal<Inquiry[]>(STORAGE_KEYS.INQUIRIES);
+    const res = await this.request(`${BASE_URL}/admin/inquiries`);
+    if (!res.ok) throw new Error('خطا در دریافت لیست استعلام‌ها.');
+    return await res.json();
   }
 
   public static async submitEstimation(id: string, items: InquiryItem[]): Promise<Inquiry> {
-    if (this.isOnline) {
-      try {
-        const res = await fetch(`${BASE_URL}/admin/inquiry/${id}/estimate`, {
-          method: 'PATCH',
-          headers: this.getHeaders({ 'Content-Type': 'application/json' }),
-          body: JSON.stringify({ items }),
-        });
-        if (res.ok) {
-          const updated = await res.json();
-          const local = getLocal<Inquiry[]>(STORAGE_KEYS.INQUIRIES);
-          setLocal(STORAGE_KEYS.INQUIRIES, local.map(i => i.id === id ? updated : i));
-          return updated;
-        }
-      } catch (e) {
-        console.error(e);
-      }
-    }
-
-    const local = getLocal<Inquiry[]>(STORAGE_KEYS.INQUIRIES);
-    let updatedInquiry: Inquiry | null = null;
-    
-    const updated = local.map(i => {
-      if (i.id === id) {
-        updatedInquiry = {
-          ...i,
-          status: 'ESTIMATED',
-          items: items.map((item, idx) => ({
-            ...item,
-            id: `item-${idx + 1}-${Date.now()}`,
-          })),
-          updated_at: new Date().toISOString(),
-        } as Inquiry;
-        return updatedInquiry;
-      }
-      return i;
+    const res = await this.request(`${BASE_URL}/admin/inquiry/${id}/estimate`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ items }),
     });
+    if (!res.ok) throw new Error('خطا در ثبت برآورد مالی.');
+    return await res.json();
+  }
 
-    setLocal(STORAGE_KEYS.INQUIRIES, updated);
-    return updatedInquiry || local.find(i => i.id === id)!;
+  /* ─────────────────────────────────────────────────────────────
+     USERS LIST ENDPOINT
+     ───────────────────────────────────────────────────────────── */
+
+  public static async getUsers(): Promise<any[]> {
+    const res = await this.request(`${BASE_URL}/admin/users`);
+    if (!res.ok) throw new Error('خطا در دریافت لیست کاربران.');
+    return await res.json();
   }
 }

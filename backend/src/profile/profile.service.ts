@@ -465,5 +465,35 @@ export class ProfileService implements OnModuleInit {
       await this.employerProfileRepository.save(profile);
     }
   }
+
+  async getUsersList(): Promise<any[]> {
+    const users = await this.userRepository.find({ order: { created_at: 'DESC' } });
+    const welders = await this.welderProfileRepository.find();
+    const employers = await this.employerProfileRepository.find();
+
+    const weldersMap = new Map(welders.map((w) => [w.user_id, w]));
+    const employersMap = new Map(employers.map((e) => [e.user_id, e]));
+
+    return users.map((user) => {
+      const welder = weldersMap.get(user.id);
+      const employer = employersMap.get(user.id);
+
+      const name = user.role === Role.WELDER
+        ? (welder?.first_name || welder?.last_name ? `${welder.first_name || ''} ${welder.last_name || ''}`.trim() : 'جوشکار بدون نام')
+        : (employer?.company_name || (employer?.first_name || employer?.last_name ? `${employer.first_name || ''} ${employer.last_name || ''}`.trim() : 'کارفرما بدون نام'));
+
+      return {
+        id: user.id,
+        phone_number: user.phone_number,
+        role: user.role,
+        roles: user.roles || [user.role],
+        created_at: user.created_at,
+        name,
+        city: user.role === Role.WELDER ? welder?.home_city : employer?.city,
+        province: user.role === Role.WELDER ? welder?.home_province : employer?.province,
+        profile_picture_url: user.role === Role.WELDER ? welder?.profile_picture_url : employer?.profile_picture_url,
+      };
+    });
+  }
 }
 
