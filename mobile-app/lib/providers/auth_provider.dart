@@ -16,6 +16,7 @@ class AuthProvider with ChangeNotifier {
   // Profile data cache
   Map<String, dynamic>? _profileData;
   bool _isProfileLoaded = false;
+  bool _isInitialized = false;
 
   int _employerTabIndex = 0;
   int _welderTabIndex = 0;
@@ -39,19 +40,25 @@ class AuthProvider with ChangeNotifier {
         } else {
           _currentRole = UserRole.employer;
         }
-        notifyListeners();
-        
+
         try {
           await loadProfile();
         } catch (e) {
           debugPrint('Error loading profile in auto-login: $e');
           if (e.toString().contains('401') || e.toString().contains('Unauthorized')) {
-            logout();
+            // Log out cleanly
+            _token = null;
+            _phoneNumber = null;
+            await prefs.remove('auth_token');
+            await prefs.remove('auth_phone');
           }
         }
       }
     } catch (e) {
       debugPrint('Error loading persisted auth data: $e');
+    } finally {
+      _isInitialized = true;
+      notifyListeners();
     }
   }
 
@@ -86,6 +93,7 @@ class AuthProvider with ChangeNotifier {
 
   Map<String, dynamic>? get profileData => _profileData;
   bool get isProfileLoaded => _isProfileLoaded;
+  bool get isInitialized => _isInitialized;
 
   int get employerTabIndex => _employerTabIndex;
   int get welderTabIndex => _welderTabIndex;

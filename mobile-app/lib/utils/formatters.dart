@@ -49,6 +49,21 @@ class Formatters {
     final formatted = priceStr.replaceAllMapped(regExp, (Match m) => '${m[1]},');
     return toPersianNumbers(formatted);
   }
+
+  /// Formats phone number into +98 9XX XXX XXXX with Persian digits
+  static String formatPhoneNumber(String phone) {
+    var cleaned = phone.trim().replaceAll(' ', '');
+    if (cleaned.startsWith('0')) {
+      cleaned = '+98${cleaned.substring(1)}';
+    } else if (!cleaned.startsWith('+')) {
+      cleaned = '+$cleaned';
+    }
+
+    if (cleaned.length == 13) {
+      cleaned = '${cleaned.substring(0, 3)} ${cleaned.substring(3, 6)} ${cleaned.substring(6, 9)} ${cleaned.substring(9)}';
+    }
+    return toPersianNumbers(cleaned);
+  }
 }
 
 class PersianPriceInputFormatter extends TextInputFormatter {

@@ -44,6 +44,7 @@ class _WelderDashboardState extends State<WelderDashboard> {
     final isSetupCompleted = profile?['is_setup_completed'] == true;
 
     final priceList = (profile?['base_price_list'] as List<dynamic>?) ?? [];
+    final skills = (profile?['skills'] as List<dynamic>?) ?? [];
 
     final profilePicUrl = profile?['profile_picture_url'] as String?;
     final fullPicUrl = profilePicUrl != null && profilePicUrl.isNotEmpty
@@ -67,7 +68,7 @@ class _WelderDashboardState extends State<WelderDashboard> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             // Welder Header Profile Card
-            _buildWelderHeaderCard(displayName, homeCity, homeProvince, totalScore, isSetupCompleted, initials, fullPicUrl, auth),
+            _buildWelderHeaderCard(displayName, homeCity, homeProvince, totalScore, isSetupCompleted, initials, fullPicUrl, auth, skills),
             const SizedBox(height: 25),
 
             // Performance Metrics
@@ -108,7 +109,7 @@ class _WelderDashboardState extends State<WelderDashboard> {
     );
   }
 
-  Widget _buildWelderHeaderCard(String name, String city, String province, double score, bool setupDone, String initials, String? fullPicUrl, AuthProvider auth) {
+  Widget _buildWelderHeaderCard(String name, String city, String province, double score, bool setupDone, String initials, String? fullPicUrl, AuthProvider auth, List<dynamic> skills) {
     final locationText = [province, city].where((s) => s.isNotEmpty).join('، ');
 
     return Container(
@@ -116,14 +117,14 @@ class _WelderDashboardState extends State<WelderDashboard> {
       padding: const EdgeInsets.all(22),
       decoration: BoxDecoration(
         gradient: const LinearGradient(
-          colors: [AppColors.burgundy, Color(0xFF6B1825)],
+          colors: [AppColors.royalBlue, Color(0xFF254EDB)],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
         borderRadius: BorderRadius.circular(24),
         boxShadow: [
           BoxShadow(
-            color: AppColors.burgundy.withValues(alpha: 0.15),
+            color: AppColors.royalBlue.withValues(alpha: 0.15),
             blurRadius: 20,
             offset: const Offset(0, 10),
           ),
@@ -146,14 +147,14 @@ class _WelderDashboardState extends State<WelderDashboard> {
                   ),
                   child: CircleAvatar(
                     radius: 28,
-                    backgroundColor: fullPicUrl != null ? Colors.transparent : AppColors.burgundy.withValues(alpha: 0.12),
+                    backgroundColor: fullPicUrl != null ? Colors.transparent : AppColors.royalBlue.withValues(alpha: 0.12),
                     backgroundImage: fullPicUrl != null ? NetworkImage(fullPicUrl) : null,
                     child: fullPicUrl != null
                         ? null
                         : Text(
                             initials,
                             style: const TextStyle(
-                              color: AppColors.burgundy,
+                              color: AppColors.royalBlue,
                               fontWeight: FontWeight.bold,
                               fontSize: 15,
                               fontFamily: 'Vazirmatn',
@@ -235,6 +236,33 @@ class _WelderDashboardState extends State<WelderDashboard> {
                     ],
                   ),
                 ],
+                if (skills.isNotEmpty) ...[
+                  const SizedBox(height: 8),
+                  Wrap(
+                    spacing: 4,
+                    runSpacing: 4,
+                    children: skills.map((skill) {
+                      final name = skill['name'] as String? ?? '';
+                      return Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                        decoration: BoxDecoration(
+                          color: Colors.white.withValues(alpha: 0.12),
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(color: Colors.white24, width: 0.5),
+                        ),
+                        child: Text(
+                          name,
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 9,
+                            fontWeight: FontWeight.w500,
+                            fontFamily: 'Vazirmatn',
+                          ),
+                        ),
+                      );
+                    }).toList(),
+                  ),
+                ],
               ],
             ),
           ),
@@ -250,7 +278,7 @@ class _WelderDashboardState extends State<WelderDashboard> {
           width: 4,
           height: 18,
           decoration: BoxDecoration(
-            color: AppColors.royalBlue,
+            color: AppColors.burgundy,
             borderRadius: BorderRadius.circular(4),
           ),
         ),
@@ -374,7 +402,7 @@ class _WelderDashboardState extends State<WelderDashboard> {
           if (activeProvince.isNotEmpty)
             Row(
               children: [
-                const Icon(Icons.map_outlined, color: AppColors.royalBlue, size: 18),
+                const Icon(Icons.map_outlined, color: AppColors.burgundy, size: 18),
                 const SizedBox(width: 8),
                 Text(
                   'استان فعال: $activeProvince',
@@ -386,7 +414,7 @@ class _WelderDashboardState extends State<WelderDashboard> {
             if (activeProvince.isNotEmpty) const SizedBox(height: 12),
             Row(
               children: [
-                const Icon(Icons.location_city_outlined, color: AppColors.royalBlue, size: 18),
+                const Icon(Icons.location_city_outlined, color: AppColors.burgundy, size: 18),
                 const SizedBox(width: 8),
                 Text(
                   '${activeCities.length} شهر فعال',
@@ -401,11 +429,11 @@ class _WelderDashboardState extends State<WelderDashboard> {
               children: activeCities.map((city) {
                 return Chip(
                   label: Text(city.toString()),
-                  backgroundColor: AppColors.royalBlue.withValues(alpha: 0.08),
-                  labelStyle: const TextStyle(color: AppColors.royalBlue, fontSize: 11, fontWeight: FontWeight.bold),
+                  backgroundColor: AppColors.burgundy.withValues(alpha: 0.08),
+                  labelStyle: const TextStyle(color: AppColors.burgundy, fontSize: 11, fontWeight: FontWeight.bold),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(12),
-                    side: const BorderSide(color: AppColors.royalBlue, width: 0.5),
+                    side: const BorderSide(color: AppColors.burgundy, width: 0.5),
                   ),
                   materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
                   visualDensity: VisualDensity.compact,
@@ -452,10 +480,10 @@ class _WelderDashboardState extends State<WelderDashboard> {
                   Container(
                     padding: const EdgeInsets.all(6),
                     decoration: BoxDecoration(
-                      color: AppColors.burgundy.withValues(alpha: 0.08),
+                      color: AppColors.royalBlue.withValues(alpha: 0.08),
                       borderRadius: BorderRadius.circular(8),
                     ),
-                    child: const Icon(Icons.construction, color: AppColors.burgundy, size: 16),
+                    child: const Icon(Icons.construction, color: AppColors.royalBlue, size: 16),
                   ),
                   const SizedBox(width: 12),
                   Expanded(
@@ -476,7 +504,7 @@ class _WelderDashboardState extends State<WelderDashboard> {
                   ),
                   Text(
                     '$priceStr تومان',
-                    style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: AppColors.royalBlue),
+                    style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: AppColors.burgundy),
                   ),
                 ],
               ),

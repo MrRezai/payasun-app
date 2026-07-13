@@ -48,7 +48,29 @@ class JoftojoorApp extends StatelessWidget {
       home: Consumer<AuthProvider>(
         builder: (context, auth, _) {
           Widget child;
-          if (!auth.isAuthenticated) {
+          if (!auth.isInitialized) {
+            child = const Scaffold(
+              key: ValueKey('SplashLoadingScreen'),
+              backgroundColor: AppColors.white,
+              body: Center(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Image(
+                      image: AssetImage('assets/logo/joftojoor.png'),
+                      width: 72,
+                      height: 72,
+                    ),
+                    SizedBox(height: 24),
+                    CircularProgressIndicator(
+                      color: AppColors.royalBlue,
+                      strokeWidth: 3,
+                    ),
+                  ],
+                ),
+              ),
+            );
+          } else if (!auth.isAuthenticated) {
             child = const LoginPhoneScreen(key: ValueKey('LoginPhoneScreen'));
           } else if (!auth.isProfileComplete) {
             if (auth.isWelder) {

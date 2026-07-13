@@ -19,6 +19,7 @@ class WelderSetupScreen extends StatefulWidget {
 
 class _WelderSetupScreenState extends State<WelderSetupScreen> {
   final _formKey = GlobalKey<FormState>();
+  int _currentStep = 0;
   final _firstNameController = TextEditingController();
   final _lastNameController = TextEditingController();
 
@@ -234,7 +235,7 @@ class _WelderSetupScreenState extends State<WelderSetupScreen> {
                     style: TextStyle(
                       fontSize: 16,
                       fontWeight: FontWeight.bold,
-                      color: AppColors.burgundy,
+                      color: AppColors.royalBlue,
                     ),
                   ),
                   const SizedBox(height: 20),
@@ -314,7 +315,7 @@ class _WelderSetupScreenState extends State<WelderSetupScreen> {
                         Navigator.pop(context);
                       },
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: AppColors.burgundy,
+                        backgroundColor: AppColors.royalBlue,
                         foregroundColor: AppColors.white,
                         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
                         elevation: 0,
@@ -350,7 +351,7 @@ class _WelderSetupScreenState extends State<WelderSetupScreen> {
                 const SizedBox(height: 16),
                 const Text(
                   'انتخاب واحد محاسبه',
-                  style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: AppColors.burgundy),
+                  style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: AppColors.royalBlue),
                 ),
                 const SizedBox(height: 12),
                 const Divider(color: AppColors.borderGrey, height: 1),
@@ -456,7 +457,7 @@ class _WelderSetupScreenState extends State<WelderSetupScreen> {
       // 2. Update pricing list (pass empty or populated list directly)
       await auth.updateWelderPrices(_customPrices);
 
-      setState(() => _isSaving = false);
+      if (mounted) setState(() => _isSaving = false);
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
@@ -471,7 +472,7 @@ class _WelderSetupScreenState extends State<WelderSetupScreen> {
         );
       }
     } catch (e) {
-      setState(() => _isSaving = false);
+      if (mounted) setState(() => _isSaving = false);
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -481,6 +482,499 @@ class _WelderSetupScreenState extends State<WelderSetupScreen> {
         );
       }
     }
+  }
+
+  bool _validateStep0() {
+    if (!_formKey.currentState!.validate()) return false;
+    if (_homeProvinceId == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('استان محل سکونت را انتخاب کنید'), backgroundColor: Colors.red),
+      );
+      return false;
+    }
+    if (_homeCityName == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('شهر محل سکونت را انتخاب کنید'), backgroundColor: Colors.red),
+      );
+      return false;
+    }
+    return true;
+  }
+
+  bool _validateStep1() {
+    if (_selectedSkillIds.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('لطفاً حداقل یک مهارت یا تخصص جوشکاری را انتخاب کنید.'), backgroundColor: Colors.red),
+      );
+      return false;
+    }
+    if (_selectedCities.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('لطفاً حداقل یک شهر را به عنوان محدوده فعالیت خود اضافه کنید.'), backgroundColor: Colors.red),
+      );
+      return false;
+    }
+    return true;
+  }
+
+  Widget _buildProfessionalStepper() {
+    final steps = [
+      {'title': 'اطلاعات شخصی', 'subtitle': 'پروفایل و آدرس'},
+      {'title': 'مهارت و محدوده', 'subtitle': 'تخصص‌ها و شهرها'},
+      {'title': 'تعرفه خدمات', 'subtitle': 'نرخ‌گذاری و ثبت'},
+    ];
+
+    return Container(
+      padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 16),
+      decoration: BoxDecoration(
+        color: AppColors.white,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: AppColors.borderGrey),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.02),
+            blurRadius: 8,
+            offset: const Offset(0, 3),
+          ),
+        ],
+      ),
+      child: Row(
+        children: List.generate(steps.length, (index) {
+          final isActive = _currentStep == index;
+          final isCompleted = _currentStep > index;
+
+          return Expanded(
+            child: Row(
+              children: [
+                // Step indicator circle
+                AnimatedContainer(
+                  duration: const Duration(milliseconds: 300),
+                  width: 32,
+                  height: 32,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: isCompleted
+                        ? AppColors.royalBlue
+                        : (isActive ? AppColors.royalBlue.withValues(alpha: 0.08) : AppColors.lightGrey),
+                    border: Border.all(
+                      color: isCompleted || isActive ? AppColors.royalBlue : AppColors.borderGrey,
+                      width: 2,
+                    ),
+                  ),
+                  child: Center(
+                    child: isCompleted
+                        ? const Icon(Icons.check, color: AppColors.white, size: 16)
+                        : Text(
+                            Formatters.toPersianNumbers((index + 1).toString()),
+                            style: TextStyle(
+                              fontSize: 13,
+                              fontWeight: FontWeight.bold,
+                              color: isCompleted
+                                  ? AppColors.white
+                                  : (isActive ? AppColors.royalBlue : AppColors.textMuted),
+                            ),
+                          ),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                // Title and subtitle
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        steps[index]['title']!,
+                        style: TextStyle(
+                          fontSize: 11,
+                          fontWeight: FontWeight.bold,
+                          color: isActive ? AppColors.textDark : AppColors.textMuted,
+                        ),
+                      ),
+                      Text(
+                        steps[index]['subtitle']!,
+                        style: const TextStyle(
+                          fontSize: 8,
+                          color: AppColors.textMuted,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                if (index < steps.length - 1) ...[
+                  // Line connecting steps
+                  Container(
+                    width: 12,
+                    height: 2,
+                    color: isCompleted ? AppColors.royalBlue : AppColors.borderGrey,
+                  ),
+                  const SizedBox(width: 6),
+                ],
+              ],
+            ),
+          );
+        }),
+      ),
+    );
+  }
+
+  Widget _buildStepNavigationButtons() {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+      decoration: BoxDecoration(
+        color: AppColors.white,
+        border: const Border(top: BorderSide(color: AppColors.borderGrey)),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.04),
+            blurRadius: 10,
+            offset: const Offset(0, -4),
+          ),
+        ],
+      ),
+      child: _currentStep == 0
+          ? SizedBox(
+              width: double.infinity,
+              height: 52,
+              child: ElevatedButton(
+                onPressed: () {
+                  if (_validateStep0()) {
+                    setState(() {
+                      _currentStep = 1;
+                    });
+                  }
+                },
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.royalBlue,
+                  foregroundColor: AppColors.white,
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                  elevation: 0,
+                ),
+                child: const Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Text(
+                      'مرحله بعد',
+                      style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
+                    ),
+                    SizedBox(width: 8),
+                    Icon(Icons.arrow_forward_rounded, color: AppColors.white, size: 18),
+                  ],
+                ),
+              ),
+            )
+          : Row(
+              children: [
+                Expanded(
+                  child: SizedBox(
+                    height: 52,
+                    child: OutlinedButton(
+                      onPressed: () {
+                        setState(() {
+                          _currentStep--;
+                        });
+                      },
+                      style: OutlinedButton.styleFrom(
+                        side: const BorderSide(color: AppColors.royalBlue),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                      ),
+                      child: const Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(Icons.arrow_back_rounded, color: AppColors.royalBlue, size: 18),
+                          SizedBox(width: 8),
+                          Text(
+                            'مرحله قبل',
+                            style: TextStyle(fontWeight: FontWeight.bold, color: AppColors.royalBlue),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 16),
+                Expanded(
+                  child: SizedBox(
+                    height: 52,
+                    child: ElevatedButton(
+                      onPressed: () {
+                        if (_currentStep == 1) {
+                          if (_validateStep1()) {
+                            setState(() {
+                              _currentStep = 2;
+                            });
+                          }
+                        } else if (_currentStep == 2) {
+                          _saveSetup();
+                        }
+                      },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppColors.royalBlue,
+                        foregroundColor: AppColors.white,
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                        elevation: 0,
+                      ),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Text(
+                            _currentStep == 2 ? 'تأیید نهایی و ورود' : 'مرحله بعد',
+                            style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
+                          ),
+                          const SizedBox(width: 8),
+                          Icon(
+                            _currentStep == 2 ? Icons.check_circle_outline : Icons.arrow_forward_rounded,
+                            color: AppColors.white,
+                            size: 18,
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+    );
+  }
+
+  Widget _buildStep0() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _buildSectionLabel('اطلاعات شخصی', isRequired: false),
+        const SizedBox(height: 10),
+        Row(
+          children: [
+            Expanded(
+              child: TextFormField(
+                controller: _firstNameController,
+                decoration: InputDecoration(
+                  label: RichText(
+                    text: const TextSpan(
+                      text: 'نام',
+                      style: TextStyle(color: AppColors.textDark, fontFamily: 'Vazirmatn', fontSize: 13),
+                      children: [
+                        TextSpan(
+                          text: ' *',
+                          style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold, fontSize: 14),
+                        ),
+                      ],
+                    ),
+                  ),
+                  prefixIcon: const Icon(Icons.person_outline, size: 20),
+                  filled: true,
+                  fillColor: AppColors.lightGrey,
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(16),
+                    borderSide: const BorderSide(color: AppColors.borderGrey),
+                  ),
+                  enabledBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(16),
+                    borderSide: const BorderSide(color: AppColors.borderGrey),
+                  ),
+                  focusedBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(16),
+                    borderSide: const BorderSide(color: AppColors.royalBlue, width: 1.5),
+                  ),
+                ),
+                validator: (val) => val == null || val.trim().isEmpty ? 'نام الزامی است' : null,
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: TextFormField(
+                controller: _lastNameController,
+                decoration: InputDecoration(
+                  label: RichText(
+                    text: const TextSpan(
+                      text: 'نام خانوادگی',
+                      style: TextStyle(color: AppColors.textDark, fontFamily: 'Vazirmatn', fontSize: 13),
+                      children: [
+                        TextSpan(
+                          text: ' *',
+                          style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold, fontSize: 14),
+                        ),
+                      ],
+                    ),
+                  ),
+                  prefixIcon: const Icon(Icons.person_outline, size: 20),
+                  filled: true,
+                  fillColor: AppColors.lightGrey,
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(16),
+                    borderSide: const BorderSide(color: AppColors.borderGrey),
+                  ),
+                  enabledBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(16),
+                    borderSide: const BorderSide(color: AppColors.borderGrey),
+                  ),
+                  focusedBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(16),
+                    borderSide: const BorderSide(color: AppColors.royalBlue, width: 1.5),
+                  ),
+                ),
+                validator: (val) => val == null || val.trim().isEmpty ? 'نام خانوادگی الزامی است' : null,
+              ),
+            ),
+          ],
+        ),
+        
+        // Residence Province Selector
+        const SizedBox(height: 14),
+        _isLoadingGeo
+            ? const Center(child: CircularProgressIndicator(color: AppColors.royalBlue))
+            : InkWell(
+                onTap: _showHomeProvincePickerBottomSheet,
+                borderRadius: BorderRadius.circular(16),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                  decoration: BoxDecoration(
+                    color: AppColors.lightGrey,
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(color: AppColors.borderGrey),
+                  ),
+                  child: Row(
+                    children: [
+                      const Icon(Icons.map_outlined, color: AppColors.royalBlue, size: 20),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            RichText(
+                              text: const TextSpan(
+                                text: 'استان محل سکونت',
+                                style: TextStyle(fontSize: 10, color: AppColors.textMuted, fontWeight: FontWeight.bold, fontFamily: 'Vazirmatn'),
+                                children: [
+                                  TextSpan(
+                                    text: ' *',
+                                    style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              _provinces.firstWhere(
+                                (prov) => prov['id'] == _homeProvinceId,
+                                orElse: () => {'name': 'انتخاب نشده'},
+                              )['name'] as String,
+                              style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: AppColors.textDark),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const Icon(Icons.keyboard_arrow_down_rounded, color: AppColors.textMuted),
+                    ],
+                  ),
+                ),
+              ),
+
+        // Residence City Selector
+        const SizedBox(height: 14),
+        InkWell(
+          onTap: _homeProvinceId == null ? null : _showHomeCityPickerBottomSheet,
+          borderRadius: BorderRadius.circular(16),
+          child: Opacity(
+            opacity: _homeProvinceId == null ? 0.5 : 1.0,
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+              decoration: BoxDecoration(
+                color: AppColors.lightGrey,
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(color: AppColors.borderGrey),
+              ),
+              child: Row(
+                children: [
+                  const Icon(Icons.location_city_outlined, color: AppColors.royalBlue, size: 20),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        RichText(
+                          text: const TextSpan(
+                            text: 'شهر محل سکونت',
+                            style: TextStyle(fontSize: 10, color: AppColors.textMuted, fontWeight: FontWeight.bold, fontFamily: 'Vazirmatn'),
+                            children: [
+                              TextSpan(
+                                text: ' *',
+                                style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold),
+                              ),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          _homeCityName ?? 'انتخاب نشده',
+                          style: TextStyle(
+                            fontSize: 13,
+                            fontWeight: FontWeight.bold,
+                            color: _homeCityName == null ? AppColors.textMuted : AppColors.textDark,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const Icon(Icons.keyboard_arrow_down_rounded, color: AppColors.textMuted),
+                ],
+              ),
+            ),
+          ),
+        ),
+        const SizedBox(height: 14),
+        TextFormField(
+          controller: _bioController,
+          maxLines: 3,
+          decoration: InputDecoration(
+            labelText: 'معرفی کوتاه / سابقه کاری شما (اختیاری)',
+            prefixIcon: const Icon(Icons.description_outlined, size: 20),
+            filled: true,
+            fillColor: AppColors.lightGrey,
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(16),
+              borderSide: const BorderSide(color: AppColors.borderGrey),
+            ),
+            enabledBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(16),
+              borderSide: const BorderSide(color: AppColors.borderGrey),
+            ),
+            focusedBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(16),
+              borderSide: const BorderSide(color: AppColors.royalBlue, width: 1.5),
+            ),
+          ),
+        ),
+        const SizedBox(height: 25),
+        _buildProfilePhotoSetupCard(),
+      ],
+    );
+  }
+
+  Widget _buildStep1() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _buildSectionLabel('مهارت‌ها و تخصص‌های جوشکاری شما', isRequired: true),
+        const SizedBox(height: 10),
+        _buildSkillsSelectorCard(),
+        const SizedBox(height: 25),
+
+        _buildSectionLabel('محدوده خدمات‌رسانی (استان و شهرها)', isRequired: true),
+        const SizedBox(height: 10),
+        _buildGeoSelectorCard(),
+      ],
+    );
+  }
+
+  Widget _buildStep2() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _buildSectionLabel('تعرفه‌ها و نرخ‌های دستمزد شما (اختیاری)'),
+        const SizedBox(height: 10),
+        _buildPricesManagerCard(),
+      ],
+    );
   }
 
   @override
@@ -493,36 +987,7 @@ class _WelderSetupScreenState extends State<WelderSetupScreen> {
         backgroundColor: AppColors.white,
         bottomNavigationBar: _isSaving
             ? null
-            : Container(
-                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
-                decoration: BoxDecoration(
-                  color: AppColors.white,
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withValues(alpha: 0.05),
-                      offset: const Offset(0, -4),
-                      blurRadius: 10,
-                    ),
-                  ],
-                ),
-                child: SizedBox(
-                  width: double.infinity,
-                  height: 52,
-                  child: ElevatedButton(
-                    onPressed: _saveSetup,
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: AppColors.royalBlue,
-                      foregroundColor: AppColors.white,
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                      elevation: 0,
-                    ),
-                    child: const Text(
-                      'تأیید نهایی و ورود به داشبورد',
-                      style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
-                    ),
-                  ),
-                ),
-              ),
+            : _buildStepNavigationButtons(),
         body: Stack(
           children: [
             // Decorative background glowing accents
@@ -545,7 +1010,7 @@ class _WelderSetupScreenState extends State<WelderSetupScreen> {
                 width: size.width * 0.6,
                 height: size.width * 0.6,
                 decoration: BoxDecoration(
-                  color: AppColors.burgundy.withValues(alpha: 0.03),
+                  color: AppColors.royalBlue.withValues(alpha: 0.03),
                   shape: BoxShape.circle,
                 ),
               ),
@@ -557,7 +1022,7 @@ class _WelderSetupScreenState extends State<WelderSetupScreen> {
                       child: Column(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-                          CircularProgressIndicator(color: AppColors.burgundy),
+                          CircularProgressIndicator(color: AppColors.royalBlue),
                           SizedBox(height: 16),
                           Text(
                             'در حال ثبت و ایجاد پروفایل کاربری...',
@@ -585,7 +1050,7 @@ class _WelderSetupScreenState extends State<WelderSetupScreen> {
                                   style: TextStyle(
                                     fontSize: 18,
                                     fontWeight: FontWeight.w900,
-                                    color: AppColors.burgundy,
+                                    color: AppColors.royalBlue,
                                   ),
                                 ),
                               ],
@@ -597,235 +1062,21 @@ class _WelderSetupScreenState extends State<WelderSetupScreen> {
                                 style: TextStyle(fontSize: 12, color: AppColors.textMuted),
                               ),
                             ),
+                            const SizedBox(height: 20),
+
+                            // Stepper Indicator
+                            _buildProfessionalStepper(),
                             const SizedBox(height: 25),
 
-                            // Personal info card
-                            _buildSectionLabel('اطلاعات شخصی', isRequired: false),
-                            const SizedBox(height: 10),
-                            Row(
+                            // Dynamic Step Content
+                            IndexedStack(
+                              index: _currentStep,
                               children: [
-                                Expanded(
-                                  child: TextFormField(
-                                    controller: _firstNameController,
-                                    decoration: InputDecoration(
-                                      label: RichText(
-                                        text: const TextSpan(
-                                          text: 'نام',
-                                          style: TextStyle(color: AppColors.textDark, fontFamily: 'Vazirmatn', fontSize: 13),
-                                          children: [
-                                            TextSpan(
-                                              text: ' *',
-                                              style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold, fontSize: 14),
-                                            ),
-                                          ],
-                                        ),
-                                      ),
-                                      prefixIcon: const Icon(Icons.person_outline, size: 20),
-                                      filled: true,
-                                      fillColor: AppColors.lightGrey,
-                                      border: OutlineInputBorder(
-                                        borderRadius: BorderRadius.circular(16),
-                                        borderSide: const BorderSide(color: AppColors.borderGrey),
-                                      ),
-                                      enabledBorder: OutlineInputBorder(
-                                        borderRadius: BorderRadius.circular(16),
-                                        borderSide: const BorderSide(color: AppColors.borderGrey),
-                                      ),
-                                      focusedBorder: OutlineInputBorder(
-                                        borderRadius: BorderRadius.circular(16),
-                                        borderSide: const BorderSide(color: AppColors.royalBlue, width: 1.5),
-                                      ),
-                                    ),
-                                    validator: (val) => val == null || val.trim().isEmpty ? 'نام الزامی است' : null,
-                                  ),
-                                ),
-                                const SizedBox(width: 12),
-                                Expanded(
-                                  child: TextFormField(
-                                    controller: _lastNameController,
-                                    decoration: InputDecoration(
-                                      label: RichText(
-                                        text: const TextSpan(
-                                          text: 'نام خانوادگی',
-                                          style: TextStyle(color: AppColors.textDark, fontFamily: 'Vazirmatn', fontSize: 13),
-                                          children: [
-                                            TextSpan(
-                                              text: ' *',
-                                              style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold, fontSize: 14),
-                                            ),
-                                          ],
-                                        ),
-                                      ),
-                                      prefixIcon: const Icon(Icons.person_outline, size: 20),
-                                      filled: true,
-                                      fillColor: AppColors.lightGrey,
-                                      border: OutlineInputBorder(
-                                        borderRadius: BorderRadius.circular(16),
-                                        borderSide: const BorderSide(color: AppColors.borderGrey),
-                                      ),
-                                      enabledBorder: OutlineInputBorder(
-                                        borderRadius: BorderRadius.circular(16),
-                                        borderSide: const BorderSide(color: AppColors.borderGrey),
-                                      ),
-                                      focusedBorder: OutlineInputBorder(
-                                        borderRadius: BorderRadius.circular(16),
-                                        borderSide: const BorderSide(color: AppColors.royalBlue, width: 1.5),
-                                      ),
-                                    ),
-                                    validator: (val) => val == null || val.trim().isEmpty ? 'نام خانوادگی الزامی است' : null,
-                                  ),
-                                ),
+                                _buildStep0(),
+                                _buildStep1(),
+                                _buildStep2(),
                               ],
                             ),
-                            
-                            // Residence Province Selector
-                            const SizedBox(height: 14),
-                            _isLoadingGeo
-                                ? const Center(child: CircularProgressIndicator(color: AppColors.burgundy))
-                                : InkWell(
-                                    onTap: _showHomeProvincePickerBottomSheet,
-                                    borderRadius: BorderRadius.circular(16),
-                                    child: Container(
-                                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-                                      decoration: BoxDecoration(
-                                        color: AppColors.lightGrey,
-                                        borderRadius: BorderRadius.circular(16),
-                                        border: Border.all(color: AppColors.borderGrey),
-                                      ),
-                                      child: Row(
-                                        children: [
-                                          const Icon(Icons.map_outlined, color: AppColors.royalBlue, size: 20),
-                                          const SizedBox(width: 12),
-                                          Expanded(
-                                            child: Column(
-                                              crossAxisAlignment: CrossAxisAlignment.start,
-                                              children: [
-                                                RichText(
-                                                  text: const TextSpan(
-                                                    text: 'استان محل سکونت',
-                                                    style: TextStyle(fontSize: 10, color: AppColors.textMuted, fontWeight: FontWeight.bold, fontFamily: 'Vazirmatn'),
-                                                    children: [
-                                                      TextSpan(
-                                                        text: ' *',
-                                                        style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold),
-                                                      ),
-                                                    ],
-                                                  ),
-                                                ),
-                                                const SizedBox(height: 4),
-                                                Text(
-                                                  _provinces.firstWhere(
-                                                    (prov) => prov['id'] == _homeProvinceId,
-                                                    orElse: () => {'name': 'انتخاب نشده'},
-                                                  )['name'] as String,
-                                                  style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: AppColors.textDark),
-                                                ),
-                                              ],
-                                            ),
-                                          ),
-                                          const Icon(Icons.keyboard_arrow_down_rounded, color: AppColors.textMuted),
-                                        ],
-                                      ),
-                                    ),
-                                  ),
-
-                            // Residence City Selector
-                            const SizedBox(height: 14),
-                            InkWell(
-                              onTap: _homeProvinceId == null ? null : _showHomeCityPickerBottomSheet,
-                              borderRadius: BorderRadius.circular(16),
-                              child: Opacity(
-                                opacity: _homeProvinceId == null ? 0.5 : 1.0,
-                                child: Container(
-                                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-                                  decoration: BoxDecoration(
-                                    color: AppColors.lightGrey,
-                                    borderRadius: BorderRadius.circular(16),
-                                    border: Border.all(color: AppColors.borderGrey),
-                                  ),
-                                  child: Row(
-                                    children: [
-                                      const Icon(Icons.location_city_outlined, color: AppColors.royalBlue, size: 20),
-                                      const SizedBox(width: 12),
-                                      Expanded(
-                                        child: Column(
-                                          crossAxisAlignment: CrossAxisAlignment.start,
-                                          children: [
-                                            RichText(
-                                              text: const TextSpan(
-                                                text: 'شهر محل سکونت',
-                                                style: TextStyle(fontSize: 10, color: AppColors.textMuted, fontWeight: FontWeight.bold, fontFamily: 'Vazirmatn'),
-                                                children: [
-                                                  TextSpan(
-                                                    text: ' *',
-                                                    style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold),
-                                                  ),
-                                                ],
-                                              ),
-                                            ),
-                                            const SizedBox(height: 4),
-                                            Text(
-                                              _homeCityName ?? 'انتخاب نشده',
-                                              style: TextStyle(
-                                                fontSize: 13,
-                                                fontWeight: FontWeight.bold,
-                                                color: _homeCityName == null ? AppColors.textMuted : AppColors.textDark,
-                                              ),
-                                            ),
-                                          ],
-                                        ),
-                                      ),
-                                      const Icon(Icons.keyboard_arrow_down_rounded, color: AppColors.textMuted),
-                                    ],
-                                  ),
-                                ),
-                              ),
-                            ),
-                            const SizedBox(height: 14),
-                            TextFormField(
-                              controller: _bioController,
-                              maxLines: 3,
-                              decoration: InputDecoration(
-                                labelText: 'معرفی کوتاه / سابقه کاری شما (اختیاری)',
-                                prefixIcon: const Icon(Icons.description_outlined, size: 20),
-                                filled: true,
-                                fillColor: AppColors.lightGrey,
-                                border: OutlineInputBorder(
-                                  borderRadius: BorderRadius.circular(16),
-                                  borderSide: const BorderSide(color: AppColors.borderGrey),
-                                ),
-                                enabledBorder: OutlineInputBorder(
-                                  borderRadius: BorderRadius.circular(16),
-                                  borderSide: const BorderSide(color: AppColors.borderGrey),
-                                ),
-                                focusedBorder: OutlineInputBorder(
-                                  borderRadius: BorderRadius.circular(16),
-                                  borderSide: const BorderSide(color: AppColors.royalBlue, width: 1.5),
-                                ),
-                              ),
-                            ),
-                            const SizedBox(height: 25),
-                            _buildProfilePhotoSetupCard(),
-                            const SizedBox(height: 25),
-
-                            // Skills selection settings
-                            _buildSectionLabel('مهارت‌ها و تخصص‌های جوشکاری شما', isRequired: true),
-                            const SizedBox(height: 10),
-                            _buildSkillsSelectorCard(),
-                            const SizedBox(height: 25),
-
-                            // Geography settings
-                            _buildSectionLabel('محدوده خدمات‌رسانی (استان و شهرها)', isRequired: true),
-                            const SizedBox(height: 10),
-                            _buildGeoSelectorCard(),
-                            const SizedBox(height: 25),
-
-
-
-                            // Bids management
-                            _buildSectionLabel('تعرفه‌ها و نرخ‌های دستمزد شما (اختیاری)'),
-                            const SizedBox(height: 10),
-                            _buildPricesManagerCard(),
                             const SizedBox(height: 40),
                           ],
                         ),
@@ -845,7 +1096,7 @@ class _WelderSetupScreenState extends State<WelderSetupScreen> {
         style: const TextStyle(
           fontSize: 14,
           fontWeight: FontWeight.bold,
-          color: AppColors.burgundy,
+          color: AppColors.royalBlue,
           fontFamily: 'Vazirmatn',
         ),
         children: isRequired
@@ -903,7 +1154,7 @@ class _WelderSetupScreenState extends State<WelderSetupScreen> {
                     const SizedBox(height: 18),
                     const Text(
                       'انتخاب استان محل فعالیت',
-                      style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: AppColors.burgundy),
+                      style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: AppColors.royalBlue),
                     ),
                     const SizedBox(height: 12),
 
@@ -1019,7 +1270,7 @@ class _WelderSetupScreenState extends State<WelderSetupScreen> {
                     const SizedBox(height: 18),
                     const Text(
                       'انتخاب شهرهای فعال',
-                      style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: AppColors.burgundy),
+                      style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: AppColors.royalBlue),
                     ),
                     const SizedBox(height: 12),
                     
@@ -1161,7 +1412,7 @@ class _WelderSetupScreenState extends State<WelderSetupScreen> {
                     const SizedBox(height: 18),
                     const Text(
                       'انتخاب استان محل سکونت',
-                      style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: AppColors.burgundy),
+                      style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: AppColors.royalBlue),
                     ),
                     const SizedBox(height: 12),
 
@@ -1277,7 +1528,7 @@ class _WelderSetupScreenState extends State<WelderSetupScreen> {
                     const SizedBox(height: 18),
                     const Text(
                       'انتخاب شهر محل سکونت',
-                      style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: AppColors.burgundy),
+                      style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: AppColors.royalBlue),
                     ),
                     const SizedBox(height: 12),
 
@@ -1362,7 +1613,7 @@ class _WelderSetupScreenState extends State<WelderSetupScreen> {
       return const Center(
         child: Padding(
           padding: EdgeInsets.all(20.0),
-          child: CircularProgressIndicator(color: AppColors.burgundy),
+          child: CircularProgressIndicator(color: AppColors.royalBlue),
         ),
       );
     }
@@ -1432,13 +1683,13 @@ class _WelderSetupScreenState extends State<WelderSetupScreen> {
                   ),
                 ),
                 selected: isSelected,
-                selectedColor: AppColors.burgundy,
+                selectedColor: AppColors.royalBlue,
                 backgroundColor: AppColors.lightGrey,
                 checkmarkColor: AppColors.white,
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(12),
                   side: BorderSide(
-                    color: isSelected ? AppColors.burgundy : AppColors.borderGrey,
+                    color: isSelected ? AppColors.royalBlue : AppColors.borderGrey,
                     width: 1,
                   ),
                 ),
@@ -1488,7 +1739,7 @@ class _WelderSetupScreenState extends State<WelderSetupScreen> {
 
           // Province Selector Button
           _isLoadingGeo
-              ? const Center(child: CircularProgressIndicator(color: AppColors.burgundy))
+              ? const Center(child: CircularProgressIndicator(color: AppColors.royalBlue))
               : InkWell(
                   onTap: _showProvincePickerBottomSheet,
                   borderRadius: BorderRadius.circular(16),
@@ -1738,13 +1989,13 @@ class _WelderSetupScreenState extends State<WelderSetupScreen> {
                   style: TextStyle(
                     fontSize: 14,
                     fontWeight: FontWeight.bold,
-                    color: AppColors.burgundy,
+                    color: AppColors.royalBlue,
                     fontFamily: 'Vazirmatn',
                   ),
                 ),
                 const SizedBox(height: 16),
                 ListTile(
-                  leading: const Icon(Icons.photo_library_outlined, color: AppColors.burgundy),
+                  leading: const Icon(Icons.photo_library_outlined, color: AppColors.royalBlue),
                   title: const Text('انتخاب از گالری / فایل‌ها', style: TextStyle(fontFamily: 'Vazirmatn', fontSize: 13)),
                   onTap: () {
                     Navigator.pop(sheetContext);
@@ -1805,11 +2056,11 @@ class _WelderSetupScreenState extends State<WelderSetupScreen> {
                   onTap: showPhotoOptions,
                   child: CircleAvatar(
                     radius: 46,
-                    backgroundColor: _pickedImageBytes != null ? Colors.transparent : AppColors.burgundy.withValues(alpha: 0.12),
+                    backgroundColor: _pickedImageBytes != null ? Colors.transparent : AppColors.royalBlue.withValues(alpha: 0.12),
                     backgroundImage: _pickedImageBytes != null ? MemoryImage(Uint8List.fromList(_pickedImageBytes!)) : null,
                     child: _pickedImageBytes != null
                         ? null
-                        : const Icon(Icons.add_a_photo_outlined, size: 30, color: AppColors.burgundy),
+                        : const Icon(Icons.add_a_photo_outlined, size: 30, color: AppColors.royalBlue),
                   ),
                 ),
                 Positioned(
@@ -1820,7 +2071,7 @@ class _WelderSetupScreenState extends State<WelderSetupScreen> {
                     child: Container(
                       padding: const EdgeInsets.all(6),
                       decoration: const BoxDecoration(
-                        color: AppColors.burgundy,
+                        color: AppColors.royalBlue,
                         shape: BoxShape.circle,
                       ),
                       child: Icon(
@@ -1859,14 +2110,14 @@ class _WelderSetupScreenState extends State<WelderSetupScreen> {
           Container(
             padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
-              color: AppColors.burgundy.withValues(alpha: 0.05),
+              color: AppColors.amberOrange.withValues(alpha: 0.05),
               borderRadius: BorderRadius.circular(14),
-              border: Border.all(color: AppColors.burgundy.withValues(alpha: 0.1)),
+              border: Border.all(color: AppColors.amberOrange.withValues(alpha: 0.15)),
             ),
             child: const Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Icon(Icons.lightbulb_outline_rounded, color: AppColors.burgundy, size: 18),
+                Icon(Icons.lightbulb_outline_rounded, color: AppColors.amberOrange, size: 18),
                 SizedBox(width: 8),
                 Expanded(
                   child: Text(

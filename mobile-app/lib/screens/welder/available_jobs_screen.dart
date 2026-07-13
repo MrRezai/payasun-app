@@ -37,7 +37,7 @@ class _AvailableJobsScreenState extends State<AvailableJobsScreen> {
         title: const Text(
           'تالار پروژه‌ها',
           style: TextStyle(
-            color: AppColors.burgundy,
+            color: AppColors.royalBlue,
             fontSize: 16,
             fontWeight: FontWeight.bold,
           ),
@@ -201,7 +201,7 @@ class _AvailableJobsScreenState extends State<AvailableJobsScreen> {
               children: [
                 const Text(
                   'توضیحات پروژه کارفرما:',
-                  style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: AppColors.burgundy),
+                  style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: AppColors.royalBlue),
                 ),
                 const SizedBox(height: 6),
                 Text(
@@ -233,7 +233,7 @@ class _AvailableJobsScreenState extends State<AvailableJobsScreen> {
                   _showBiddingBottomSheet(job);
                 },
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: AppColors.burgundy,
+                  backgroundColor: AppColors.royalBlue,
                   foregroundColor: AppColors.white,
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                   elevation: 0,
@@ -342,7 +342,7 @@ class _AvailableJobsScreenState extends State<AvailableJobsScreen> {
                     style: TextStyle(
                       fontSize: 17,
                       fontWeight: FontWeight.bold,
-                      color: AppColors.burgundy,
+                      color: AppColors.royalBlue,
                     ),
                   ),
                   const SizedBox(height: 6),
@@ -413,17 +413,17 @@ class _AvailableJobsScreenState extends State<AvailableJobsScreen> {
                   Container(
                     padding: const EdgeInsets.all(12),
                     decoration: BoxDecoration(
-                      color: AppColors.royalBlue.withValues(alpha: 0.05),
+                      color: AppColors.amberOrange.withValues(alpha: 0.05),
                       borderRadius: BorderRadius.circular(12),
                     ),
                     child: const Row(
                       children: [
-                        Icon(Icons.info_outline, color: AppColors.royalBlue, size: 16),
+                        Icon(Icons.info_outline, color: AppColors.amberOrange, size: 16),
                         SizedBox(width: 8),
                         Expanded(
                           child: Text(
                             'این پیشنهاد قیمت به عنوان تخمین اولیه مستقیماً برای کارفرما ارسال می‌شود.',
-                            style: TextStyle(fontSize: 10, color: AppColors.royalBlue, height: 1.5),
+                            style: TextStyle(fontSize: 10, color: AppColors.amberOrange, height: 1.5),
                           ),
                         ),
                       ],
@@ -451,7 +451,7 @@ class _AvailableJobsScreenState extends State<AvailableJobsScreen> {
                         );
                       },
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: AppColors.burgundy,
+                        backgroundColor: AppColors.royalBlue,
                         foregroundColor: AppColors.white,
                         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
                         elevation: 0,

@@ -63,7 +63,7 @@ class _MainShellScreenState extends State<MainShellScreen> {
                   const Text(
                     'جفت‌وجور',
                     style: TextStyle(
-                      color: AppColors.burgundy,
+                      color: AppColors.royalBlue,
                       fontWeight: FontWeight.w900,
                       fontSize: 22,
                       letterSpacing: -0.5,

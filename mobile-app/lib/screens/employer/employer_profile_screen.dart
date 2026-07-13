@@ -8,6 +8,7 @@ import 'package:flutter/foundation.dart';
 import 'package:file_picker/file_picker.dart';
 import '../../constants/route_transitions.dart';
 import '../auth/login_phone_screen.dart';
+import '../../utils/formatters.dart';
 
 enum ProfileView { menu, personalInfo }
 
@@ -553,8 +554,9 @@ class _EmployerProfileScreenState extends State<EmployerProfileScreen> {
                 ],
                 const SizedBox(height: 6),
                 Text(
-                  auth.phoneNumber,
+                  Formatters.formatPhoneNumber(auth.phoneNumber),
                   style: const TextStyle(fontSize: 12, color: AppColors.textMuted, fontFamily: 'Vazirmatn'),
+                  textDirection: TextDirection.ltr,
                 ),
                 const SizedBox(height: 12),
                 Text(

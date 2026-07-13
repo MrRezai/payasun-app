@@ -393,7 +393,7 @@ class _WelderProfileScreenState extends State<WelderProfileScreen> {
                     style: TextStyle(
                       fontSize: 16,
                       fontWeight: FontWeight.bold,
-                      color: AppColors.burgundy,
+                      color: AppColors.royalBlue,
                     ),
                   ),
                   const SizedBox(height: 20),
@@ -491,7 +491,7 @@ class _WelderProfileScreenState extends State<WelderProfileScreen> {
                         }
                       },
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: AppColors.burgundy,
+                        backgroundColor: AppColors.royalBlue,
                         foregroundColor: AppColors.white,
                         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
                         elevation: 0,
@@ -527,7 +527,7 @@ class _WelderProfileScreenState extends State<WelderProfileScreen> {
                 const SizedBox(height: 16),
                 const Text(
                   'انتخاب واحد محاسبه',
-                  style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: AppColors.burgundy),
+                  style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: AppColors.royalBlue),
                 ),
                 const SizedBox(height: 12),
                 const Divider(color: AppColors.borderGrey, height: 1),
@@ -586,7 +586,7 @@ class _WelderProfileScreenState extends State<WelderProfileScreen> {
         elevation: 0,
         title: Text(
           _getViewTitle(),
-          style: const TextStyle(color: AppColors.burgundy, fontSize: 16, fontWeight: FontWeight.bold),
+          style: const TextStyle(color: AppColors.royalBlue, fontSize: 16, fontWeight: FontWeight.bold),
         ),
         centerTitle: true,
         leading: _currentView != ProfileView.menu
@@ -605,7 +605,7 @@ class _WelderProfileScreenState extends State<WelderProfileScreen> {
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  CircularProgressIndicator(color: AppColors.burgundy),
+                  CircularProgressIndicator(color: AppColors.royalBlue),
                   SizedBox(height: 16),
                   Text('در حال ذخیره‌سازی اطلاعات...', style: TextStyle(fontWeight: FontWeight.bold)),
                 ],
@@ -714,13 +714,13 @@ class _WelderProfileScreenState extends State<WelderProfileScreen> {
                                 style: TextStyle(
                                   fontSize: 14,
                                   fontWeight: FontWeight.bold,
-                                  color: AppColors.burgundy,
+                                  color: AppColors.royalBlue,
                                   fontFamily: 'Vazirmatn',
                                 ),
                               ),
                               const SizedBox(height: 16),
                               ListTile(
-                                leading: const Icon(Icons.photo_library_outlined, color: AppColors.burgundy),
+                                leading: const Icon(Icons.photo_library_outlined, color: AppColors.royalBlue),
                                 title: const Text('انتخاب از گالری / فایل‌ها', style: TextStyle(fontFamily: 'Vazirmatn', fontSize: 13)),
                                 onTap: () {
                                   Navigator.pop(sheetContext);
@@ -789,14 +789,14 @@ class _WelderProfileScreenState extends State<WelderProfileScreen> {
                             onTap: showPhotoOptions,
                             child: CircleAvatar(
                               radius: 42,
-                              backgroundColor: avatarImage != null ? Colors.transparent : AppColors.burgundy.withValues(alpha: 0.12),
+                              backgroundColor: avatarImage != null ? Colors.transparent : AppColors.royalBlue.withValues(alpha: 0.12),
                               backgroundImage: avatarImage,
                               child: avatarImage != null
                                   ? null
                                   : Text(
                                       initials,
                                       style: const TextStyle(
-                                        color: AppColors.burgundy,
+                                        color: AppColors.royalBlue,
                                         fontWeight: FontWeight.bold,
                                         fontSize: 20,
                                         fontFamily: 'Vazirmatn',
@@ -812,7 +812,7 @@ class _WelderProfileScreenState extends State<WelderProfileScreen> {
                               child: Container(
                                 padding: const EdgeInsets.all(5),
                                 decoration: const BoxDecoration(
-                                  color: AppColors.burgundy,
+                                  color: AppColors.royalBlue,
                                   shape: BoxShape.circle,
                                 ),
                                 child: const Icon(
@@ -880,8 +880,9 @@ class _WelderProfileScreenState extends State<WelderProfileScreen> {
                 ),
                 const SizedBox(height: 6),
                 Text(
-                  auth.phoneNumber,
-                  style: const TextStyle(fontSize: 12, color: AppColors.textMuted),
+                  Formatters.formatPhoneNumber(auth.phoneNumber),
+                  style: const TextStyle(fontSize: 12, color: AppColors.textMuted, fontFamily: 'Vazirmatn'),
+                  textDirection: TextDirection.ltr,
                 ),
                 const SizedBox(height: 12),
                 Text(
@@ -980,8 +981,8 @@ class _WelderProfileScreenState extends State<WelderProfileScreen> {
           onTap: onTap,
           leading: Container(
             padding: const EdgeInsets.all(8),
-            decoration: BoxDecoration(color: AppColors.burgundy.withValues(alpha: 0.08), shape: BoxShape.circle),
-            child: Icon(icon, color: AppColors.burgundy, size: 20),
+            decoration: BoxDecoration(color: AppColors.royalBlue.withValues(alpha: 0.08), shape: BoxShape.circle),
+            child: Icon(icon, color: AppColors.royalBlue, size: 20),
           ),
           title: Text(title, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: AppColors.textDark)),
           subtitle: Text(subtitle, style: const TextStyle(fontSize: 10, color: AppColors.textMuted)),
@@ -999,7 +1000,7 @@ class _WelderProfileScreenState extends State<WelderProfileScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text('اطلاعات هویتی شما:', style: TextStyle(fontWeight: FontWeight.bold, color: AppColors.burgundy)),
+          const Text('اطلاعات هویتی شما:', style: TextStyle(fontWeight: FontWeight.bold, color: AppColors.royalBlue)),
           const SizedBox(height: 14),
           Row(
             children: [
@@ -1076,7 +1077,7 @@ class _WelderProfileScreenState extends State<WelderProfileScreen> {
           // Residence Province Selector
           const SizedBox(height: 14),
           _isLoadingGeo
-              ? const Center(child: CircularProgressIndicator(color: AppColors.burgundy))
+              ? const Center(child: CircularProgressIndicator(color: AppColors.royalBlue))
               : InkWell(
                   onTap: _showHomeProvincePickerBottomSheet,
                   borderRadius: BorderRadius.circular(16),
@@ -1251,7 +1252,7 @@ class _WelderProfileScreenState extends State<WelderProfileScreen> {
                     const SizedBox(height: 18),
                     const Text(
                       'انتخاب استان محل فعالیت',
-                      style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: AppColors.burgundy),
+                      style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: AppColors.royalBlue),
                     ),
                     const SizedBox(height: 12),
 
@@ -1365,7 +1366,7 @@ class _WelderProfileScreenState extends State<WelderProfileScreen> {
                     const SizedBox(height: 18),
                     const Text(
                       'انتخاب شهرهای فعال',
-                      style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: AppColors.burgundy),
+                      style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: AppColors.royalBlue),
                     ),
                     const SizedBox(height: 12),
                     
@@ -1505,7 +1506,7 @@ class _WelderProfileScreenState extends State<WelderProfileScreen> {
                     const SizedBox(height: 18),
                     const Text(
                       'انتخاب استان محل سکونت',
-                      style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: AppColors.burgundy),
+                      style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: AppColors.royalBlue),
                     ),
                     const SizedBox(height: 12),
 
@@ -1619,7 +1620,7 @@ class _WelderProfileScreenState extends State<WelderProfileScreen> {
                     const SizedBox(height: 18),
                     const Text(
                       'انتخاب شهر محل سکونت',
-                      style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: AppColors.burgundy),
+                      style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: AppColors.royalBlue),
                     ),
                     const SizedBox(height: 12),
 
@@ -1711,12 +1712,12 @@ class _WelderProfileScreenState extends State<WelderProfileScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text('انتخاب محدوده جغرافیایی فعالیت:', style: TextStyle(fontWeight: FontWeight.bold, color: AppColors.burgundy)),
+          const Text('انتخاب محدوده جغرافیایی فعالیت:', style: TextStyle(fontWeight: FontWeight.bold, color: AppColors.royalBlue)),
           const SizedBox(height: 14),
 
           // Province Selector Tile
           _isLoadingGeo
-              ? const Center(child: CircularProgressIndicator(color: AppColors.burgundy))
+              ? const Center(child: CircularProgressIndicator(color: AppColors.royalBlue))
               : InkWell(
                   onTap: _showProvincePickerBottomSheet,
                   borderRadius: BorderRadius.circular(16),
@@ -1859,7 +1860,7 @@ class _WelderProfileScreenState extends State<WelderProfileScreen> {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              const Text('لیست تعرفه‌های ثبت شده:', style: TextStyle(fontWeight: FontWeight.bold, color: AppColors.burgundy)),
+              const Text('لیست تعرفه‌های ثبت شده:', style: TextStyle(fontWeight: FontWeight.bold, color: AppColors.royalBlue)),
               TextButton.icon(
                 onPressed: _showAddPriceBottomSheet,
                 icon: const Icon(Icons.add),
@@ -1959,7 +1960,7 @@ class _WelderProfileScreenState extends State<WelderProfileScreen> {
             style: TextStyle(
               fontSize: 14,
               fontWeight: FontWeight.bold,
-              color: AppColors.burgundy,
+              color: AppColors.royalBlue,
               fontFamily: 'Vazirmatn',
             ),
           ),
@@ -1979,7 +1980,7 @@ class _WelderProfileScreenState extends State<WelderProfileScreen> {
             const Center(
               child: Padding(
                 padding: EdgeInsets.all(30.0),
-                child: CircularProgressIndicator(color: AppColors.burgundy),
+                child: CircularProgressIndicator(color: AppColors.royalBlue),
               ),
             )
           else if (_availableSkills.isEmpty)
@@ -2016,13 +2017,13 @@ class _WelderProfileScreenState extends State<WelderProfileScreen> {
                       ),
                     ),
                     selected: isSelected,
-                    selectedColor: AppColors.burgundy,
+                    selectedColor: AppColors.royalBlue,
                     backgroundColor: AppColors.lightGrey,
                     checkmarkColor: AppColors.white,
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(12),
                       side: BorderSide(
-                        color: isSelected ? AppColors.burgundy : AppColors.borderGrey,
+                        color: isSelected ? AppColors.royalBlue : AppColors.borderGrey,
                         width: 1,
                       ),
                     ),
@@ -2065,7 +2066,7 @@ class _WelderProfileScreenState extends State<WelderProfileScreen> {
                 }
               },
               style: ElevatedButton.styleFrom(
-                backgroundColor: AppColors.burgundy,
+                backgroundColor: AppColors.royalBlue,
                 foregroundColor: AppColors.white,
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
                 elevation: 0,
