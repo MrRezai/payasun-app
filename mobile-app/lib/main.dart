@@ -6,6 +6,7 @@ import 'screens/main_shell_screen.dart';
 import 'screens/auth/login_phone_screen.dart';
 import 'screens/welder/welder_setup_screen.dart';
 import 'screens/employer/employer_setup_screen.dart';
+import 'screens/splash_screen.dart';
 import 'constants/app_colors.dart';
 
 void main() {
@@ -20,8 +21,27 @@ void main() {
   );
 }
 
-class JoftojoorApp extends StatelessWidget {
+class JoftojoorApp extends StatefulWidget {
   const JoftojoorApp({super.key});
+
+  @override
+  State<JoftojoorApp> createState() => _JoftojoorAppState();
+}
+
+class _JoftojoorAppState extends State<JoftojoorApp> {
+  bool _splashTimerFinished = false;
+
+  @override
+  void initState() {
+    super.initState();
+    Future.delayed(const Duration(seconds: 3), () {
+      if (mounted) {
+        setState(() {
+          _splashTimerFinished = true;
+        });
+      }
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -48,28 +68,8 @@ class JoftojoorApp extends StatelessWidget {
       home: Consumer<AuthProvider>(
         builder: (context, auth, _) {
           Widget child;
-          if (!auth.isInitialized) {
-            child = const Scaffold(
-              key: ValueKey('SplashLoadingScreen'),
-              backgroundColor: AppColors.white,
-              body: Center(
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Image(
-                      image: AssetImage('assets/logo/joftojoor.png'),
-                      width: 72,
-                      height: 72,
-                    ),
-                    SizedBox(height: 24),
-                    CircularProgressIndicator(
-                      color: AppColors.royalBlue,
-                      strokeWidth: 3,
-                    ),
-                  ],
-                ),
-              ),
-            );
+          if (!auth.isInitialized || !_splashTimerFinished) {
+            child = const SplashScreen(key: ValueKey('SplashScreen'));
           } else if (!auth.isAuthenticated) {
             child = const LoginPhoneScreen(key: ValueKey('LoginPhoneScreen'));
           } else if (!auth.isProfileComplete) {

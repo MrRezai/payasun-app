@@ -93,6 +93,15 @@ export class WelderProfile {
   @Column({ type: 'varchar', length: 50, default: 'NONE' })
   profile_picture_status: string;
 
+  @Column({ type: 'varchar', length: 30, nullable: true })
+  card_number: string | null;
+
+  @Column({ type: 'varchar', length: 40, nullable: true })
+  shiba_number: string | null;
+
+  @Column({ type: 'varchar', length: 100, nullable: true })
+  bank_name: string | null;
+
   @ManyToMany(() => Skill, { onDelete: 'CASCADE' })
   @JoinTable({
     name: 'welder_skills',

@@ -18,18 +18,62 @@ export default function ViewProjectDetailModal({ inquiry, onClose }: ViewProject
         <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 1fr', gap: '20px', marginBottom: '20px' }}>
           <div>
             <h4 style={{ fontSize: '13px', color: 'var(--text-secondary)', marginBottom: '8px' }}>نقشه فنی پروژه</h4>
-            {inquiry.has_blueprint ? (
-              <div style={{ height: '180px', borderRadius: '12px', overflow: 'hidden', border: '1px solid var(--border)' }}>
-                <img 
-                  src={inquiry.blueprint_url ? `${BASE_URL}${inquiry.blueprint_url}` : ''} 
-                  alt="Project Blueprint" 
-                  style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-                  onError={(e) => {
-                    if (inquiry.blueprint_url) e.currentTarget.src = inquiry.blueprint_url;
-                  }}
-                />
-              </div>
-            ) : (
+            {inquiry.has_blueprint ? (() => {
+              const isPdf = inquiry.blueprint_url?.toLowerCase().endsWith('.pdf');
+              const fileUrl = inquiry.blueprint_url 
+                ? (inquiry.blueprint_url.startsWith('http') ? inquiry.blueprint_url : `${BASE_URL}${inquiry.blueprint_url}`)
+                : '';
+              
+              if (isPdf) {
+                return (
+                  <div style={{ 
+                    height: '180px', 
+                    borderRadius: '12px', 
+                    border: '1px solid var(--border)', 
+                    display: 'flex', 
+                    flexDirection: 'column',
+                    alignItems: 'center', 
+                    justifyContent: 'center', 
+                    backgroundColor: 'rgba(0,0,0,0.02)', 
+                    padding: '16px',
+                    textAlign: 'center'
+                  }}>
+                    <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#e74c3c" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ marginBottom: '10px' }}>
+                      <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                      <polyline points="14 2 14 8 20 8"></polyline>
+                      <line x1="16" y1="13" x2="8" y2="13"></line>
+                      <line x1="16" y1="17" x2="8" y2="17"></line>
+                      <polyline points="10 9 9 9 8 9"></polyline>
+                    </svg>
+                    <span style={{ fontSize: '11px', fontWeight: 'bold', marginBottom: '8px', color: 'var(--text-primary)' }}>فایل نقشه فنی PDF است</span>
+                    <a 
+                      href={fileUrl} 
+                      target="_blank" 
+                      rel="noreferrer"
+                      style={{ padding: '4px 12px', fontSize: '11px', textDecoration: 'none', backgroundColor: '#e74c3c', color: 'white', borderRadius: '6px', fontWeight: 'bold' }}
+                    >
+                      دانلود و مشاهده PDF
+                    </a>
+                  </div>
+                );
+              }
+
+              return (
+                <div style={{ height: '180px', borderRadius: '12px', overflow: 'hidden', border: '1px solid var(--border)' }}>
+                  <img 
+                    src={fileUrl} 
+                    alt="Project Blueprint" 
+                    style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                    onError={(e) => {
+                      e.currentTarget.onerror = null;
+                      if (inquiry.blueprint_url && !inquiry.blueprint_url.startsWith('http')) {
+                        e.currentTarget.src = inquiry.blueprint_url;
+                      }
+                    }}
+                  />
+                </div>
+              );
+            })() : (
               <div style={{ height: '180px', borderRadius: '12px', backgroundColor: 'rgba(0,0,0,0.01)', border: '1px dashed var(--border)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-secondary)' }}>
                 بدون نقشه فنی (اقلام دستی)
               </div>

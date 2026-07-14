@@ -173,19 +173,24 @@ show_banner() {
 show_menu() {
     echo -e "  ${BOLD}${UNDERLINE}Select an option:${NC}"
     echo ""
+    echo -e "  ${CYAN}─── Backend Services ───${NC}"
     echo -e "  ${GREEN}[1]${NC}  📊  Check System Status"
-    echo -e "  ${GREEN}[2]${NC}  🌐  Configure Nginx Reverse Proxy & Domain"
+    echo -e "  ${GREEN}[2]${NC}  🌐  Configure Nginx Reverse Proxy & Domain (Backend)"
     echo -e "  ${GREEN}[3]${NC}  📋  View Live PM2 Logs"
     echo -e "  ${GREEN}[4]${NC}  🔄  Restart Backend Application"
     echo -e "  ${GREEN}[5]${NC}  ⚙️   Reconfigure Environment (.env)"
     echo -e "  ${GREEN}[6]${NC}  🛠️   Diagnose & Fix Database Connection"
     echo -e "  ${GREEN}[7]${NC}  🚀  Git Pull, Rebuild Backend & PM2 Restart"
-    echo -e "  ${RED}[8]${NC}  🚪  Exit Dashboard"
+    echo ""
+    echo -e "  ${CYAN}─── Admin Panel Services ───${NC}"
+    echo -e "  ${GREEN}[8]${NC}  🖥️   Configure Nginx Domain (Admin Panel)"
+    echo -e "  ${GREEN}[9]${NC}  📦  Build & Deploy React Admin Panel"
+    echo ""
+    echo -e "  ${RED}[10]${NC} 🚪  Exit Dashboard"
     echo ""
     divider
-    echo -en "  ${CYAN}▶${NC}  Enter your choice [1-8]: "
+    echo -en "  ${CYAN}▶${NC}  Enter your choice [1-10]: "
 }
-
 
 # ══════════════════════════════════════════════════════════════════════
 #  [1] CHECK SYSTEM STATUS
@@ -1469,6 +1474,161 @@ fix_create_user() {
     fi
 }
 
+# ─── Sub-function: Build & Deploy React Admin Panel ──────────────────
+deploy_admin_panel() {
+    header "BUILD & DEPLOY REACT ADMIN PANEL"
+
+    local admin_dir="${SCRIPT_DIR}/admin-panel"
+    local dist_dir="/var/www/joftojoor-admin"
+
+    if [ ! -d "$admin_dir" ]; then
+        error "Admin panel source directory not found at: ${admin_dir}"
+        pause_continue
+        return 1
+    fi
+
+    # Step 1: Prompt for VITE_API_URL
+    local current_api_url="https://api.joftojoor.com"
+    echo ""
+    info "Specify the backend API URL for this admin panel build."
+    prompt_input "VITE_API_URL" "$current_api_url" api_url
+    echo ""
+
+    # Step 2: Build the React application
+    info "Installing admin-panel dependencies..."
+    if ! (cd "$admin_dir" && npm install); then
+        error "npm install failed in admin-panel."
+        pause_continue
+        return 1
+    fi
+
+    info "Building admin-panel static assets..."
+    if ! (cd "$admin_dir" && env VITE_API_URL="$api_url" npm run build); then
+        error "Vite build failed. Please review compilation errors above."
+        pause_continue
+        return 1
+    fi
+
+    success "Admin panel built successfully in ${admin_dir}/dist"
+
+    # Step 3: Deploy static files to Nginx web root
+    info "Preparing web deployment directory: ${dist_dir}"
+    sudo mkdir -p "$dist_dir"
+
+    info "Copying build assets to Nginx folder..."
+    sudo rm -rf "${dist_dir:?}"/*
+    sudo cp -r "${admin_dir}"/dist/* "$dist_dir"
+
+    # Step 4: Fix ownership and permissions
+    info "Setting file permissions..."
+    sudo chown -R www-data:www-data "$dist_dir"
+    sudo chmod -R 755 "$dist_dir"
+
+    success "Admin panel static files deployed successfully to: ${dist_dir}"
+    pause_continue
+}
+
+# ─── Sub-function: Configure Nginx for Admin Panel ───────────────────
+configure_admin_nginx() {
+    header "ADMIN PANEL NGINX & DOMAIN SETUP"
+
+    if ! cmd_exists nginx; then
+        error "Nginx is not installed. Please install it using option [2] first."
+        pause_continue
+        return 1
+    fi
+
+    local domain=""
+    prompt_input "Enter your admin panel domain name (e.g., admin.joftojoor.com)" "" domain
+
+    if [ -z "$domain" ]; then
+        error "Domain name cannot be empty. Returning to menu."
+        pause_continue
+        return 1
+    fi
+
+    domain=$(echo "$domain" | sed -e 's|https\?://||' -e 's|/.*||' -e 's|:.*||')
+    info "Configuring Nginx static server for domain: ${BOLD}${domain}${NC}"
+    echo ""
+
+    local config_file="${NGINX_SITES_AVAILABLE}/${domain}"
+
+    if [ -f "$config_file" ]; then
+        warn "A Nginx configuration for '${domain}' already exists."
+        if ! confirm "Overwrite the existing configuration?"; then
+            info "Skipping."
+            pause_continue
+            return 0
+        fi
+    fi
+
+    info "Generating Nginx static site block..."
+    sudo tee "$config_file" > /dev/null << NGINX_CONF
+# ──────────────────────────────────────────────────────────
+# Joftojoor Admin Panel — Nginx Static Site Configuration
+# Domain: ${domain}
+# Generated: $(date '+%Y-%m-%d %H:%M:%S')
+# ──────────────────────────────────────────────────────────
+server {
+    listen 80;
+    listen [::]:80;
+    server_name ${domain};
+
+    root /var/www/joftojoor-admin;
+    index index.html;
+
+    # Security headers
+    add_header X-Frame-Options "SAMEORIGIN" always;
+    add_header X-Content-Type-Options "nosniff" always;
+    add_header X-XSS-Protection "1; mode=block" always;
+    add_header Referrer-Policy "strict-origin-when-cross-origin" always;
+
+    # Gzip compression
+    gzip on;
+    gzip_vary on;
+    gzip_min_length 1024;
+    gzip_types text/plain text/css application/json application/javascript text/xml;
+
+    location / {
+        try_files \$uri \$uri/ /index.html;
+    }
+}
+NGINX_CONF
+
+    success "Server block written to: ${config_file}"
+
+    local enabled_link="${NGINX_SITES_ENABLED}/${domain}"
+    if [ -L "$enabled_link" ]; then
+        sudo rm "$enabled_link"
+    fi
+
+    sudo ln -s "$config_file" "$enabled_link"
+    success "Site enabled: ${enabled_link}"
+
+    info "Testing Nginx configuration..."
+    if sudo nginx -t 2>&1; then
+        success "Nginx configuration test passed!"
+        info "Reloading Nginx..."
+        sudo systemctl reload nginx
+        success "Nginx reloaded successfully."
+    else
+        error "Nginx configuration test FAILED. Please review Nginx logs."
+        pause_continue
+        return 1
+    fi
+
+    # Let's Encrypt SSL
+    echo ""
+    divider
+    echo -e "  ${BOLD}🔒 SSL Certificate (Let's Encrypt)${NC}"
+    if confirm "Install Certbot and configure free SSL for ${domain}?"; then
+        install_certbot_ssl "$domain"
+    else
+        warn "Your Admin Panel is currently accessible only via HTTP (not encrypted)."
+    fi
+
+    pause_continue
+}
 
 # ══════════════════════════════════════════════════════════════════════
 #  MAIN MENU LOOP
@@ -1497,7 +1657,9 @@ main() {
             5) reconfigure_env ;;
             6) diagnose_database ;;
             7) update_and_rebuild_backend ;;
-            8)
+            8) configure_admin_nginx ;;
+            9) deploy_admin_panel ;;
+            10)
                 echo ""
                 echo -e "  ${GREEN}${BOLD}Goodbye! 👋${NC}"
                 echo -e "  ${DIM}Joftojoor Platform Management Dashboard v${VERSION}${NC}"
@@ -1505,7 +1667,7 @@ main() {
                 exit 0
                 ;;
             *)
-                warn "Invalid option. Please enter a number between 1 and 8."
+                warn "Invalid option. Please enter a number between 1 and 10."
                 sleep 1
                 ;;
         esac
@@ -1514,3 +1676,6 @@ main() {
 
 # ── Entry Point ───────────────────────────────────────────────────────
 main "$@"
+
+
+

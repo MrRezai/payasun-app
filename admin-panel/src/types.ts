@@ -51,10 +51,10 @@ export interface InquiryItem {
   quantity: number;
   price?: number;
 }
-
 export interface Inquiry {
   id: string;
   employer_id: string;
+  employerId?: string;
   title: string;
   description: string;
   province: string;

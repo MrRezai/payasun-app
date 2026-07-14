@@ -1,6 +1,5 @@
 import { Skill, Inquiry, InquiryItem } from './types';
-
-export const BASE_URL = 'https://api.joftojoor.com';
+export const BASE_URL = (import.meta as any).env.VITE_API_URL || 'https://api.joftojoor.com';
 
 export class ApiClient {
   private static isOnline = false;
@@ -93,25 +92,30 @@ export class ApiClient {
       return false;
     }
   }
-
   /* ─────────────────────────────────────────────────────────────
-     ADMIN AUTHENTICATION (Checks credentials from admin-panel env)
+     ADMIN AUTHENTICATION (Checks credentials from backend /auth/admin-login)
      ───────────────────────────────────────────────────────────── */
 
   public static async verifyAdminLogin(username: string, password: string): Promise<string> {
-    const expectedUser = (import.meta as any).env.VITE_ADMIN_USERNAME || 'admin';
-    const expectedPass = (import.meta as any).env.VITE_ADMIN_PASSWORD || 'adminpassword';
-
-    if (username === expectedUser && password === expectedPass) {
-      const token = 'payasun_admin_secret_token_12345';
+    try {
+      const res = await fetch(`${BASE_URL}/auth/admin-login`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username, password }),
+      });
+      if (!res.ok) {
+        const errorData = await res.json().catch(() => ({}));
+        throw new Error(errorData.message || 'نام کاربری یا رمز عبور ادمین نادرست است.');
+      }
+      const data = await res.json();
+      const token = data.token;
       this.setToken(token);
       await this.ping();
       return token;
-    } else {
-      throw new Error('نام کاربری یا رمز عبور ادمین نادرست است.');
+    } catch (err: any) {
+      throw new Error(err.message || 'خطا در برقراری ارتباط با سرور.');
     }
   }
-
   /* ─────────────────────────────────────────────────────────────
      METRICS COUNTS ENDPOINTS
      ───────────────────────────────────────────────────────────── */
@@ -219,10 +223,15 @@ export class ApiClient {
   /* ─────────────────────────────────────────────────────────────
      USERS LIST ENDPOINT
      ───────────────────────────────────────────────────────────── */
-
   public static async getUsers(): Promise<any[]> {
     const res = await this.request(`${BASE_URL}/admin/users`);
     if (!res.ok) throw new Error('خطا در دریافت لیست کاربران.');
+    return await res.json();
+  }
+
+  public static async getUserHistory(userId: string): Promise<any> {
+    const res = await this.request(`${BASE_URL}/admin/users/${userId}`);
+    if (!res.ok) throw new Error('خطا در دریافت سابقه کاربر.');
     return await res.json();
   }
 }

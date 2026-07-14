@@ -94,3 +94,43 @@ class PersianPriceInputFormatter extends TextInputFormatter {
     );
   }
 }
+class PersianDigitsFormatter extends TextInputFormatter {
+  final bool stripLeadingZero;
+
+  PersianDigitsFormatter({this.stripLeadingZero = false});
+
+  @override
+  TextEditingValue formatEditUpdate(
+    TextEditingValue oldValue,
+    TextEditingValue newValue,
+  ) {
+    String text = newValue.text;
+    
+    // 1. Convert English/Arabic digits to Persian digits
+    const english = ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9'];
+    const arabic = ['٠', '١', '٢', '٣', '٤', '٥', '٦', '٧', '٨', '٩'];
+    const persian = ['۰', '۱', '۲', '۳', '۴', '۵', '۶', '۷', '۸', '۹'];
+    for (var i = 0; i < 10; i++) {
+      text = text.replaceAll(english[i], persian[i]);
+      text = text.replaceAll(arabic[i], persian[i]);
+    }
+    
+    // 2. Keep only Persian digits (Unicode range \u06f0 to \u06f9)
+    text = text.replaceAll(RegExp(r'[^\u06f0-\u06f9]'), '');
+    
+    // 3. Strip leading zeroes
+    if (stripLeadingZero) {
+      while (text.startsWith('۰')) {
+        text = text.substring(1);
+      }
+    }
+    
+    // 4. Calculate selection index
+    int selectionIndex = text.length;
+    
+    return TextEditingValue(
+      text: text,
+      selection: TextSelection.collapsed(offset: selectionIndex),
+    );
+  }
+}

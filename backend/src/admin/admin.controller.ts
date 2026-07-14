@@ -78,4 +78,21 @@ export class AdminController {
   async getUsers() {
     return this.profileService.getUsersList();
   }
+
+  @Get('users/:id')
+  async getUserHistory(@Param('id') id: string) {
+    const profileData = await this.profileService.getUserProfiles(id);
+    const inquiries = await this.inquiryService.findByEmployer(id);
+    const offers = profileData.welder
+      ? await this.inquiryService.findOffersByWelder(profileData.welder.id)
+      : [];
+
+    return {
+      user: profileData.user,
+      welderProfile: profileData.welder,
+      employerProfile: profileData.employer,
+      inquiries,
+      offers,
+    };
+  }
 }

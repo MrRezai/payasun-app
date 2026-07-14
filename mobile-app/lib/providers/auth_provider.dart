@@ -248,7 +248,6 @@ class AuthProvider with ChangeNotifier {
     return _apiService.fetchSkills(_token!);
   }
 
-  /// Update welder profile details.
   Future<void> updateWelderProfile({
     String? firstName,
     String? lastName,
@@ -259,6 +258,9 @@ class AuthProvider with ChangeNotifier {
     String? bio,
     bool? isSetupCompleted,
     List<int>? skillIds,
+    String? cardNumber,
+    String? shibaNumber,
+    String? bankName,
   }) async {
     if (_token == null) return;
     _isLoading = true;
@@ -277,6 +279,9 @@ class AuthProvider with ChangeNotifier {
         bio: bio,
         isSetupCompleted: isSetupCompleted,
         skillIds: skillIds,
+        cardNumber: cardNumber,
+        shibaNumber: shibaNumber,
+        bankName: bankName,
       );
       // Reload profile to refresh local cache
       await loadProfile();
@@ -289,8 +294,6 @@ class AuthProvider with ChangeNotifier {
       rethrow;
     }
   }
-
-  /// Update employer profile details.
   Future<void> updateEmployerProfile({
     String? firstName,
     String? lastName,
@@ -299,6 +302,9 @@ class AuthProvider with ChangeNotifier {
     String? companyName,
     String? bio,
     bool? isSetupCompleted,
+    String? cardNumber,
+    String? shibaNumber,
+    String? bankName,
   }) async {
     if (_token == null) return;
     _isLoading = true;
@@ -315,6 +321,9 @@ class AuthProvider with ChangeNotifier {
         companyName: companyName,
         bio: bio,
         isSetupCompleted: isSetupCompleted,
+        cardNumber: cardNumber,
+        shibaNumber: shibaNumber,
+        bankName: bankName,
       );
       // Reload profile
       await loadProfile();

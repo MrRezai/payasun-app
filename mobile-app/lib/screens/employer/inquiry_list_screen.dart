@@ -70,7 +70,7 @@ class _InquiryListScreenState extends State<InquiryListScreen> with SingleTicker
                 labelStyle: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13, fontFamily: 'Vazirmatn'),
                 unselectedLabelStyle: const TextStyle(fontSize: 13, fontFamily: 'Vazirmatn'),
                 tabs: const [
-                  Tab(text: 'در حال پردازش (فعال)'),
+                  Tab(text: 'در حال پردازش'),
                   Tab(text: 'تاریخچه انتشار'),
                 ],
               ),

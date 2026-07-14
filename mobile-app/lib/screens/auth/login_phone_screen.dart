@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import '../../constants/app_colors.dart';
 import '../../constants/route_transitions.dart';
 import '../../providers/auth_provider.dart';
+import '../../utils/formatters.dart';
 import 'verify_otp_screen.dart';
 
 class LoginPhoneScreen extends StatefulWidget {
@@ -19,9 +20,8 @@ class _LoginPhoneScreenState extends State<LoginPhoneScreen> {
 
   void _submitPhone() async {
     if (!_formKey.currentState!.validate()) return;
-
     final auth = Provider.of<AuthProvider>(context, listen: false);
-    final rawPhone = _phoneController.text.trim();
+    final rawPhone = Formatters.cleanNumber(_phoneController.text);
     final phone = '0$rawPhone';
 
     try {
@@ -304,22 +304,22 @@ class _LoginPhoneScreenState extends State<LoginPhoneScreen> {
       keyboardType: TextInputType.phone,
       textAlign: TextAlign.left,
       inputFormatters: [
-        FilteringTextInputFormatter.digitsOnly,
-        StripLeadingZeroFormatter(),
+        PersianDigitsFormatter(stripLeadingZero: true),
         LengthLimitingTextInputFormatter(10),
       ],
       validator: (value) {
         if (value == null || value.isEmpty) {
           return 'لطفاً شماره موبایل خود را بدون صفر اول وارد کنید';
         }
-        if (value.length != 10 || !value.startsWith('9')) {
-          return 'شماره موبایل باید ۱۰ رقم و بدون صفر اول باشد (مثال: 9123456789)';
+        final cleaned = Formatters.cleanNumber(value);
+        if (cleaned.length != 10 || !cleaned.startsWith('9')) {
+          return 'شماره موبایل باید ۱۰ رقم و بدون صفر اول باشد (مثال: ۹۱۲۳۴۵۶۷۸۹)';
         }
         return null;
       },
       decoration: InputDecoration(
         labelText: 'شماره موبایل',
-        hintText: 'مثال: 9123456789',
+        hintText: 'مثال: ۹۱۲۳۴۵۶۷۸۹',
         filled: true,
         fillColor: AppColors.lightGrey,
         contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 15),
@@ -459,24 +459,4 @@ class _LoginPhoneScreenState extends State<LoginPhoneScreen> {
   }
 }
 
-class StripLeadingZeroFormatter extends TextInputFormatter {
-  @override
-  TextEditingValue formatEditUpdate(
-    TextEditingValue oldValue,
-    TextEditingValue newValue,
-  ) {
-    String text = newValue.text;
-    while (text.startsWith('0')) {
-      text = text.substring(1);
-    }
-    
-    int selectionIndex = newValue.selection.baseOffset - (newValue.text.length - text.length);
-    if (selectionIndex < 0) selectionIndex = 0;
-    if (selectionIndex > text.length) selectionIndex = text.length;
 
-    return TextEditingValue(
-      text: text,
-      selection: TextSelection.collapsed(offset: selectionIndex),
-    );
-  }
-}

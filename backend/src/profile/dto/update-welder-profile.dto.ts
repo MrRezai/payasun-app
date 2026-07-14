@@ -86,4 +86,31 @@ export class UpdateWelderProfileDto {
   @IsArray()
   @IsInt({ each: true })
   skill_ids?: number[];
+
+  @ApiPropertyOptional({
+    description: 'Welder card number (16 digits)',
+    example: '6037991122334455',
+  })
+  @IsOptional()
+  @IsString()
+  @MaxLength(30)
+  card_number?: string;
+
+  @ApiPropertyOptional({
+    description: 'Welder Sheba number (without IR)',
+    example: '120120000000012345678901',
+  })
+  @IsOptional()
+  @IsString()
+  @MaxLength(40)
+  shiba_number?: string;
+
+  @ApiPropertyOptional({
+    description: 'Welder bank name',
+    example: 'بانک ملی',
+  })
+  @IsOptional()
+  @IsString()
+  @MaxLength(100)
+  bank_name?: string;
 }

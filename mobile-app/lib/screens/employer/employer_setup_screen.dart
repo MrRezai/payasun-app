@@ -671,106 +671,112 @@ class _EmployerSetupScreenState extends State<EmployerSetupScreen> {
                             const SizedBox(height: 12),
                             _isLoadingProvinces
                                 ? const Center(child: CircularProgressIndicator(color: AppColors.royalBlue))
-                                : InkWell(
-                                    onTap: _showProvincePickerBottomSheet,
-                                    borderRadius: BorderRadius.circular(16),
-                                    child: Container(
-                                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-                                      decoration: BoxDecoration(
-                                        color: AppColors.lightGrey,
-                                        borderRadius: BorderRadius.circular(16),
-                                        border: Border.all(color: AppColors.borderGrey),
-                                      ),
-                                      child: Row(
-                                        children: [
-                                          const Icon(Icons.map_outlined, color: AppColors.royalBlue, size: 20),
-                                          const SizedBox(width: 12),
-                                          Expanded(
-                                            child: Column(
-                                              crossAxisAlignment: CrossAxisAlignment.start,
-                                              children: [
-                                                RichText(
-                                                  text: const TextSpan(
-                                                    text: 'استان',
-                                                    style: TextStyle(fontSize: 10, color: AppColors.textMuted, fontWeight: FontWeight.bold, fontFamily: 'Vazirmatn'),
-                                                    children: [
-                                                      TextSpan(
-                                                        text: ' *',
-                                                        style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold),
-                                                      ),
-                                                    ],
-                                                  ),
-                                                ),
-                                                const SizedBox(height: 4),
-                                                Text(
-                                                  _selectedProvinceName ?? 'انتخاب نشده',
-                                                  style: TextStyle(
-                                                    fontSize: 13,
-                                                    fontWeight: FontWeight.bold,
-                                                    color: _selectedProvinceName == null ? AppColors.textMuted : AppColors.textDark,
-                                                  ),
-                                                ),
-                                              ],
-                                            ),
-                                          ),
-                                          const Icon(Icons.keyboard_arrow_down_rounded, color: AppColors.textMuted),
-                                        ],
-                                      ),
-                                    ),
-                                  ),
-                            const SizedBox(height: 14),
-                            InkWell(
-                              onTap: _selectedProvinceId == null || _isLoadingCities ? null : _showCityPickerBottomSheet,
-                              borderRadius: BorderRadius.circular(16),
-                              child: Opacity(
-                                opacity: _selectedProvinceId == null ? 0.5 : 1.0,
-                                child: Container(
-                                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-                                  decoration: BoxDecoration(
-                                    color: AppColors.lightGrey,
-                                    borderRadius: BorderRadius.circular(16),
-                                    border: Border.all(color: AppColors.borderGrey),
-                                  ),
-                                  child: Row(
-                                    children: [
-                                      const Icon(Icons.location_city_outlined, color: AppColors.royalBlue, size: 20),
-                                      const SizedBox(width: 12),
-                                      Expanded(
-                                        child: Column(
-                                          crossAxisAlignment: CrossAxisAlignment.start,
+                                : Material(
+                                    color: Colors.transparent,
+                                    child: InkWell(
+                                      onTap: _showProvincePickerBottomSheet,
+                                      borderRadius: BorderRadius.circular(16),
+                                      child: Ink(
+                                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                                        decoration: BoxDecoration(
+                                          color: AppColors.lightGrey,
+                                          borderRadius: BorderRadius.circular(16),
+                                          border: Border.all(color: AppColors.borderGrey),
+                                        ),
+                                        child: Row(
                                           children: [
-                                            RichText(
-                                              text: const TextSpan(
-                                                text: 'شهر',
-                                                style: TextStyle(fontSize: 10, color: AppColors.textMuted, fontWeight: FontWeight.bold, fontFamily: 'Vazirmatn'),
+                                            const Icon(Icons.map_outlined, color: AppColors.royalBlue, size: 20),
+                                            const SizedBox(width: 12),
+                                            Expanded(
+                                              child: Column(
+                                                crossAxisAlignment: CrossAxisAlignment.start,
                                                 children: [
-                                                  TextSpan(
-                                                    text: ' *',
-                                                    style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold),
+                                                  RichText(
+                                                    text: const TextSpan(
+                                                      text: 'استان',
+                                                      style: TextStyle(fontSize: 10, color: AppColors.textMuted, fontWeight: FontWeight.bold, fontFamily: 'Vazirmatn'),
+                                                      children: [
+                                                        TextSpan(
+                                                          text: ' *',
+                                                          style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold),
+                                                        ),
+                                                      ],
+                                                    ),
+                                                  ),
+                                                  const SizedBox(height: 4),
+                                                  Text(
+                                                    _selectedProvinceName ?? 'انتخاب نشده',
+                                                    style: TextStyle(
+                                                      fontSize: 13,
+                                                      fontWeight: FontWeight.bold,
+                                                      color: _selectedProvinceName == null ? AppColors.textMuted : AppColors.textDark,
+                                                    ),
                                                   ),
                                                 ],
                                               ),
                                             ),
-                                            const SizedBox(height: 4),
-                                            _isLoadingCities
-                                                ? const SizedBox(
-                                                    height: 14,
-                                                    width: 14,
-                                                    child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.royalBlue),
-                                                  )
-                                                : Text(
-                                                    _selectedCityName ?? 'انتخاب نشده',
-                                                    style: TextStyle(
-                                                      fontSize: 13,
-                                                      fontWeight: FontWeight.bold,
-                                                      color: _selectedCityName == null ? AppColors.textMuted : AppColors.textDark,
-                                                    ),
-                                                  ),
+                                            const Icon(Icons.keyboard_arrow_down_rounded, color: AppColors.textMuted),
                                           ],
                                         ),
                                       ),
-                                      const Icon(Icons.keyboard_arrow_down_rounded, color: AppColors.textMuted),
-                                    ],
+                                    ),
+                                  ),
+                            const SizedBox(height: 14),
+                            Material(
+                              color: Colors.transparent,
+                              child: InkWell(
+                                onTap: _selectedProvinceId == null || _isLoadingCities ? null : _showCityPickerBottomSheet,
+                                borderRadius: BorderRadius.circular(16),
+                                child: Opacity(
+                                  opacity: _selectedProvinceId == null ? 0.5 : 1.0,
+                                  child: Ink(
+                                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                                    decoration: BoxDecoration(
+                                      color: AppColors.lightGrey,
+                                      borderRadius: BorderRadius.circular(16),
+                                      border: Border.all(color: AppColors.borderGrey),
+                                    ),
+                                    child: Row(
+                                      children: [
+                                        const Icon(Icons.location_city_outlined, color: AppColors.royalBlue, size: 20),
+                                        const SizedBox(width: 12),
+                                        Expanded(
+                                          child: Column(
+                                            crossAxisAlignment: CrossAxisAlignment.start,
+                                            children: [
+                                              RichText(
+                                                text: const TextSpan(
+                                                  text: 'شهر',
+                                                  style: TextStyle(fontSize: 10, color: AppColors.textMuted, fontWeight: FontWeight.bold, fontFamily: 'Vazirmatn'),
+                                                  children: [
+                                                    TextSpan(
+                                                      text: ' *',
+                                                      style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold),
+                                                    ),
+                                                  ],
+                                                ),
+                                              ),
+                                              const SizedBox(height: 4),
+                                              _isLoadingCities
+                                                  ? const SizedBox(
+                                                      height: 14,
+                                                      width: 14,
+                                                      child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.royalBlue),
+                                                    )
+                                                  : Text(
+                                                      _selectedCityName ?? 'انتخاب نشده',
+                                                      style: TextStyle(
+                                                        fontSize: 13,
+                                                        fontWeight: FontWeight.bold,
+                                                        color: _selectedCityName == null ? AppColors.textMuted : AppColors.textDark,
+                                                      ),
+                                                    ),
+                                            ],
+                                          ),
+                                        ),
+                                        const Icon(Icons.keyboard_arrow_down_rounded, color: AppColors.textMuted),
+                                      ],
+                                    ),
                                   ),
                                 ),
                               ),

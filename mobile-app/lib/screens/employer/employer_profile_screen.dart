@@ -10,7 +10,7 @@ import '../../constants/route_transitions.dart';
 import '../auth/login_phone_screen.dart';
 import '../../utils/formatters.dart';
 
-enum ProfileView { menu, personalInfo }
+enum ProfileView { menu, personalInfo, financialInfo }
 
 class EmployerProfileScreen extends StatefulWidget {
   const EmployerProfileScreen({super.key});
@@ -80,12 +80,16 @@ class _EmployerProfileScreenState extends State<EmployerProfileScreen> {
       debugPrint('Error loading provinces: $e');
     }
   }
-
   // Controllers for personal info editing
   final _firstNameController = TextEditingController();
   final _lastNameController = TextEditingController();
   final _companyNameController = TextEditingController();
   final _bioController = TextEditingController();
+
+  // Controllers for financial settings
+  final _cardNumberController = TextEditingController();
+  final _shibaController = TextEditingController();
+  final _bankNameController = TextEditingController();
 
   // Location selector state
   int? _provinceId;
@@ -104,6 +108,9 @@ class _EmployerProfileScreenState extends State<EmployerProfileScreen> {
     _lastNameController.dispose();
     _companyNameController.dispose();
     _bioController.dispose();
+    _cardNumberController.dispose();
+    _shibaController.dispose();
+    _bankNameController.dispose();
     super.dispose();
   }
 
@@ -124,6 +131,71 @@ class _EmployerProfileScreenState extends State<EmployerProfileScreen> {
         });
         _resolveProvinceId();
       }
+    }
+  }
+
+  void _populateFinancialFields() {
+    if (!mounted) return;
+    final auth = Provider.of<AuthProvider>(context, listen: false);
+    if (auth.profileData != null) {
+      final profile = auth.profileData!['profile'] as Map<String, dynamic>?;
+      if (profile != null) {
+        setState(() {
+          _cardNumberController.text = profile['card_number'] ?? '';
+          _shibaController.text = profile['shiba_number'] ?? '';
+          _bankNameController.text = profile['bank_name'] ?? '';
+        });
+      }
+    }
+  }
+
+  Future<void> _saveFinancialInfo(AuthProvider auth) async {
+    final card = _cardNumberController.text.trim();
+    final shiba = _shibaController.text.trim();
+    final bank = _bankNameController.text.trim();
+    if (card.isEmpty) {
+      _showError('لطفاً شماره کارت را وارد کنید.');
+      return;
+    }
+    if (card.length != 16) {
+      _showError('شماره کارت باید ۱۶ رقم باشد.');
+      return;
+    }
+
+    if (shiba.isEmpty) {
+      _showError('لطفاً شماره شبا را وارد کنید.');
+      return;
+    }
+    if (shiba.length != 24 && shiba.length != 26) {
+      _showError('شماره شبا باید ۲۴ رقم باشد.');
+      return;
+    }
+
+    if (bank.isEmpty) {
+      _showError('لطفاً نام بانک را وارد کنید.');
+      return;
+    }
+
+    setState(() {
+      _isSaving = true;
+    });
+
+    try {
+      await auth.updateEmployerProfile(
+        cardNumber: card.isEmpty ? "" : card,
+        shibaNumber: shiba.isEmpty ? "" : shiba,
+        bankName: bank.isEmpty ? "" : bank,
+      );
+      _showSuccess('تنظیمات مالی با موفقیت به‌روزرسانی شد.');
+      setState(() {
+        _isSaving = false;
+        _currentView = ProfileView.menu;
+      });
+    } catch (e) {
+      setState(() {
+        _isSaving = false;
+      });
+      _showError('خطا در به‌روزرسانی اطلاعات: ${e.toString().replaceAll('Exception: ', '')}');
     }
   }
 
@@ -284,13 +356,14 @@ class _EmployerProfileScreenState extends State<EmployerProfileScreen> {
             ),
     );
   }
-
   String _getViewTitle() {
     switch (_currentView) {
       case ProfileView.menu:
         return 'حساب کاربری کارفرما';
       case ProfileView.personalInfo:
         return 'ویرایش اطلاعات کارفرما';
+      case ProfileView.financialInfo:
+        return 'تنظیمات مالی';
     }
   }
 
@@ -300,9 +373,10 @@ class _EmployerProfileScreenState extends State<EmployerProfileScreen> {
         return _buildMainMenuBody(auth);
       case ProfileView.personalInfo:
         return _buildPersonalInfoBody(auth);
+      case ProfileView.financialInfo:
+        return _buildFinancialInfoBody(auth);
     }
   }
-
   Widget _buildMainMenuBody(AuthProvider auth) {
     final profile = auth.profileData?['profile'] as Map<String, dynamic>?;
     final firstName = profile?['first_name'] ?? '';
@@ -571,7 +645,7 @@ class _EmployerProfileScreenState extends State<EmployerProfileScreen> {
           ),
           const SizedBox(height: 20),
 
-          // Menu items list
+          // Edit Personal Info Card
           Card(
             elevation: 0,
             shape: RoundedRectangleBorder(
@@ -599,9 +673,37 @@ class _EmployerProfileScreenState extends State<EmployerProfileScreen> {
               ),
             ),
           ),
-          const SizedBox(height: 25),
+          const SizedBox(height: 12),
 
-          // Logout
+          // Financial Settings Card
+          Card(
+            elevation: 0,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(16),
+              side: const BorderSide(color: AppColors.borderGrey),
+            ),
+            color: AppColors.white,
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(16),
+              child: ListTile(
+                title: const Text(
+                  'تنظیمات مالی',
+                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, fontFamily: 'Vazirmatn'),
+                ),
+                subtitle: const Text(
+                  'ثبت شماره کارت، شماره شبا و نام بانک جهت تسویه‌حساب',
+                  style: TextStyle(fontSize: 11, color: AppColors.textMuted, fontFamily: 'Vazirmatn'),
+                ),
+                leading: const Icon(Icons.account_balance_wallet_outlined, color: AppColors.royalBlue),
+                trailing: const Icon(Icons.arrow_forward_ios, size: 14, color: AppColors.textMuted),
+                onTap: () {
+                  _populateFinancialFields();
+                  setState(() => _currentView = ProfileView.financialInfo);
+                },
+              ),
+            ),
+          ),
+          const SizedBox(height: 25),
           SizedBox(
             width: double.infinity,
             height: 52,
@@ -640,7 +742,7 @@ class _EmployerProfileScreenState extends State<EmployerProfileScreen> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             const Text(
-              'اطلاعات هویتی شما:',
+              'اطلاعات هویتی شما',
               style: TextStyle(fontWeight: FontWeight.bold, color: AppColors.royalBlue, fontFamily: 'Vazirmatn', fontSize: 13),
             ),
             const SizedBox(height: 14),
@@ -734,7 +836,7 @@ class _EmployerProfileScreenState extends State<EmployerProfileScreen> {
             ),
             const SizedBox(height: 24),
             const Text(
-              'محل سکونت / فعالیت کارفرما:',
+              'محل سکونت / فعالیت کارفرما',
               style: TextStyle(fontWeight: FontWeight.bold, color: AppColors.royalBlue, fontFamily: 'Vazirmatn', fontSize: 13),
             ),
             const SizedBox(height: 14),
@@ -753,6 +855,7 @@ class _EmployerProfileScreenState extends State<EmployerProfileScreen> {
                       borderRadius: BorderRadius.circular(16),
                       child: InkWell(
                         onTap: _showProvincePickerBottomSheet,
+                        borderRadius: BorderRadius.circular(16),
                         child: Padding(
                           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
                           child: Row(
@@ -789,6 +892,7 @@ class _EmployerProfileScreenState extends State<EmployerProfileScreen> {
                       borderRadius: BorderRadius.circular(16),
                       child: InkWell(
                         onTap: _provinceId == null || _isLoadingCities ? null : _showCityPickerBottomSheet,
+                        borderRadius: BorderRadius.circular(16),
                         child: Opacity(
                           opacity: _provinceId == null ? 0.5 : 1.0,
                           child: Padding(
@@ -952,6 +1056,9 @@ class _EmployerProfileScreenState extends State<EmployerProfileScreen> {
                                   child: ClipRRect(
                                     borderRadius: BorderRadius.circular(12),
                                     child: ListTile(
+                                      shape: RoundedRectangleBorder(
+                                        borderRadius: BorderRadius.circular(12),
+                                      ),
                                       title: Text(
                                         prov['name'] as String,
                                         style: TextStyle(
@@ -1093,6 +1200,9 @@ class _EmployerProfileScreenState extends State<EmployerProfileScreen> {
                                   child: ClipRRect(
                                     borderRadius: BorderRadius.circular(12),
                                     child: ListTile(
+                                      shape: RoundedRectangleBorder(
+                                        borderRadius: BorderRadius.circular(12),
+                                      ),
                                       title: Text(
                                         cityName,
                                         style: TextStyle(
@@ -1124,6 +1234,127 @@ class _EmployerProfileScreenState extends State<EmployerProfileScreen> {
           },
         );
       },
+    );
+  }
+
+  Widget _buildFinancialInfoBody(AuthProvider auth) {
+    return Scaffold(
+      backgroundColor: AppColors.white,
+      body: SingleChildScrollView(
+        physics: const BouncingScrollPhysics(),
+        padding: const EdgeInsets.all(20),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              'اطلاعات حساب مالی جهت تسویه‌حساب',
+              style: TextStyle(fontWeight: FontWeight.bold, color: AppColors.royalBlue, fontFamily: 'Vazirmatn', fontSize: 13),
+            ),
+            const SizedBox(height: 14),
+
+            // Card Number
+            const Text(
+              'شماره کارت (۱۶ رقمی)',
+              style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: AppColors.textDark, fontFamily: 'Vazirmatn'),
+            ),
+            const SizedBox(height: 6),
+            TextFormField(
+              controller: _cardNumberController,
+              keyboardType: TextInputType.number,
+              maxLength: 16,
+              textAlign: TextAlign.center,
+              decoration: InputDecoration(
+                hintText: 'مثال: ۶۰۳۷۹۹۱۱۲۲۳۳۴۴۵۵',
+                hintStyle: const TextStyle(fontSize: 12, color: AppColors.textMuted),
+                counterText: '',
+                contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(16),
+                  borderSide: const BorderSide(color: AppColors.borderGrey),
+                ),
+                focusedBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(16),
+                  borderSide: const BorderSide(color: AppColors.royalBlue, width: 1.5),
+                ),
+              ),
+            ),
+            const SizedBox(height: 18),
+
+            // Shiba Number
+            const Text(
+              'شماره شبا (۲۴ رقمی - بدون IR)',
+              style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: AppColors.textDark, fontFamily: 'Vazirmatn'),
+            ),
+            const SizedBox(height: 6),
+            TextFormField(
+              controller: _shibaController,
+              keyboardType: TextInputType.number,
+              maxLength: 24,
+              textAlign: TextAlign.center,
+              decoration: InputDecoration(
+                prefixText: 'IR ',
+                prefixStyle: const TextStyle(fontWeight: FontWeight.bold, color: AppColors.textDark),
+                hintText: 'مثال: ۱۲۰۱۲۰۰۰۰۰۰۰۰۱۲۳۴۵۶۷۸۹۰۱',
+                hintStyle: const TextStyle(fontSize: 12, color: AppColors.textMuted),
+                counterText: '',
+                contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(16),
+                  borderSide: const BorderSide(color: AppColors.borderGrey),
+                ),
+                focusedBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(16),
+                  borderSide: const BorderSide(color: AppColors.royalBlue, width: 1.5),
+                ),
+              ),
+            ),
+            const SizedBox(height: 18),
+
+            // Bank Name
+            const Text(
+              'نام بانک',
+              style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: AppColors.textDark, fontFamily: 'Vazirmatn'),
+            ),
+            const SizedBox(height: 6),
+            TextFormField(
+              controller: _bankNameController,
+              textAlign: TextAlign.right,
+              decoration: InputDecoration(
+                hintText: 'مثال: بانک ملی، بانک ملت و ...',
+                hintStyle: const TextStyle(fontSize: 12, color: AppColors.textMuted),
+                contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(16),
+                  borderSide: const BorderSide(color: AppColors.borderGrey),
+                ),
+                focusedBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(16),
+                  borderSide: const BorderSide(color: AppColors.royalBlue, width: 1.5),
+                ),
+              ),
+            ),
+            const SizedBox(height: 36),
+
+            // Save Button
+            SizedBox(
+              width: double.infinity,
+              height: 52,
+              child: ElevatedButton(
+                onPressed: () => _saveFinancialInfo(auth),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.royalBlue,
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                  elevation: 0,
+                ),
+                child: const Text(
+                  'ذخیره تنظیمات مالی',
+                  style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 14, fontFamily: 'Vazirmatn'),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }

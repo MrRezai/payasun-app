@@ -162,17 +162,29 @@ export class ProfileService implements OnModuleInit {
     if (dto.is_setup_completed !== undefined) {
       profile.is_setup_completed = dto.is_setup_completed;
     }
+    if (dto.card_number !== undefined) {
+      profile.card_number = dto.card_number;
+    }
+    if (dto.shiba_number !== undefined) {
+      profile.shiba_number = dto.shiba_number;
+    }
+    if (dto.bank_name !== undefined) {
+      profile.bank_name = dto.bank_name;
+    }
 
     const updated = await this.employerProfileRepository.save(profile);
     (updated as any).full_name = `${updated.first_name || ''} ${updated.last_name || ''}`.trim();
 
-    // Sync name to welder profile if exists
+    // Sync name & financial details to welder profile if exists
     const welderProfile = await this.welderProfileRepository.findOne({
       where: { user_id: userId },
     });
     if (welderProfile) {
       if (updated.first_name !== null) welderProfile.first_name = updated.first_name;
       if (updated.last_name !== null) welderProfile.last_name = updated.last_name;
+      welderProfile.card_number = updated.card_number;
+      welderProfile.shiba_number = updated.shiba_number;
+      welderProfile.bank_name = updated.bank_name;
       await this.welderProfileRepository.save(welderProfile);
     }
 
@@ -232,6 +244,15 @@ export class ProfileService implements OnModuleInit {
     if (dto.is_setup_completed !== undefined) {
       profile.is_setup_completed = dto.is_setup_completed;
     }
+    if (dto.card_number !== undefined) {
+      profile.card_number = dto.card_number;
+    }
+    if (dto.shiba_number !== undefined) {
+      profile.shiba_number = dto.shiba_number;
+    }
+    if (dto.bank_name !== undefined) {
+      profile.bank_name = dto.bank_name;
+    }
     if (dto.skill_ids !== undefined) {
       if (dto.skill_ids && dto.skill_ids.length > 0) {
         const skills = await this.skillRepository.findBy({ id: In(dto.skill_ids) });
@@ -246,13 +267,16 @@ export class ProfileService implements OnModuleInit {
     const fullNameVal = `${updated.first_name || ''} ${updated.last_name || ''}`.trim();
     (updated as any).full_name = fullNameVal;
 
-    // Sync name to employer profile if exists
+    // Sync name & financial details to employer profile if exists
     const employerProfile = await this.employerProfileRepository.findOne({
       where: { user_id: userId },
     });
     if (employerProfile) {
       if (updated.first_name !== null) employerProfile.first_name = updated.first_name;
       if (updated.last_name !== null) employerProfile.last_name = updated.last_name;
+      employerProfile.card_number = updated.card_number;
+      employerProfile.shiba_number = updated.shiba_number;
+      employerProfile.bank_name = updated.bank_name;
       await this.employerProfileRepository.save(employerProfile);
     }
 
@@ -495,5 +519,19 @@ export class ProfileService implements OnModuleInit {
       };
     });
   }
-}
 
+  async getUserProfiles(userId: string): Promise<any> {
+    const user = await this.userRepository.findOne({ where: { id: userId } });
+    if (!user) {
+      throw new NotFoundException('کاربر مورد نظر یافت نشد.');
+    }
+    const welder = await this.welderProfileRepository.findOne({
+      where: { user_id: userId },
+      relations: ['skills'],
+    });
+    const employer = await this.employerProfileRepository.findOne({
+      where: { user_id: userId },
+    });
+    return { user, welder, employer };
+  }
+}

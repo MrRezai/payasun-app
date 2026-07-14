@@ -573,70 +573,76 @@ class _CreateInquiryScreenState extends State<CreateInquiryScreen> {
               Row(
                 children: [
                   Expanded(
-                    child: InkWell(
-                      onTap: _showProvincePickerBottomSheet,
-                      borderRadius: BorderRadius.circular(16),
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 15),
-                        decoration: BoxDecoration(
-                          color: AppColors.white,
-                          borderRadius: BorderRadius.circular(16),
-                          border: Border.all(
-                            color: _selectedProvinceName != null
-                                ? AppColors.royalBlue.withValues(alpha: 0.5)
-                                : AppColors.borderGrey,
-                            width: _selectedProvinceName != null ? 1.5 : 1,
-                          ),
-                        ),
-                        child: Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            Text(
-                              _selectedProvinceName ?? 'استان پروژه',
-                              style: TextStyle(
-                                color: _selectedProvinceName != null ? AppColors.textDark : AppColors.textMuted,
-                                fontSize: 13,
-                                fontWeight: _selectedProvinceName != null ? FontWeight.bold : FontWeight.normal,
-                                fontFamily: 'Vazirmatn',
-                              ),
+                    child: Material(
+                      color: Colors.transparent,
+                      child: InkWell(
+                        onTap: _showProvincePickerBottomSheet,
+                        borderRadius: BorderRadius.circular(16),
+                        child: Ink(
+                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 15),
+                          decoration: BoxDecoration(
+                            color: AppColors.white,
+                            borderRadius: BorderRadius.circular(16),
+                            border: Border.all(
+                              color: _selectedProvinceName != null
+                                  ? AppColors.royalBlue.withValues(alpha: 0.5)
+                                  : AppColors.borderGrey,
+                              width: _selectedProvinceName != null ? 1.5 : 1,
                             ),
-                            const Icon(Icons.arrow_drop_down, color: AppColors.textMuted),
-                          ],
+                          ),
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Text(
+                                _selectedProvinceName ?? 'استان پروژه',
+                                style: TextStyle(
+                                  color: _selectedProvinceName != null ? AppColors.textDark : AppColors.textMuted,
+                                  fontSize: 13,
+                                  fontWeight: _selectedProvinceName != null ? FontWeight.bold : FontWeight.normal,
+                                  fontFamily: 'Vazirmatn',
+                                ),
+                              ),
+                              const Icon(Icons.arrow_drop_down, color: AppColors.textMuted),
+                            ],
+                          ),
                         ),
                       ),
                     ),
                   ),
                   const SizedBox(width: 10),
                   Expanded(
-                    child: InkWell(
-                      onTap: _selectedProvinceId == null ? null : _showCityPickerBottomSheet,
-                      borderRadius: BorderRadius.circular(16),
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 15),
-                        decoration: BoxDecoration(
-                          color: _selectedProvinceId == null ? AppColors.lightGrey : AppColors.white,
-                          borderRadius: BorderRadius.circular(16),
-                          border: Border.all(
-                            color: _selectedCityName != null
-                                ? AppColors.royalBlue.withValues(alpha: 0.5)
-                                : AppColors.borderGrey,
-                            width: _selectedCityName != null ? 1.5 : 1,
-                          ),
-                        ),
-                        child: Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            Text(
-                              _selectedCityName ?? 'شهر پروژه',
-                              style: TextStyle(
-                                color: _selectedCityName != null ? AppColors.textDark : AppColors.textMuted,
-                                fontSize: 13,
-                                fontWeight: _selectedCityName != null ? FontWeight.bold : FontWeight.normal,
-                                fontFamily: 'Vazirmatn',
-                              ),
+                    child: Material(
+                      color: Colors.transparent,
+                      child: InkWell(
+                        onTap: _selectedProvinceId == null ? null : _showCityPickerBottomSheet,
+                        borderRadius: BorderRadius.circular(16),
+                        child: Ink(
+                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 15),
+                          decoration: BoxDecoration(
+                            color: _selectedProvinceId == null ? AppColors.lightGrey : AppColors.white,
+                            borderRadius: BorderRadius.circular(16),
+                            border: Border.all(
+                              color: _selectedCityName != null
+                                  ? AppColors.royalBlue.withValues(alpha: 0.5)
+                                  : AppColors.borderGrey,
+                              width: _selectedCityName != null ? 1.5 : 1,
                             ),
-                            const Icon(Icons.arrow_drop_down, color: AppColors.textMuted),
-                          ],
+                          ),
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Text(
+                                _selectedCityName ?? 'شهر پروژه',
+                                style: TextStyle(
+                                  color: _selectedCityName != null ? AppColors.textDark : AppColors.textMuted,
+                                  fontSize: 13,
+                                  fontWeight: _selectedCityName != null ? FontWeight.bold : FontWeight.normal,
+                                  fontFamily: 'Vazirmatn',
+                                ),
+                              ),
+                              const Icon(Icons.arrow_drop_down, color: AppColors.textMuted),
+                            ],
+                          ),
                         ),
                       ),
                     ),

@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { Inquiry } from '../types';
+import ViewUserHistoryModal from '../modals/ViewUserHistoryModal';
 
 interface ProjectsProps {
   inquiries: Inquiry[];
@@ -9,6 +10,7 @@ interface ProjectsProps {
 
 export default function Projects({ inquiries, onEstimateClick, onViewDetailClick }: ProjectsProps) {
   const [projectSubTab, setProjectSubTab] = useState<'pending' | 'broadcasted' | 'closed'>('pending');
+  const [selectedEmployerId, setSelectedEmployerId] = useState<string | null>(null);
 
   const pendingCount = inquiries.filter(i => i.status === 'PENDING_ESTIMATION' || i.status === 'ESTIMATED').length;
   const broadcastedCount = inquiries.filter(i => i.status === 'BROADCASTED').length;
@@ -86,7 +88,18 @@ export default function Projects({ inquiries, onEstimateClick, onViewDetailClick
                 return (
                   <tr key={inq.id}>
                     <td style={{ fontWeight: 'bold' }}>{inq.title}</td>
-                    <td>{inq.employer_name || 'کارفرمای پلتفرم'}</td>
+                    <td>
+                      {inq.employerId ? (
+                        <span 
+                          style={{ color: 'var(--primary)', cursor: 'pointer', textDecoration: 'underline', fontWeight: '500' }}
+                          onClick={() => setSelectedEmployerId(inq.employerId || null)}
+                        >
+                          {inq.employer_name || 'کارفرمای پلتفرم'}
+                        </span>
+                      ) : (
+                        <span>{inq.employer_name || 'کارفرمای پلتفرم'}</span>
+                      )}
+                    </td>
                     <td>{inq.province || 'نامشخص'}، {inq.city || 'نامشخص'}</td>
                     <td>
                       {inq.has_blueprint ? (
@@ -130,6 +143,13 @@ export default function Projects({ inquiries, onEstimateClick, onViewDetailClick
             </tbody>
           </table>
         </div>
+      )}
+
+      {selectedEmployerId && (
+        <ViewUserHistoryModal 
+          userId={selectedEmployerId} 
+          onClose={() => setSelectedEmployerId(null)} 
+        />
       )}
     </div>
   );

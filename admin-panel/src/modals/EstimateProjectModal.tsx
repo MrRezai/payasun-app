@@ -62,26 +62,70 @@ export default function EstimateProjectModal({
           {/* Left Column: Blueprint Viewer */}
           <div>
             <h4 style={{ fontSize: '13px', color: 'var(--text-secondary)', marginBottom: '8px' }}>فایل نقشه پروژه (Blueprint)</h4>
-            {inquiry.has_blueprint ? (
-              <div style={{ position: 'relative', height: '220px', borderRadius: '12px', overflow: 'hidden', border: '1px solid var(--border)' }}>
-                <img 
-                  src={inquiry.blueprint_url ? `${BASE_URL}${inquiry.blueprint_url}` : ''} 
-                  alt="Project Blueprint" 
-                  style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-                  onError={(e) => {
-                    if (inquiry.blueprint_url) e.currentTarget.src = inquiry.blueprint_url;
-                  }}
-                />
-                <a 
-                  href={inquiry.blueprint_url ? `${BASE_URL}${inquiry.blueprint_url}` : '#'} 
-                  target="_blank" 
-                  rel="noreferrer"
-                  style={{ position: 'absolute', bottom: '12px', left: '12px', backgroundColor: 'rgba(0,0,0,0.7)', color: 'white', padding: '4px 10px', borderRadius: '6px', fontSize: '11px', textDecoration: 'none' }}
-                >
-                  مشاهده سایز اصلی
-                </a>
-              </div>
-            ) : (
+            {inquiry.has_blueprint ? (() => {
+              const isPdf = inquiry.blueprint_url?.toLowerCase().endsWith('.pdf');
+              const fileUrl = inquiry.blueprint_url 
+                ? (inquiry.blueprint_url.startsWith('http') ? inquiry.blueprint_url : `${BASE_URL}${inquiry.blueprint_url}`)
+                : '';
+              
+              if (isPdf) {
+                return (
+                  <div style={{ 
+                    height: '220px', 
+                    borderRadius: '12px', 
+                    border: '1px solid var(--border)', 
+                    display: 'flex', 
+                    flexDirection: 'column',
+                    alignItems: 'center', 
+                    justifyContent: 'center', 
+                    backgroundColor: 'rgba(0,0,0,0.02)', 
+                    padding: '20px',
+                    textAlign: 'center'
+                  }}>
+                    <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#e74c3c" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ marginBottom: '12px' }}>
+                      <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                      <polyline points="14 2 14 8 20 8"></polyline>
+                      <line x1="16" y1="13" x2="8" y2="13"></line>
+                      <line x1="16" y1="17" x2="8" y2="17"></line>
+                      <polyline points="10 9 9 9 8 9"></polyline>
+                    </svg>
+                    <span style={{ fontSize: '12px', fontWeight: 'bold', marginBottom: '8px', color: 'var(--text-primary)' }}>فایل نقشه فنی PDF است</span>
+                    <a 
+                      href={fileUrl} 
+                      target="_blank" 
+                      rel="noreferrer"
+                      style={{ padding: '6px 16px', fontSize: '11px', textDecoration: 'none', backgroundColor: '#e74c3c', color: 'white', borderRadius: '6px', fontWeight: 'bold' }}
+                    >
+                      دانلود و مشاهده فایل PDF
+                    </a>
+                  </div>
+                );
+              }
+
+              return (
+                <div style={{ position: 'relative', height: '220px', borderRadius: '12px', overflow: 'hidden', border: '1px solid var(--border)' }}>
+                  <img 
+                    src={fileUrl} 
+                    alt="Project Blueprint" 
+                    style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                    onError={(e) => {
+                      e.currentTarget.onerror = null;
+                      if (inquiry.blueprint_url && !inquiry.blueprint_url.startsWith('http')) {
+                        e.currentTarget.src = inquiry.blueprint_url;
+                      }
+                    }}
+                  />
+                  <a 
+                    href={fileUrl} 
+                    target="_blank" 
+                    rel="noreferrer"
+                    style={{ position: 'absolute', bottom: '12px', left: '12px', backgroundColor: 'rgba(0,0,0,0.7)', color: 'white', padding: '4px 10px', borderRadius: '6px', fontSize: '11px', textDecoration: 'none' }}
+                  >
+                    مشاهده سایز اصلی
+                  </a>
+                </div>
+              );
+            })() : (
               <div style={{ height: '220px', borderRadius: '12px', backgroundColor: 'rgba(0,0,0,0.01)', border: '1px dashed var(--border)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-secondary)' }}>
                 بدون نقشه ارسالی (اقلام دستی)
               </div>
@@ -131,10 +175,19 @@ export default function EstimateProjectModal({
                   onChange={(e) => handleEstimationRowChange(idx, 'unit', e.target.value)}
                   style={{ padding: '8px' }}
                 >
-                  <option value="متر">متر</option>
                   <option value="عدد">عدد</option>
+                  <option value="متر">متر</option>
+                  <option value="متر مربع">متر مربع</option>
+                  <option value="متر مکعب">متر مکعب</option>
                   <option value="کیلوگرم">کیلوگرم</option>
                   <option value="شاخه">شاخه</option>
+                  <option value="تن">تن</option>
+                  <option value="بند">بند</option>
+                  <option value="ساعت">ساعت</option>
+                  <option value="روز">روز</option>
+                  <option value="سرجوش">سرجوش</option>
+                  <option value="اینچ-قطر">اینچ-قطر</option>
+                  <option value="پروژه‌ای">پروژه‌ای / مقطوع</option>
                 </select>
 
                 <input 

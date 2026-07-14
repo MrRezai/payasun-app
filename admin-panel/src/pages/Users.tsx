@@ -1,10 +1,14 @@
+import { useState } from 'react';
 import { BASE_URL } from '../api';
+import ViewUserHistoryModal from '../modals/ViewUserHistoryModal';
 
 interface UsersProps {
   usersList: any[];
 }
 
 export default function Users({ usersList }: UsersProps) {
+  const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
+
   return (
     <div className="glass-card" style={{ animation: 'fadeIn 0.3s ease-out' }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '18px' }}>
@@ -29,6 +33,7 @@ export default function Users({ usersList }: UsersProps) {
                 <th>محدوده جغرافیایی</th>
                 <th>نقش‌های ثبت شده</th>
                 <th>تاریخ عضویت</th>
+                <th>عملیات</th>
               </tr>
             </thead>
             <tbody>
@@ -75,11 +80,27 @@ export default function Users({ usersList }: UsersProps) {
                   <td>
                     {new Date(usr.created_at).toLocaleDateString('fa-IR')}
                   </td>
+                  <td>
+                    <button 
+                      className="btn btn-secondary" 
+                      style={{ fontSize: '11px', padding: '6px 12px', borderRadius: '8px' }}
+                      onClick={() => setSelectedUserId(usr.id)}
+                    >
+                      مشاهده سابقه
+                    </button>
+                  </td>
                 </tr>
               ))}
             </tbody>
           </table>
         </div>
+      )}
+
+      {selectedUserId && (
+        <ViewUserHistoryModal 
+          userId={selectedUserId} 
+          onClose={() => setSelectedUserId(null)} 
+        />
       )}
     </div>
   );

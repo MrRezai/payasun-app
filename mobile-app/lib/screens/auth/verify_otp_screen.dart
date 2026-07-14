@@ -8,6 +8,7 @@ import '../main_shell_screen.dart';
 import '../welder/welder_setup_screen.dart';
 import '../employer/employer_setup_screen.dart';
 import '../../constants/route_transitions.dart';
+import '../../utils/formatters.dart';
 class VerifyOtpScreen extends StatefulWidget {
   final String phoneNumber;
   final String? debugCode;
@@ -86,9 +87,9 @@ class _VerifyOtpScreenState extends State<VerifyOtpScreen> {
       }
     }
   }
-
   void _submitCode() async {
-    final code = _controllers.map((c) => c.text).join();
+    final rawCode = _controllers.map((c) => c.text).join();
+    final code = Formatters.cleanNumber(rawCode);
     if (code.length != 5) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('لطفاً کد تایید ۵ رقمی را کامل وارد کنید.')),
@@ -411,7 +412,7 @@ class _VerifyOtpScreenState extends State<VerifyOtpScreen> {
               keyboardType: TextInputType.number,
               textAlign: TextAlign.center,
               inputFormatters: [
-                FilteringTextInputFormatter.digitsOnly,
+                PersianDigitsFormatter(),
                 LengthLimitingTextInputFormatter(1),
               ],
               style: const TextStyle(

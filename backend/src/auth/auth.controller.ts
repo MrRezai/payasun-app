@@ -1,4 +1,4 @@
-import { Body, Controller, HttpCode, HttpStatus, Post, UseGuards } from '@nestjs/common';
+import { Body, Controller, HttpCode, HttpStatus, Post, UseGuards, UnauthorizedException } from '@nestjs/common';
 import {
   ApiBearerAuth,
   ApiBody,
@@ -147,5 +147,29 @@ export class AuthController {
     @Body() dto: SwitchRoleDto,
   ): Promise<{ access_token: string }> {
     return this.authService.switchRole(user.id, dto.role);
+  }
+
+  /**
+   * POST /auth/admin-login
+   *
+   * Validates admin credentials against environment variables
+   * and returns the admin secret token.
+   */
+  @Post('admin-login')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary: 'Admin Login',
+    description: 'Validates admin credentials and returns the admin secret token.',
+  })
+  async adminLogin(
+    @Body() body: any,
+  ): Promise<{ token: string }> {
+    const expectedUser = process.env.ADMIN_USERNAME || 'admin';
+    const expectedPass = process.env.ADMIN_PASSWORD || 'adminpassword';
+    if (body.username === expectedUser && body.password === expectedPass) {
+      return { token: 'payasun_admin_secret_token_12345' };
+    } else {
+      throw new UnauthorizedException('نام کاربری یا رمز عبور ادمین نادرست است.');
+    }
   }
 }

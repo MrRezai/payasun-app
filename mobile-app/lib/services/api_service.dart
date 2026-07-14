@@ -227,7 +227,6 @@ class ApiService {
     }
   }
 
-  /// Partially update welder profile info.
   Future<Map<String, dynamic>> updateWelderProfile(
     String token, {
     String? firstName,
@@ -239,6 +238,9 @@ class ApiService {
     String? bio,
     bool? isSetupCompleted,
     List<int>? skillIds,
+    String? cardNumber,
+    String? shibaNumber,
+    String? bankName,
   }) async {
     final bodyMap = <String, dynamic>{};
     if (firstName != null) bodyMap['first_name'] = firstName;
@@ -250,6 +252,9 @@ class ApiService {
     if (bio != null) bodyMap['bio'] = bio;
     if (isSetupCompleted != null) bodyMap['is_setup_completed'] = isSetupCompleted;
     if (skillIds != null) bodyMap['skill_ids'] = skillIds;
+    if (cardNumber != null) bodyMap['card_number'] = cardNumber;
+    if (shibaNumber != null) bodyMap['shiba_number'] = shibaNumber;
+    if (bankName != null) bodyMap['bank_name'] = bankName;
 
     final response = await http.patch(
       Uri.parse('$baseUrl/profile/welder'),
@@ -264,7 +269,6 @@ class ApiService {
       throw Exception(error['message'] ?? 'خطا در به‌روزرسانی پروفایل جوشکار');
     }
   }
-
   Future<Map<String, dynamic>> updateEmployerProfile(
     String token, {
     String? firstName,
@@ -274,6 +278,9 @@ class ApiService {
     String? companyName,
     String? bio,
     bool? isSetupCompleted,
+    String? cardNumber,
+    String? shibaNumber,
+    String? bankName,
   }) async {
     final bodyMap = <String, dynamic>{};
     if (firstName != null) bodyMap['first_name'] = firstName;
@@ -283,6 +290,9 @@ class ApiService {
     if (companyName != null) bodyMap['company_name'] = companyName;
     if (bio != null) bodyMap['bio'] = bio;
     if (isSetupCompleted != null) bodyMap['is_setup_completed'] = isSetupCompleted;
+    if (cardNumber != null) bodyMap['card_number'] = cardNumber;
+    if (shibaNumber != null) bodyMap['shiba_number'] = shibaNumber;
+    if (bankName != null) bodyMap['bank_name'] = bankName;
 
     final response = await http.patch(
       Uri.parse('$baseUrl/profile/employer'),
@@ -296,9 +306,7 @@ class ApiService {
       final error = jsonDecode(response.body);
       throw Exception(error['message'] ?? 'خطا در به‌روزرسانی پروفایل کارفرما');
     }
-  }
-
-  /// Overwrites the entire base price list for the Welder.
+  }  /// Overwrites the entire base price list for the Welder.
   Future<Map<String, dynamic>> updateWelderPrices(
     String token,
     List<Map<String, dynamic>> priceList,

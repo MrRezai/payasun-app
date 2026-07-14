@@ -822,101 +822,107 @@ class _WelderSetupScreenState extends State<WelderSetupScreen> {
         const SizedBox(height: 14),
         _isLoadingGeo
             ? const Center(child: CircularProgressIndicator(color: AppColors.royalBlue))
-            : InkWell(
-                onTap: _showHomeProvincePickerBottomSheet,
-                borderRadius: BorderRadius.circular(16),
-                child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-                  decoration: BoxDecoration(
-                    color: AppColors.lightGrey,
-                    borderRadius: BorderRadius.circular(16),
-                    border: Border.all(color: AppColors.borderGrey),
-                  ),
-                  child: Row(
-                    children: [
-                      const Icon(Icons.map_outlined, color: AppColors.royalBlue, size: 20),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            RichText(
-                              text: const TextSpan(
-                                text: 'استان محل سکونت',
-                                style: TextStyle(fontSize: 10, color: AppColors.textMuted, fontWeight: FontWeight.bold, fontFamily: 'Vazirmatn'),
-                                children: [
-                                  TextSpan(
-                                    text: ' *',
-                                    style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold),
-                                  ),
-                                ],
+            : Material(
+                color: Colors.transparent,
+                child: InkWell(
+                  onTap: _showHomeProvincePickerBottomSheet,
+                  borderRadius: BorderRadius.circular(16),
+                  child: Ink(
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                    decoration: BoxDecoration(
+                      color: AppColors.lightGrey,
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(color: AppColors.borderGrey),
+                    ),
+                    child: Row(
+                      children: [
+                        const Icon(Icons.map_outlined, color: AppColors.royalBlue, size: 20),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              RichText(
+                                text: const TextSpan(
+                                  text: 'استان محل سکونت',
+                                  style: TextStyle(fontSize: 10, color: AppColors.textMuted, fontWeight: FontWeight.bold, fontFamily: 'Vazirmatn'),
+                                  children: [
+                                    TextSpan(
+                                      text: ' *',
+                                      style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold),
+                                    ),
+                                  ],
+                                ),
                               ),
-                            ),
-                            const SizedBox(height: 4),
-                            Text(
-                              _provinces.firstWhere(
-                                (prov) => prov['id'] == _homeProvinceId,
-                                orElse: () => {'name': 'انتخاب نشده'},
-                              )['name'] as String,
-                              style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: AppColors.textDark),
-                            ),
-                          ],
+                              const SizedBox(height: 4),
+                              Text(
+                                _provinces.firstWhere(
+                                  (prov) => prov['id'] == _homeProvinceId,
+                                  orElse: () => {'name': 'انتخاب نشده'},
+                                )['name'] as String,
+                                style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: AppColors.textDark),
+                              ),
+                            ],
+                          ),
                         ),
-                      ),
-                      const Icon(Icons.keyboard_arrow_down_rounded, color: AppColors.textMuted),
-                    ],
+                        const Icon(Icons.keyboard_arrow_down_rounded, color: AppColors.textMuted),
+                      ],
+                    ),
                   ),
                 ),
               ),
 
         // Residence City Selector
         const SizedBox(height: 14),
-        InkWell(
-          onTap: _homeProvinceId == null ? null : _showHomeCityPickerBottomSheet,
-          borderRadius: BorderRadius.circular(16),
-          child: Opacity(
-            opacity: _homeProvinceId == null ? 0.5 : 1.0,
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-              decoration: BoxDecoration(
-                color: AppColors.lightGrey,
-                borderRadius: BorderRadius.circular(16),
-                border: Border.all(color: AppColors.borderGrey),
-              ),
-              child: Row(
-                children: [
-                  const Icon(Icons.location_city_outlined, color: AppColors.royalBlue, size: 20),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        RichText(
-                          text: const TextSpan(
-                            text: 'شهر محل سکونت',
-                            style: TextStyle(fontSize: 10, color: AppColors.textMuted, fontWeight: FontWeight.bold, fontFamily: 'Vazirmatn'),
-                            children: [
-                              TextSpan(
-                                text: ' *',
-                                style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold),
-                              ),
-                            ],
+        Material(
+          color: Colors.transparent,
+          child: InkWell(
+            onTap: _homeProvinceId == null ? null : _showHomeCityPickerBottomSheet,
+            borderRadius: BorderRadius.circular(16),
+            child: Opacity(
+              opacity: _homeProvinceId == null ? 0.5 : 1.0,
+              child: Ink(
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                decoration: BoxDecoration(
+                  color: AppColors.lightGrey,
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(color: AppColors.borderGrey),
+                ),
+                child: Row(
+                  children: [
+                    const Icon(Icons.location_city_outlined, color: AppColors.royalBlue, size: 20),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          RichText(
+                            text: const TextSpan(
+                              text: 'شهر محل سکونت',
+                              style: TextStyle(fontSize: 10, color: AppColors.textMuted, fontWeight: FontWeight.bold, fontFamily: 'Vazirmatn'),
+                              children: [
+                                TextSpan(
+                                  text: ' *',
+                                  style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold),
+                                ),
+                              ],
+                            ),
                           ),
-                        ),
-                        const SizedBox(height: 4),
-                        Text(
-                          _homeCityName ?? 'انتخاب نشده',
-                          style: TextStyle(
-                            fontSize: 13,
-                            fontWeight: FontWeight.bold,
-                            color: _homeCityName == null ? AppColors.textMuted : AppColors.textDark,
+                          const SizedBox(height: 4),
+                          Text(
+                            _homeCityName ?? 'انتخاب نشده',
+                            style: TextStyle(
+                              fontSize: 13,
+                              fontWeight: FontWeight.bold,
+                              color: _homeCityName == null ? AppColors.textMuted : AppColors.textDark,
+                            ),
                           ),
-                        ),
-                      ],
+                        ],
+                      ),
                     ),
-                  ),
-                  const Icon(Icons.keyboard_arrow_down_rounded, color: AppColors.textMuted),
-                ],
+                    const Icon(Icons.keyboard_arrow_down_rounded, color: AppColors.textMuted),
+                  ],
+                ),
               ),
             ),
           ),

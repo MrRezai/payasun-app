@@ -10,7 +10,7 @@ import 'package:file_picker/file_picker.dart';
 import '../../constants/route_transitions.dart';
 import '../auth/login_phone_screen.dart';
 
-enum ProfileView { menu, personalInfo, coverage, rates, skills }
+enum ProfileView { menu, personalInfo, coverage, rates, skills, financialInfo }
 
 class WelderProfileScreen extends StatefulWidget {
   const WelderProfileScreen({super.key});
@@ -55,11 +55,17 @@ class _WelderProfileScreenState extends State<WelderProfileScreen> {
       _showError('خطا در انتخاب تصویر');
     }
   }
-
   // Controllers & Local States
   final _firstNameController = TextEditingController();
   final _lastNameController = TextEditingController();
   final _bioController = TextEditingController();
+
+  // Controllers for financial settings
+  final _cardNumberController = TextEditingController();
+  final _shibaController = TextEditingController();
+  final _bankNameController = TextEditingController();
+
+
 
   // Home location states
   int? _homeProvinceId;
@@ -163,6 +169,71 @@ class _WelderProfileScreenState extends State<WelderProfileScreen> {
     }
   }
 
+  void _populateFinancialFields() {
+    if (!mounted) return;
+    final auth = Provider.of<AuthProvider>(context, listen: false);
+    if (auth.profileData != null) {
+      final profile = auth.profileData!['profile'] as Map<String, dynamic>?;
+      if (profile != null) {
+        setState(() {
+          _cardNumberController.text = profile['card_number'] ?? '';
+          _shibaController.text = profile['shiba_number'] ?? '';
+          _bankNameController.text = profile['bank_name'] ?? '';
+        });
+      }
+    }
+  }
+
+  Future<void> _saveFinancialInfo(AuthProvider auth) async {
+    final card = _cardNumberController.text.trim();
+    final shiba = _shibaController.text.trim();
+    final bank = _bankNameController.text.trim();
+    if (card.isEmpty) {
+      _showError('لطفاً شماره کارت را وارد کنید.');
+      return;
+    }
+    if (card.length != 16) {
+      _showError('شماره کارت باید ۱۶ رقم باشد.');
+      return;
+    }
+
+    if (shiba.isEmpty) {
+      _showError('لطفاً شماره شبا را وارد کنید.');
+      return;
+    }
+    if (shiba.length != 24 && shiba.length != 26) {
+      _showError('شماره شبا باید ۲۴ رقم باشد.');
+      return;
+    }
+
+    if (bank.isEmpty) {
+      _showError('لطفاً نام بانک را وارد کنید.');
+      return;
+    }
+
+    setState(() {
+      _isSaving = true;
+    });
+
+    try {
+      await auth.updateWelderProfile(
+        cardNumber: card.isEmpty ? "" : card,
+        shibaNumber: shiba.isEmpty ? "" : shiba,
+        bankName: bank.isEmpty ? "" : bank,
+      );
+      _showSuccess('تنظیمات مالی با موفقیت به‌روزرسانی شد.');
+      setState(() {
+        _isSaving = false;
+        _currentView = ProfileView.menu;
+      });
+    } catch (e) {
+      setState(() {
+        _isSaving = false;
+      });
+      _showError('خطا در به‌روزرسانی اطلاعات: ${e.toString().replaceAll('Exception: ', '')}');
+    }
+  }
+
   Future<void> _loadProvinces() async {
     if (mounted) setState(() => _isLoadingGeo = true);
     try {
@@ -259,6 +330,9 @@ class _WelderProfileScreenState extends State<WelderProfileScreen> {
     _firstNameController.dispose();
     _lastNameController.dispose();
     _bioController.dispose();
+    _cardNumberController.dispose();
+    _shibaController.dispose();
+    _bankNameController.dispose();
     super.dispose();
   }
 
@@ -630,6 +704,8 @@ class _WelderProfileScreenState extends State<WelderProfileScreen> {
         return 'مدیریت نرخ‌ها و تعرفه‌ها';
       case ProfileView.skills:
         return 'مدیریت تخصص‌های جوشکاری';
+      case ProfileView.financialInfo:
+        return 'تنظیمات مالی';
     }
   }
 
@@ -645,9 +721,10 @@ class _WelderProfileScreenState extends State<WelderProfileScreen> {
         return _buildRatesBody();
       case ProfileView.skills:
         return _buildSkillsBody();
+      case ProfileView.financialInfo:
+        return _buildFinancialInfoBody(auth);
     }
   }
-
   // --- 1. Main Menu View ---
   Widget _buildMainMenuBody(AuthProvider auth) {
     final profile = auth.profileData?['profile'] as Map<String, dynamic>?;
@@ -934,6 +1011,15 @@ class _WelderProfileScreenState extends State<WelderProfileScreen> {
               setState(() => _currentView = ProfileView.rates);
             },
           ),
+          _buildMenuTile(
+            title: 'تنظیمات مالی',
+            subtitle: 'ثبت شماره کارت، شماره شبا و نام بانک جهت تسویه‌حساب',
+            icon: Icons.account_balance_wallet_outlined,
+            onTap: () {
+              _populateFinancialFields();
+              setState(() => _currentView = ProfileView.financialInfo);
+            },
+          ),
           const SizedBox(height: 30),
 
           // Logout
@@ -1078,101 +1164,107 @@ class _WelderProfileScreenState extends State<WelderProfileScreen> {
           const SizedBox(height: 14),
           _isLoadingGeo
               ? const Center(child: CircularProgressIndicator(color: AppColors.royalBlue))
-              : InkWell(
-                  onTap: _showHomeProvincePickerBottomSheet,
-                  borderRadius: BorderRadius.circular(16),
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-                    decoration: BoxDecoration(
-                      color: AppColors.white,
-                      borderRadius: BorderRadius.circular(16),
-                      border: Border.all(color: AppColors.borderGrey),
-                    ),
-                    child: Row(
-                      children: [
-                        const Icon(Icons.map_outlined, color: AppColors.royalBlue, size: 20),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              RichText(
-                                text: const TextSpan(
-                                  text: 'استان محل سکونت',
-                                  style: TextStyle(fontSize: 10, color: AppColors.textMuted, fontWeight: FontWeight.bold, fontFamily: 'Vazirmatn'),
-                                  children: [
-                                    TextSpan(
-                                      text: ' *',
-                                      style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold),
-                                    ),
-                                  ],
+              : Material(
+                  color: Colors.transparent,
+                  child: InkWell(
+                    onTap: _showHomeProvincePickerBottomSheet,
+                    borderRadius: BorderRadius.circular(16),
+                    child: Ink(
+                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                      decoration: BoxDecoration(
+                        color: AppColors.white,
+                        borderRadius: BorderRadius.circular(16),
+                        border: Border.all(color: AppColors.borderGrey),
+                      ),
+                      child: Row(
+                        children: [
+                          const Icon(Icons.map_outlined, color: AppColors.royalBlue, size: 20),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                RichText(
+                                  text: const TextSpan(
+                                    text: 'استان محل سکونت',
+                                    style: TextStyle(fontSize: 10, color: AppColors.textMuted, fontWeight: FontWeight.bold, fontFamily: 'Vazirmatn'),
+                                    children: [
+                                      TextSpan(
+                                        text: ' *',
+                                        style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold),
+                                      ),
+                                    ],
+                                  ),
                                 ),
-                              ),
-                              const SizedBox(height: 4),
-                              Text(
-                                _provinces.firstWhere(
-                                  (prov) => prov['id'] == _homeProvinceId,
-                                  orElse: () => {'name': _homeProvinceName ?? 'انتخاب نشده'},
-                                )['name'] as String,
-                                style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: AppColors.textDark),
-                              ),
-                            ],
+                                const SizedBox(height: 4),
+                                Text(
+                                  _provinces.firstWhere(
+                                    (prov) => prov['id'] == _homeProvinceId,
+                                    orElse: () => {'name': _homeProvinceName ?? 'انتخاب نشده'},
+                                  )['name'] as String,
+                                  style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: AppColors.textDark),
+                                ),
+                              ],
+                            ),
                           ),
-                        ),
-                        const Icon(Icons.keyboard_arrow_down_rounded, color: AppColors.textMuted),
-                      ],
+                          const Icon(Icons.keyboard_arrow_down_rounded, color: AppColors.textMuted),
+                        ],
+                      ),
                     ),
                   ),
                 ),
 
           // Residence City Selector
           const SizedBox(height: 14),
-          InkWell(
-            onTap: _homeProvinceId == null ? null : _showHomeCityPickerBottomSheet,
-            borderRadius: BorderRadius.circular(16),
-            child: Opacity(
-              opacity: _homeProvinceId == null ? 0.5 : 1.0,
-              child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-                decoration: BoxDecoration(
-                  color: AppColors.white,
-                  borderRadius: BorderRadius.circular(16),
-                  border: Border.all(color: AppColors.borderGrey),
-                ),
-                child: Row(
-                  children: [
-                    const Icon(Icons.location_city_outlined, color: AppColors.royalBlue, size: 20),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          RichText(
-                            text: const TextSpan(
-                              text: 'شهر محل سکونت',
-                              style: TextStyle(fontSize: 10, color: AppColors.textMuted, fontWeight: FontWeight.bold, fontFamily: 'Vazirmatn'),
-                              children: [
-                                TextSpan(
-                                  text: ' *',
-                                  style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold),
-                                ),
-                              ],
+          Material(
+            color: Colors.transparent,
+            child: InkWell(
+              onTap: _homeProvinceId == null ? null : _showHomeCityPickerBottomSheet,
+              borderRadius: BorderRadius.circular(16),
+              child: Opacity(
+                opacity: _homeProvinceId == null ? 0.5 : 1.0,
+                child: Ink(
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                  decoration: BoxDecoration(
+                    color: AppColors.white,
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(color: AppColors.borderGrey),
+                  ),
+                  child: Row(
+                    children: [
+                      const Icon(Icons.location_city_outlined, color: AppColors.royalBlue, size: 20),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            RichText(
+                              text: const TextSpan(
+                                text: 'شهر محل سکونت',
+                                style: TextStyle(fontSize: 10, color: AppColors.textMuted, fontWeight: FontWeight.bold, fontFamily: 'Vazirmatn'),
+                                children: [
+                                  TextSpan(
+                                    text: ' *',
+                                    style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold),
+                                  ),
+                                ],
+                              ),
                             ),
-                          ),
-                          const SizedBox(height: 4),
-                          Text(
-                            _homeCityName ?? 'انتخاب نشده',
-                            style: TextStyle(
-                              fontSize: 13,
-                              fontWeight: FontWeight.bold,
-                              color: _homeCityName == null ? AppColors.textMuted : AppColors.textDark,
+                            const SizedBox(height: 4),
+                            Text(
+                              _homeCityName ?? 'انتخاب نشده',
+                              style: TextStyle(
+                                fontSize: 13,
+                                fontWeight: FontWeight.bold,
+                                color: _homeCityName == null ? AppColors.textMuted : AppColors.textDark,
+                              ),
                             ),
-                          ),
-                        ],
+                          ],
+                        ),
                       ),
-                    ),
-                    const Icon(Icons.keyboard_arrow_down_rounded, color: AppColors.textMuted),
-                  ],
+                      const Icon(Icons.keyboard_arrow_down_rounded, color: AppColors.textMuted),
+                    ],
+                  ),
                 ),
               ),
             ),
@@ -1718,84 +1810,90 @@ class _WelderProfileScreenState extends State<WelderProfileScreen> {
           // Province Selector Tile
           _isLoadingGeo
               ? const Center(child: CircularProgressIndicator(color: AppColors.royalBlue))
-              : InkWell(
-                  onTap: _showProvincePickerBottomSheet,
-                  borderRadius: BorderRadius.circular(16),
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-                    decoration: BoxDecoration(
-                      color: AppColors.white,
-                      borderRadius: BorderRadius.circular(16),
-                      border: Border.all(color: AppColors.borderGrey),
-                    ),
-                    child: Row(
-                      children: [
-                        const Icon(Icons.map_outlined, color: AppColors.royalBlue, size: 20),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              const Text(
-                                'استان محل کار',
-                                style: TextStyle(fontSize: 10, color: AppColors.textMuted, fontWeight: FontWeight.bold),
-                              ),
-                              const SizedBox(height: 4),
-                              Text(
-                                provinceName,
-                                style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: AppColors.textDark),
-                              ),
-                            ],
+              : Material(
+                  color: Colors.transparent,
+                  child: InkWell(
+                    onTap: _showProvincePickerBottomSheet,
+                    borderRadius: BorderRadius.circular(16),
+                    child: Ink(
+                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                      decoration: BoxDecoration(
+                        color: AppColors.white,
+                        borderRadius: BorderRadius.circular(16),
+                        border: Border.all(color: AppColors.borderGrey),
+                      ),
+                      child: Row(
+                        children: [
+                          const Icon(Icons.map_outlined, color: AppColors.royalBlue, size: 20),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                const Text(
+                                  'استان محل کار',
+                                  style: TextStyle(fontSize: 10, color: AppColors.textMuted, fontWeight: FontWeight.bold),
+                                ),
+                                const SizedBox(height: 4),
+                                Text(
+                                  provinceName,
+                                  style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: AppColors.textDark),
+                                ),
+                              ],
+                            ),
                           ),
-                        ),
-                        const Icon(Icons.keyboard_arrow_down_rounded, color: AppColors.textMuted),
-                      ],
+                          const Icon(Icons.keyboard_arrow_down_rounded, color: AppColors.textMuted),
+                        ],
+                      ),
                     ),
                   ),
                 ),
           const SizedBox(height: 12),
 
           // City Selector Tile
-          InkWell(
-            onTap: _selectedProvinceId == null ? null : _showCityPickerBottomSheet,
-            borderRadius: BorderRadius.circular(16),
-            child: Opacity(
-              opacity: _selectedProvinceId == null ? 0.5 : 1.0,
-              child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-                decoration: BoxDecoration(
-                  color: AppColors.white,
-                  borderRadius: BorderRadius.circular(16),
-                  border: Border.all(color: AppColors.borderGrey),
-                ),
-                child: Row(
-                  children: [
-                    const Icon(Icons.location_city_outlined, color: AppColors.royalBlue, size: 20),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          const Text(
-                            'شهرهای فعال تحت پوشش شما',
-                            style: TextStyle(fontSize: 10, color: AppColors.textMuted, fontWeight: FontWeight.bold),
-                          ),
-                          const SizedBox(height: 4),
-                          Text(
-                            _activeCities.isEmpty
-                                ? 'هیچ شهری انتخاب نشده است (افزودن...)'
-                                : '${_activeCities.length} شهر انتخاب شده',
-                            style: TextStyle(
-                              fontSize: 13,
-                              fontWeight: FontWeight.bold,
-                              color: _activeCities.isEmpty ? AppColors.textMuted : AppColors.textDark,
+          Material(
+            color: Colors.transparent,
+            child: InkWell(
+              onTap: _selectedProvinceId == null ? null : _showCityPickerBottomSheet,
+              borderRadius: BorderRadius.circular(16),
+              child: Opacity(
+                opacity: _selectedProvinceId == null ? 0.5 : 1.0,
+                child: Ink(
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                  decoration: BoxDecoration(
+                    color: AppColors.white,
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(color: AppColors.borderGrey),
+                  ),
+                  child: Row(
+                    children: [
+                      const Icon(Icons.location_city_outlined, color: AppColors.royalBlue, size: 20),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Text(
+                              'شهرهای فعال تحت پوشش شما',
+                              style: TextStyle(fontSize: 10, color: AppColors.textMuted, fontWeight: FontWeight.bold),
                             ),
-                          ),
-                        ],
+                            const SizedBox(height: 4),
+                            Text(
+                              _activeCities.isEmpty
+                                  ? 'هیچ شهری انتخاب نشده است (افزودن...)'
+                                  : '${_activeCities.length} شهر انتخاب شده',
+                              style: TextStyle(
+                                fontSize: 13,
+                                fontWeight: FontWeight.bold,
+                                color: _activeCities.isEmpty ? AppColors.textMuted : AppColors.textDark,
+                              ),
+                            ),
+                          ],
+                        ),
                       ),
-                    ),
-                    const Icon(Icons.add_circle_outline_rounded, color: AppColors.royalBlue, size: 20),
-                  ],
+                      const Icon(Icons.add_circle_outline_rounded, color: AppColors.royalBlue, size: 20),
+                    ],
+                  ),
                 ),
               ),
             ),
@@ -2080,6 +2178,127 @@ class _WelderProfileScreenState extends State<WelderProfileScreen> {
             ),
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildFinancialInfoBody(AuthProvider auth) {
+    return Scaffold(
+      backgroundColor: AppColors.white,
+      body: SingleChildScrollView(
+        physics: const BouncingScrollPhysics(),
+        padding: const EdgeInsets.all(20),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              'اطلاعات حساب مالی جهت تسویه‌حساب',
+              style: TextStyle(fontWeight: FontWeight.bold, color: AppColors.royalBlue, fontFamily: 'Vazirmatn', fontSize: 13),
+            ),
+            const SizedBox(height: 14),
+
+            // Card Number
+            const Text(
+              'شماره کارت (۱۶ رقمی)',
+              style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: AppColors.textDark, fontFamily: 'Vazirmatn'),
+            ),
+            const SizedBox(height: 6),
+            TextFormField(
+              controller: _cardNumberController,
+              keyboardType: TextInputType.number,
+              maxLength: 16,
+              textAlign: TextAlign.center,
+              decoration: InputDecoration(
+                hintText: 'مثال: ۶۰۳۷۹۹۱۱۲۲۳۳۴۴۵۵',
+                hintStyle: const TextStyle(fontSize: 12, color: AppColors.textMuted),
+                counterText: '',
+                contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(16),
+                  borderSide: const BorderSide(color: AppColors.borderGrey),
+                ),
+                focusedBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(16),
+                  borderSide: const BorderSide(color: AppColors.royalBlue, width: 1.5),
+                ),
+              ),
+            ),
+            const SizedBox(height: 18),
+
+            // Shiba Number
+            const Text(
+              'شماره شبا (۲۴ رقمی - بدون IR)',
+              style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: AppColors.textDark, fontFamily: 'Vazirmatn'),
+            ),
+            const SizedBox(height: 6),
+            TextFormField(
+              controller: _shibaController,
+              keyboardType: TextInputType.number,
+              maxLength: 24,
+              textAlign: TextAlign.center,
+              decoration: InputDecoration(
+                prefixText: 'IR ',
+                prefixStyle: const TextStyle(fontWeight: FontWeight.bold, color: AppColors.textDark),
+                hintText: 'مثال: ۱۲۰۱۲۰۰۰۰۰۰۰۰۱۲۳۴۵۶۷۸۹۰۱',
+                hintStyle: const TextStyle(fontSize: 12, color: AppColors.textMuted),
+                counterText: '',
+                contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(16),
+                  borderSide: const BorderSide(color: AppColors.borderGrey),
+                ),
+                focusedBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(16),
+                  borderSide: const BorderSide(color: AppColors.royalBlue, width: 1.5),
+                ),
+              ),
+            ),
+            const SizedBox(height: 18),
+
+            // Bank Name
+            const Text(
+              'نام بانک',
+              style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: AppColors.textDark, fontFamily: 'Vazirmatn'),
+            ),
+            const SizedBox(height: 6),
+            TextFormField(
+              controller: _bankNameController,
+              textAlign: TextAlign.right,
+              decoration: InputDecoration(
+                hintText: 'مثال: بانک ملی، بانک ملت و ...',
+                hintStyle: const TextStyle(fontSize: 12, color: AppColors.textMuted),
+                contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(16),
+                  borderSide: const BorderSide(color: AppColors.borderGrey),
+                ),
+                focusedBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(16),
+                  borderSide: const BorderSide(color: AppColors.royalBlue, width: 1.5),
+                ),
+              ),
+            ),
+            const SizedBox(height: 36),
+
+            // Save Button
+            SizedBox(
+              width: double.infinity,
+              height: 52,
+              child: ElevatedButton(
+                onPressed: () => _saveFinancialInfo(auth),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.royalBlue,
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                  elevation: 0,
+                ),
+                child: const Text(
+                  'ذخیره تنظیمات مالی',
+                  style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 14, fontFamily: 'Vazirmatn'),
+                ),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

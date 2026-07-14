@@ -386,4 +386,13 @@ export class InquiryService {
     const diffDays = Math.floor(diffHours / 24);
     return `${diffDays} روز پیش`;
   }
+
+  async findOffersByWelder(welderId: string): Promise<Offer[]> {
+    if (!welderId) return [];
+    return this.offerRepository.find({
+      where: { welder_id: welderId },
+      relations: ['inquiry'],
+      order: { created_at: 'DESC' },
+    });
+  }
 }
