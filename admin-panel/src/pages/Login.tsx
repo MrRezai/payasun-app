@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import logoImg from '../assets/logo/joftojoor.png';
 
 interface LoginProps {
   onLoginSuccess: (username: string, pass: string) => Promise<void>;
@@ -19,7 +20,7 @@ export default function Login({ onLoginSuccess, isOnline, isLoading }: LoginProp
     <div style={{ display: 'flex', minHeight: '100vh', alignItems: 'center', justifyContent: 'center', backgroundColor: '#F8FAFC', padding: '16px' }}>
       <div className="glass-card" style={{ width: '100%', maxWidth: '420px', padding: '32px', boxShadow: '0 10px 30px rgba(15, 23, 42, 0.08)' }}>
         <div style={{ textAlign: 'center', marginBottom: '24px' }}>
-          <img src="/src/assets/logo/joftojoor.png" alt="جفت و جور" style={{ width: '64px', height: '64px', marginBottom: '12px' }} />
+          <img src={logoImg} alt="جفت و جور" style={{ width: '64px', height: '64px', marginBottom: '12px' }} />
           <h2 style={{ fontSize: '20px', fontWeight: '800', color: 'var(--text-primary)' }}>ورود به پنل مدیریت جفت‌وجور</h2>
           <p style={{ fontSize: '12px', color: 'var(--text-secondary)', marginTop: '6px' }}>
             احراز هویت کنترل ادمین سیستم

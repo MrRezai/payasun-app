@@ -1,4 +1,5 @@
 import { NavLink } from 'react-router-dom';
+import logoImg from '../assets/logo/joftojoor.png';
 
 interface SidebarProps {
   pendingPicsCount: number;
@@ -10,7 +11,7 @@ export default function Sidebar({ pendingPicsCount, pendingEstimationsCount, onL
   return (
     <aside className="sidebar">
       <div className="sidebar-logo">
-        <img src="/src/assets/logo/joftojoor.png" alt="جفت و جور" />
+        <img src={logoImg} alt="جفت و جور" />
         <span>پنل مدیریت جفت‌وجور</span>
       </div>
       
