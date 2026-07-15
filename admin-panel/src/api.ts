@@ -234,4 +234,22 @@ export class ApiClient {
     if (!res.ok) throw new Error('خطا در دریافت سابقه کاربر.');
     return await res.json();
   }
+
+  public static async deleteInquiry(id: string): Promise<any> {
+    const res = await this.request(`${BASE_URL}/admin/inquiry/${id}`, {
+      method: 'DELETE',
+    });
+    if (!res.ok) throw new Error('خطا در حذف کامل پروژه.');
+    return await res.json();
+  }
+
+  public static async toggleOfferVisibility(offerId: string, isHidden: boolean): Promise<any> {
+    const res = await this.request(`${BASE_URL}/admin/offer/${offerId}/toggle-visibility`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ isHidden }),
+    });
+    if (!res.ok) throw new Error('خطا در تغییر وضعیت پیشنهاد جوشکار.');
+    return await res.json();
+  }
 }

@@ -150,14 +150,17 @@ export class InquiryService {
         id: o.id,
         welder_id: o.welder_id,
         welder_user_id: o.welder?.user_id,
+        welder_name: o.welder ? `${o.welder.first_name || ''} ${o.welder.last_name || ''}`.trim() || 'جوشکار پلتفرم' : 'جوشکار پلتفرم',
         total_price: o.total_price,
         items_prices: o.items_prices,
         scaffold_checked: o.scaffold_checked,
         power_checked: o.power_checked,
         rod_checked: o.rod_checked,
         delivery_checked: o.delivery_checked,
-        created_at: o.created_at
+        created_at: o.created_at,
+        is_hidden: o.is_hidden,
       });
+
       offerMap.set(o.inquiry_id, list);
     });
     
@@ -190,11 +193,9 @@ export class InquiryService {
     if (!inquiry) {
       throw new NotFoundException('استعلام مورد نظر یافت نشد.');
     }
-
-    if (inquiry.status !== InquiryStatus.PENDING_ESTIMATION) {
-      throw new BadRequestException('فقط استعلام‌های در انتظار بررسی قابل رد شدن هستند.');
+    if (inquiry.status === InquiryStatus.DRAFT) {
+      throw new BadRequestException('پیش‌نویس‌ها قابل رد شدن نیستند.');
     }
-
     inquiry.status = InquiryStatus.REJECTED;
     inquiry.rejection_reason = reason;
     return this.inquiryRepository.save(inquiry);
@@ -245,12 +246,11 @@ export class InquiryService {
       where: { employerId },
       order: { created_at: 'DESC' },
     });
-
-    // Fetch all offers
+    // Fetch all offers (exclude hidden ones for employers)
     const offers = await this.offerRepository.find({
+      where: { is_hidden: false },
       relations: ['welder']
     });
-
     // Map offers by inquiry_id
     const offerMap = new Map<string, any[]>();
     offers.forEach(o => {
@@ -332,10 +332,9 @@ export class InquiryService {
 
     return this.offerRepository.save(offer);
   }
-
   async getOffers(inquiryId: string): Promise<any[]> {
     const offers = await this.offerRepository.find({
-      where: { inquiry_id: inquiryId },
+      where: { inquiry_id: inquiryId, is_hidden: false },
       relations: ['welder', 'welder.user'],
       order: { created_at: 'DESC' }
     });
@@ -395,4 +394,24 @@ export class InquiryService {
       order: { created_at: 'DESC' },
     });
   }
+
+  async deleteInquiry(id: string): Promise<void> {
+    const inquiry = await this.inquiryRepository.findOne({ where: { id } });
+    if (!inquiry) {
+      throw new NotFoundException('استعلام مورد نظر یافت نشد.');
+    }
+    await this.inquiryRepository.remove(inquiry);
+  }
+
+  async toggleOfferVisibility(offerId: string, isHidden: boolean): Promise<Offer> {
+    const offer = await this.offerRepository.findOne({ where: { id: offerId } });
+    if (!offer) {
+      throw new NotFoundException('پیشنهاد مورد نظر یافت نشد.');
+    }
+    offer.is_hidden = isHidden;
+    return this.offerRepository.save(offer);
+  }
 }
+
+
+

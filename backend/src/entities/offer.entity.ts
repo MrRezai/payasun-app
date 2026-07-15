@@ -37,13 +37,13 @@ export class Offer {
 
   @Column({ type: 'boolean', default: false })
   power_checked: boolean;
-
   @Column({ type: 'boolean', default: false })
   rod_checked: boolean;
 
   @Column({ type: 'boolean', default: false })
   delivery_checked: boolean;
-
+  @Column({ type: 'boolean', default: false })
+  is_hidden: boolean;
   @CreateDateColumn({ type: 'timestamptz' })
   created_at: Date;
 }

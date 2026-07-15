@@ -95,4 +95,18 @@ export class AdminController {
       offers,
     };
   }
+
+  @Delete('inquiry/:id')
+  async deleteInquiry(@Param('id') id: string) {
+    await this.inquiryService.deleteInquiry(id);
+    return { message: 'پروژه با موفقیت حذف شد.' };
+  }
+
+  @Patch('offer/:id/toggle-visibility')
+  async toggleOfferVisibility(
+    @Param('id') id: string,
+    @Body('isHidden') isHidden: boolean,
+  ) {
+    return this.inquiryService.toggleOfferVisibility(id, isHidden);
+  }
 }

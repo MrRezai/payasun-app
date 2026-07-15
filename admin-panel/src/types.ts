@@ -66,6 +66,22 @@ export interface Inquiry {
   items: InquiryItem[];
   created_at: string;
   updated_at: string;
-  employer_name?: string; // hydrated/joined UI fields
+  employer_name?: string;
   employer_phone?: string;
+  offers?: Offer[];
+}
+
+export interface Offer {
+  id: string;
+  welder_id: string;
+  welder_user_id: string;
+  welder_name: string;
+  total_price: number;
+  items_prices: { title: string, price: number }[];
+  scaffold_checked: boolean;
+  power_checked: boolean;
+  rod_checked: boolean;
+  delivery_checked: boolean;
+  created_at: string;
+  is_hidden: boolean;
 }

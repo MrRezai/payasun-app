@@ -191,6 +191,17 @@ export default function ViewUserHistoryModal({ userId, onClose }: ViewUserHistor
                             <tr key={off.id}>
                               <td>
                                 <strong>{off.inquiry?.title || 'پروژه حذف شده'}</strong>
+                                {off.items_prices && off.items_prices.length > 0 && (
+                                  <div style={{ marginTop: '8px', padding: '8px', backgroundColor: 'var(--bg-dark)', borderRadius: '6px', border: '1px solid var(--border)' }}>
+                                    <div style={{ fontWeight: '600', marginBottom: '4px', fontSize: '10px', color: 'var(--text-secondary)' }}>ریز قیمت پیشنهادی هر آیتم:</div>
+                                    {off.items_prices.map((item: any, idx: number) => (
+                                      <div key={idx} style={{ display: 'flex', justifyContent: 'space-between', fontSize: '10px', padding: '2px 0', borderBottom: '1px dashed var(--border)' }}>
+                                        <span>{item.title}</span>
+                                        <strong style={{ color: 'var(--text-primary)' }}>{formatPrice(item.price)} تومان</strong>
+                                      </div>
+                                    ))}
+                                  </div>
+                                )}
                               </td>
                               <td style={{ color: 'var(--success)', fontWeight: 'bold' }}>{formatPrice(off.total_price)}</td>
                               <td>

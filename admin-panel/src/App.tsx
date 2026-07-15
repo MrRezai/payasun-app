@@ -198,6 +198,7 @@ function AppContent() {
       await ApiClient.rejectInquiry(inqId, reason.trim());
       showToast('استعلام پروژه با موفقیت رد گردید و دلیل ثبت شد.', 'success');
       setSelectedInquiry(null);
+      setViewingProjectDetail(null);
       loadAllData();
     } catch (e: any) {
       if (e.message === 'UNAUTHORIZED') {
@@ -205,6 +206,51 @@ function AppContent() {
         showToast('جلسه کاری شما منقضی شده است. لطفا دوباره وارد شوید.', 'warning');
       } else {
         showToast(e.message || 'خطا در رد کردن پروژه.', 'warning');
+      }
+    }
+  };
+
+  const handleDeleteInquiry = async (inqId: string) => {
+    try {
+      await ApiClient.deleteInquiry(inqId);
+      showToast('پروژه با موفقیت و به طور کامل حذف شد.', 'success');
+      setViewingProjectDetail(null);
+      loadAllData();
+    } catch (e: any) {
+      if (e.message === 'UNAUTHORIZED') {
+        setIsAuthenticated(false);
+        showToast('جلسه کاری شما منقضی شده است. لطفا دوباره وارد شوید.', 'warning');
+      } else {
+        showToast(e.message || 'خطا در حذف پروژه.', 'warning');
+      }
+    }
+  };
+
+  const handleToggleOfferVisibility = async (offerId: string, isHidden: boolean) => {
+    try {
+      await ApiClient.toggleOfferVisibility(offerId, isHidden);
+      showToast(isHidden ? 'پیشنهاد با موفقیت از دید کارفرما پنهان شد.' : 'پیشنهاد مجددا برای کارفرما قابل مشاهده گردید.', 'success');
+      loadAllData();
+      
+      // Update the modal's state if it's currently open
+      if (viewingProjectDetail) {
+        setViewingProjectDetail(prev => {
+          if (!prev) return null;
+          const updatedOffers = prev.offers?.map(o => {
+            if (o.id === offerId) {
+              return { ...o, is_hidden: isHidden };
+            }
+            return o;
+          });
+          return { ...prev, offers: updatedOffers };
+        });
+      }
+    } catch (e: any) {
+      if (e.message === 'UNAUTHORIZED') {
+        setIsAuthenticated(false);
+        showToast('جلسه کاری شما منقضی شده است. لطفا دوباره وارد شوید.', 'warning');
+      } else {
+        showToast(e.message || 'خطا در تغییر وضعیت پیشنهاد.', 'warning');
       }
     }
   };
@@ -360,6 +406,9 @@ function AppContent() {
         <ViewProjectDetailModal 
           inquiry={viewingProjectDetail}
           onClose={() => setViewingProjectDetail(null)}
+          onRejectInquiry={handleRejectInquiry}
+          onDeleteInquiry={handleDeleteInquiry}
+          onToggleOfferVisibility={handleToggleOfferVisibility}
         />
       )}
 
