@@ -411,7 +411,20 @@ export class InquiryService {
     offer.is_hidden = isHidden;
     return this.offerRepository.save(offer);
   }
+
+  async deleteInquiriesAndOffersByUser(userId: string): Promise<void> {
+    // Delete welder offers
+    const welderProfile = await this.inquiryRepository.manager.getRepository(WelderProfile).findOne({
+      where: { user_id: userId }
+    });
+    if (welderProfile) {
+      await this.offerRepository.delete({ welder_id: welderProfile.id });
+    }
+
+    // Delete employer inquiries
+    const inquiries = await this.inquiryRepository.find({ where: { employerId: userId } });
+    if (inquiries.length > 0) {
+      await this.inquiryRepository.remove(inquiries);
+    }
+  }
 }
-
-
-

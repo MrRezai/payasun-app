@@ -4,9 +4,11 @@ import ViewUserHistoryModal from '../modals/ViewUserHistoryModal';
 
 interface UsersProps {
   usersList: any[];
+  onDeleteUser: (id: string) => Promise<void>;
+  onToggleBlockUser: (id: string, isBlocked: boolean) => Promise<void>;
 }
 
-export default function Users({ usersList }: UsersProps) {
+export default function Users({ usersList, onDeleteUser, onToggleBlockUser }: UsersProps) {
   const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
 
   return (
@@ -55,7 +57,14 @@ export default function Users({ usersList }: UsersProps) {
                         )}
                       </div>
                       <div className="user-details">
-                        <h4>{usr.name}</h4>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                          <h4>{usr.name}</h4>
+                          {usr.is_blocked && (
+                            <span className="status-chip rejected" style={{ fontSize: '9px', padding: '2px 6px', margin: '0' }}>
+                              مسدود شده
+                            </span>
+                          )}
+                        </div>
                       </div>
                     </div>
                   </td>
@@ -81,13 +90,33 @@ export default function Users({ usersList }: UsersProps) {
                     {new Date(usr.created_at).toLocaleDateString('fa-IR')}
                   </td>
                   <td>
-                    <button 
-                      className="btn btn-secondary" 
-                      style={{ fontSize: '11px', padding: '6px 12px', borderRadius: '8px' }}
-                      onClick={() => setSelectedUserId(usr.id)}
-                    >
-                      مشاهده سابقه
-                    </button>
+                    <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
+                      <button 
+                        className="btn btn-secondary" 
+                        style={{ fontSize: '11px', padding: '6px 12px', borderRadius: '8px' }}
+                        onClick={() => setSelectedUserId(usr.id)}
+                      >
+                        مشاهده سابقه
+                      </button>
+                      <button 
+                        className={`btn ${usr.is_blocked ? 'btn-success' : 'btn-danger'}`}
+                        style={{ fontSize: '11px', padding: '6px 12px', borderRadius: '8px' }}
+                        onClick={() => onToggleBlockUser(usr.id, !usr.is_blocked)}
+                      >
+                        {usr.is_blocked ? 'رفع مسدودیت' : 'مسدود کردن'}
+                      </button>
+                      <button 
+                        className="btn btn-danger" 
+                        style={{ fontSize: '11px', padding: '6px 12px', borderRadius: '8px', border: '1px dashed var(--danger)' }}
+                        onClick={() => {
+                          if (window.confirm('آیا از حذف کامل این کاربر به همراه تمامی استعلام‌ها و پیشنهادهای مربوطه اطمینان دارید؟ این عمل غیرقابل بازگشت است.')) {
+                            onDeleteUser(usr.id);
+                          }
+                        }}
+                      >
+                        حذف کامل
+                      </button>
+                    </div>
                   </td>
                 </tr>
               ))}

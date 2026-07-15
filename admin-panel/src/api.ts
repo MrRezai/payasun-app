@@ -252,4 +252,22 @@ export class ApiClient {
     if (!res.ok) throw new Error('خطا در تغییر وضعیت پیشنهاد جوشکار.');
     return await res.json();
   }
+
+  public static async toggleBlockUser(userId: string, isBlocked: boolean): Promise<any> {
+    const res = await this.request(`${BASE_URL}/admin/users/${userId}/toggle-block`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ isBlocked }),
+    });
+    if (!res.ok) throw new Error('خطا در تغییر وضعیت مسدودسازی کاربر.');
+    return await res.json();
+  }
+
+  public static async deleteUser(userId: string): Promise<any> {
+    const res = await this.request(`${BASE_URL}/admin/users/${userId}`, {
+      method: 'DELETE',
+    });
+    if (!res.ok) throw new Error('خطا در حذف کامل کاربر.');
+    return await res.json();
+  }
 }

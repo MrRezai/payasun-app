@@ -10,12 +10,12 @@ export interface Skill {
   created_at?: string;
   updated_at?: string;
 }
-
 export interface User {
   id: string;
   phoneNumber: string;
   role: UserRole;
   created_at: string;
+  is_blocked?: boolean;
 }
 
 export interface WelderProfile {

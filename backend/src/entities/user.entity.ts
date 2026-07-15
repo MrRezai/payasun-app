@@ -27,10 +27,11 @@ export class User {
 
   @Column({ type: 'jsonb', default: [] })
   roles: Role[];
-
   @Column({ type: 'boolean', default: false })
   is_authenticated: boolean;
 
+  @Column({ type: 'boolean', default: false })
+  is_blocked: boolean;
   @CreateDateColumn({ type: 'timestamptz' })
   created_at: Date;
 }

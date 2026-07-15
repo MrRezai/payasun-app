@@ -255,6 +255,36 @@ function AppContent() {
     }
   };
 
+  const handleDeleteUser = async (userId: string) => {
+    try {
+      await ApiClient.deleteUser(userId);
+      showToast('کاربر و تمامی سوابق او با موفقیت حذف شدند.', 'success');
+      loadAllData();
+    } catch (e: any) {
+      if (e.message === 'UNAUTHORIZED') {
+        setIsAuthenticated(false);
+        showToast('جلسه کاری شما منقضی شده است. لطفا دوباره وارد شوید.', 'warning');
+      } else {
+        showToast(e.message || 'خطا در حذف کاربر.', 'warning');
+      }
+    }
+  };
+
+  const handleToggleBlockUser = async (userId: string, isBlocked: boolean) => {
+    try {
+      await ApiClient.toggleBlockUser(userId, isBlocked);
+      showToast(isBlocked ? 'کاربر با موفقیت مسدود گردید.' : 'مسدودیت کاربر با موفقیت برطرف شد.', 'success');
+      loadAllData();
+    } catch (e: any) {
+      if (e.message === 'UNAUTHORIZED') {
+        setIsAuthenticated(false);
+        showToast('جلسه کاری شما منقضی شده است. لطفا دوباره وارد شوید.', 'warning');
+      } else {
+        showToast(e.message || 'خطا در تغییر وضعیت مسدودسازی کاربر.', 'warning');
+      }
+    }
+  };
+
   const handleAddSkill = async (name: string) => {
     try {
       await ApiClient.createSkill(name);
@@ -344,7 +374,13 @@ function AppContent() {
             } />
 
             <Route path="/users" element={
-              isAuthenticated ? <Users usersList={usersList} /> : <Navigate to="/login" replace />
+              isAuthenticated ? (
+                <Users 
+                  usersList={usersList} 
+                  onDeleteUser={handleDeleteUser}
+                  onToggleBlockUser={handleToggleBlockUser}
+                />
+              ) : <Navigate to="/login" replace />
             } />
 
             <Route path="/approvals" element={

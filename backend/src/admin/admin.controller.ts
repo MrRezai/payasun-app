@@ -109,4 +109,22 @@ export class AdminController {
   ) {
     return this.inquiryService.toggleOfferVisibility(id, isHidden);
   }
+
+  @Patch('users/:id/toggle-block')
+  async toggleBlockUser(
+    @Param('id') id: string,
+    @Body('isBlocked') isBlocked: boolean,
+  ) {
+    return this.profileService.toggleBlockUser(id, isBlocked);
+  }
+
+  @Delete('users/:id')
+  async deleteUser(@Param('id') id: string) {
+    // 1. Clean up user's inquiries and offers
+    await this.inquiryService.deleteInquiriesAndOffersByUser(id);
+    // 2. Delete user and their cascade profiles
+    await this.profileService.deleteUser(id);
+    return { message: 'کاربر با موفقیت به همراه تمامی اطلاعات مرتبط حذف شد.' };
+  }
 }
+

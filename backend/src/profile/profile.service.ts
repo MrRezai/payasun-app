@@ -505,13 +505,13 @@ export class ProfileService implements OnModuleInit {
       const name = user.role === Role.WELDER
         ? (welder?.first_name || welder?.last_name ? `${welder.first_name || ''} ${welder.last_name || ''}`.trim() : 'جوشکار بدون نام')
         : (employer?.company_name || (employer?.first_name || employer?.last_name ? `${employer.first_name || ''} ${employer.last_name || ''}`.trim() : 'کارفرما بدون نام'));
-
       return {
         id: user.id,
         phone_number: user.phone_number,
         role: user.role,
         roles: user.roles || [user.role],
         created_at: user.created_at,
+        is_blocked: user.is_blocked || false,
         name,
         city: user.role === Role.WELDER ? welder?.home_city : employer?.city,
         province: user.role === Role.WELDER ? welder?.home_province : employer?.province,
@@ -519,7 +519,6 @@ export class ProfileService implements OnModuleInit {
       };
     });
   }
-
   async getUserProfiles(userId: string): Promise<any> {
     const user = await this.userRepository.findOne({ where: { id: userId } });
     if (!user) {
@@ -533,5 +532,22 @@ export class ProfileService implements OnModuleInit {
       where: { user_id: userId },
     });
     return { user, welder, employer };
+  }
+
+  async toggleBlockUser(userId: string, isBlocked: boolean): Promise<User> {
+    const user = await this.userRepository.findOne({ where: { id: userId } });
+    if (!user) {
+      throw new NotFoundException('کاربر مورد نظر یافت نشد.');
+    }
+    user.is_blocked = isBlocked;
+    return this.userRepository.save(user);
+  }
+
+  async deleteUser(userId: string): Promise<void> {
+    const user = await this.userRepository.findOne({ where: { id: userId } });
+    if (!user) {
+      throw new NotFoundException('کاربر مورد نظر یافت نشد.');
+    }
+    await this.userRepository.remove(user);
   }
 }

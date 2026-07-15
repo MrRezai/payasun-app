@@ -58,7 +58,11 @@ export class AuthService {
   async sendOtp(
     phoneNumber: string,
   ): Promise<{ message: string; otpCode?: string }> {
-    // Generate a cryptographically sufficient 5-digit code
+    const user = await this.userRepository.findOne({ where: { phone_number: phoneNumber } });
+    if (user && user.is_blocked) {
+      throw new BadRequestException('حساب شما مسدود شده است. لطفا با پشتیبانی تماس بگیرید.');
+    }
+
     const code = Math.floor(10000 + Math.random() * 90000).toString();
 
     // Store in cache with 2-minute expiration
@@ -126,6 +130,9 @@ export class AuthService {
     });
 
     if (user) {
+      if (user.is_blocked) {
+        throw new BadRequestException('حساب شما مسدود شده است. لطفا با پشتیبانی تماس بگیرید.');
+      }
       // Ensure roles is initialized
       if (!user.roles) {
         user.roles = [user.role];
@@ -187,9 +194,12 @@ export class AuthService {
     let user = await this.userRepository.findOne({
       where: { id: userId },
     });
-
     if (!user) {
       throw new NotFoundException('User not found.');
+    }
+
+    if (user.is_blocked) {
+      throw new BadRequestException('حساب شما مسدود شده است. لطفا با پشتیبانی تماس بگیرید.');
     }
 
     if (!user.roles) {
