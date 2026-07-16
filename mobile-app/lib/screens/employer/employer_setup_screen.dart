@@ -191,7 +191,8 @@ class _EmployerSetupScreenState extends State<EmployerSetupScreen> {
 
             return Directionality(
               textDirection: TextDirection.rtl,
-              child: Padding(
+              child: Container(
+                height: MediaQuery.of(context).size.height * 0.65,
                 padding: EdgeInsets.only(
                   bottom: MediaQuery.of(context).viewInsets.bottom,
                   top: 20,
@@ -307,7 +308,8 @@ class _EmployerSetupScreenState extends State<EmployerSetupScreen> {
 
             return Directionality(
               textDirection: TextDirection.rtl,
-              child: Padding(
+              child: Container(
+                height: MediaQuery.of(context).size.height * 0.65,
                 padding: EdgeInsets.only(
                   bottom: MediaQuery.of(context).viewInsets.bottom,
                   top: 20,

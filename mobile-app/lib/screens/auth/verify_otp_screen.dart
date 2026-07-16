@@ -27,15 +27,22 @@ class _VerifyOtpScreenState extends State<VerifyOtpScreen> {
   static const int totalSeconds = 120; // 2 minutes countdown
   int _secondsRemaining = totalSeconds;
   Timer? _timer;
-
   // 5 digits verification code
-  final List<TextEditingController> _controllers = List.generate(5, (_) => TextEditingController());
+  final List<TextEditingController> _controllers = List.generate(5, (_) => TextEditingController(text: '\u200B'));
   final List<FocusNode> _focusNodes = List.generate(5, (_) => FocusNode());
 
   @override
   void initState() {
     super.initState();
     _startTimer();
+    for (int i = 0; i < 5; i++) {
+      _focusNodes[i].addListener(() {
+        if (_focusNodes[i].hasFocus) {
+          final text = _controllers[i].text;
+          _controllers[i].selection = TextSelection.collapsed(offset: text.length);
+        }
+      });
+    }
   }
 
   void _startTimer() {
@@ -87,8 +94,9 @@ class _VerifyOtpScreenState extends State<VerifyOtpScreen> {
       }
     }
   }
+
   void _submitCode() async {
-    final rawCode = _controllers.map((c) => c.text).join();
+    final rawCode = _controllers.map((c) => c.text.replaceAll('\u200B', '')).join();
     final code = Formatters.cleanNumber(rawCode);
     if (code.length != 5) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -397,6 +405,13 @@ class _VerifyOtpScreenState extends State<VerifyOtpScreen> {
     );
   }
 
+  void _setControllerText(int index, String text) {
+    _controllers[index].value = TextEditingValue(
+      text: text,
+      selection: TextSelection.collapsed(offset: text.length),
+    );
+  }
+
   Widget _buildOtpGrid() {
     return Directionality(
       textDirection: TextDirection.ltr,
@@ -413,7 +428,7 @@ class _VerifyOtpScreenState extends State<VerifyOtpScreen> {
               textAlign: TextAlign.center,
               inputFormatters: [
                 PersianDigitsFormatter(),
-                LengthLimitingTextInputFormatter(1),
+                LengthLimitingTextInputFormatter(3),
               ],
               style: const TextStyle(
                 fontSize: 18,
@@ -439,16 +454,22 @@ class _VerifyOtpScreenState extends State<VerifyOtpScreen> {
                 ),
               ),
               onChanged: (value) {
-                if (value.isNotEmpty) {
+                if (value.length >= 2) {
+                  final digit = value.substring(value.length - 1);
+                  _setControllerText(index, '\u200B$digit');
                   if (index < 4) {
                     _focusNodes[index + 1].requestFocus();
                   } else {
                     _focusNodes[index].unfocus();
                     _submitCode();
                   }
-                } else {
+                } else if (value.isEmpty) {
                   if (index > 0) {
+                    _setControllerText(index, '\u200B');
+                    _setControllerText(index - 1, '\u200B');
                     _focusNodes[index - 1].requestFocus();
+                  } else {
+                    _setControllerText(index, '\u200B');
                   }
                 }
               },

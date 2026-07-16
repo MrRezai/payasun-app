@@ -652,43 +652,51 @@ class _WelderProfileScreenState extends State<WelderProfileScreen> {
     if (!_initialized && auth.profileData != null) {
       _populateFields();
     }
-
-    return Scaffold(
-      backgroundColor: AppColors.lightGrey,
-      appBar: AppBar(
-        backgroundColor: AppColors.white,
-        elevation: 0,
-        title: Text(
-          _getViewTitle(),
-          style: const TextStyle(color: AppColors.royalBlue, fontSize: 16, fontWeight: FontWeight.bold),
+    return PopScope(
+      canPop: _currentView == ProfileView.menu,
+      onPopInvokedWithResult: (didPop, result) {
+        if (didPop) return;
+        if (_currentView != ProfileView.menu) {
+          setState(() => _currentView = ProfileView.menu);
+        }
+      },
+      child: Scaffold(
+        backgroundColor: AppColors.lightGrey,
+        appBar: AppBar(
+          backgroundColor: AppColors.white,
+          elevation: 0,
+          title: Text(
+            _getViewTitle(),
+            style: const TextStyle(color: AppColors.royalBlue, fontSize: 16, fontWeight: FontWeight.bold),
+          ),
+          centerTitle: true,
+          leading: _currentView != ProfileView.menu
+              ? IconButton(
+                  icon: const Icon(Icons.arrow_back, color: AppColors.textDark),
+                  onPressed: () => setState(() => _currentView = ProfileView.menu),
+                )
+              : null,
+          bottom: PreferredSize(
+            preferredSize: const Size.fromHeight(1),
+            child: Container(color: AppColors.borderGrey, height: 1),
+          ),
         ),
-        centerTitle: true,
-        leading: _currentView != ProfileView.menu
-            ? IconButton(
-                icon: const Icon(Icons.arrow_back, color: AppColors.textDark),
-                onPressed: () => setState(() => _currentView = ProfileView.menu),
+        body: _isSaving
+            ? const Center(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    CircularProgressIndicator(color: AppColors.royalBlue),
+                    SizedBox(height: 16),
+                    Text('در حال ذخیره‌سازی اطلاعات...', style: TextStyle(fontWeight: FontWeight.bold)),
+                  ],
+                ),
               )
-            : null,
-        bottom: PreferredSize(
-          preferredSize: const Size.fromHeight(1),
-          child: Container(color: AppColors.borderGrey, height: 1),
-        ),
-      ),
-      body: _isSaving
-          ? const Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  CircularProgressIndicator(color: AppColors.royalBlue),
-                  SizedBox(height: 16),
-                  Text('در حال ذخیره‌سازی اطلاعات...', style: TextStyle(fontWeight: FontWeight.bold)),
-                ],
+            : AnimatedSwitcher(
+                duration: const Duration(milliseconds: 250),
+                child: _buildCurrentViewBody(auth),
               ),
-            )
-          : AnimatedSwitcher(
-              duration: const Duration(milliseconds: 250),
-              child: _buildCurrentViewBody(auth),
-            ),
+      ),
     );
   }
 
@@ -985,7 +993,7 @@ class _WelderProfileScreenState extends State<WelderProfileScreen> {
             },
           ),
           _buildMenuTile(
-            title: 'مدیریت محدوده فعالیت (استان و شهرها)',
+            title: 'مدیریت محدوده فعالیت',
             subtitle: 'انتخاب استان‌ها و اضافه کردن شهرهای خدماتی شما',
             icon: Icons.map_outlined,
             onTap: () {
@@ -994,7 +1002,7 @@ class _WelderProfileScreenState extends State<WelderProfileScreen> {
             },
           ),
           _buildMenuTile(
-            title: 'مدیریت تخصص‌ها و مهارت‌های جوشکاری',
+            title: 'مدیریت تخصص‌ و مهارت‌',
             subtitle: 'ویرایش تخصص‌ها و انواع فرآیندهای جوشکاری مجاز شما',
             icon: Icons.construction_outlined,
             onTap: () {
@@ -1320,7 +1328,8 @@ class _WelderProfileScreenState extends State<WelderProfileScreen> {
 
             return Directionality(
               textDirection: TextDirection.rtl,
-              child: Padding(
+              child: Container(
+                height: MediaQuery.of(context).size.height * 0.65,
                 padding: EdgeInsets.only(
                   bottom: MediaQuery.of(context).viewInsets.bottom,
                   top: 20,
@@ -1434,7 +1443,8 @@ class _WelderProfileScreenState extends State<WelderProfileScreen> {
 
             return Directionality(
               textDirection: TextDirection.rtl,
-              child: Padding(
+              child: Container(
+                height: MediaQuery.of(context).size.height * 0.65,
                 padding: EdgeInsets.only(
                   bottom: MediaQuery.of(context).viewInsets.bottom,
                   top: 20,
@@ -1574,7 +1584,8 @@ class _WelderProfileScreenState extends State<WelderProfileScreen> {
 
             return Directionality(
               textDirection: TextDirection.rtl,
-              child: Padding(
+              child: Container(
+                height: MediaQuery.of(context).size.height * 0.65,
                 padding: EdgeInsets.only(
                   bottom: MediaQuery.of(context).viewInsets.bottom,
                   top: 20,
@@ -1688,7 +1699,8 @@ class _WelderProfileScreenState extends State<WelderProfileScreen> {
 
             return Directionality(
               textDirection: TextDirection.rtl,
-              child: Padding(
+              child: Container(
+                height: MediaQuery.of(context).size.height * 0.65,
                 padding: EdgeInsets.only(
                   bottom: MediaQuery.of(context).viewInsets.bottom,
                   top: 20,

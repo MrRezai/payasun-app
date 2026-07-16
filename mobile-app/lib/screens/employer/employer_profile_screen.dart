@@ -312,50 +312,59 @@ class _EmployerProfileScreenState extends State<EmployerProfileScreen> {
     if (!_initialized && auth.profileData != null) {
       _populateFields();
     }
-
-    return Scaffold(
-      backgroundColor: AppColors.lightGrey,
-      appBar: AppBar(
-        backgroundColor: AppColors.white,
-        elevation: 0,
-        scrolledUnderElevation: 0,
-        title: Text(
-          _getViewTitle(),
-          style: const TextStyle(
-            color: AppColors.royalBlue,
-            fontSize: 16,
-            fontWeight: FontWeight.bold,
-            fontFamily: 'Vazirmatn',
-          ),
-        ),
-        centerTitle: true,
-        leading: _currentView != ProfileView.menu
-            ? IconButton(
-                icon: const Icon(Icons.arrow_back_ios_new, color: AppColors.textDark, size: 18),
-                onPressed: () => setState(() => _currentView = ProfileView.menu),
-              )
-            : null,
-      ),
-      body: _isSaving
-          ? const Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  CircularProgressIndicator(color: AppColors.royalBlue),
-                  SizedBox(height: 16),
-                  Text(
-                    'در حال ذخیره‌سازی اطلاعات...',
-                    style: TextStyle(fontWeight: FontWeight.bold, fontFamily: 'Vazirmatn'),
-                  ),
-                ],
-              ),
-            )
-          : AnimatedSwitcher(
-              duration: const Duration(milliseconds: 250),
-              child: _buildCurrentViewBody(auth),
+    return PopScope(
+      canPop: _currentView == ProfileView.menu,
+      onPopInvokedWithResult: (didPop, result) {
+        if (didPop) return;
+        if (_currentView != ProfileView.menu) {
+          setState(() => _currentView = ProfileView.menu);
+        }
+      },
+      child: Scaffold(
+        backgroundColor: AppColors.lightGrey,
+        appBar: AppBar(
+          backgroundColor: AppColors.white,
+          elevation: 0,
+          scrolledUnderElevation: 0,
+          title: Text(
+            _getViewTitle(),
+            style: const TextStyle(
+              color: AppColors.royalBlue,
+              fontSize: 16,
+              fontWeight: FontWeight.bold,
+              fontFamily: 'Vazirmatn',
             ),
+          ),
+          centerTitle: true,
+          leading: _currentView != ProfileView.menu
+              ? IconButton(
+                  icon: const Icon(Icons.arrow_back_ios_new, color: AppColors.textDark, size: 18),
+                  onPressed: () => setState(() => _currentView = ProfileView.menu),
+                )
+              : null,
+        ),
+        body: _isSaving
+            ? const Center(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    CircularProgressIndicator(color: AppColors.royalBlue),
+                    SizedBox(height: 16),
+                    Text(
+                      'در حال ذخیره‌سازی اطلاعات...',
+                      style: TextStyle(fontWeight: FontWeight.bold, fontFamily: 'Vazirmatn'),
+                    ),
+                  ],
+                ),
+              )
+            : AnimatedSwitcher(
+                duration: const Duration(milliseconds: 250),
+                child: _buildCurrentViewBody(auth),
+              ),
+      ),
     );
   }
+
   String _getViewTitle() {
     switch (_currentView) {
       case ProfileView.menu:
