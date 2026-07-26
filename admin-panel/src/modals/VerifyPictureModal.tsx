@@ -1,5 +1,9 @@
 import { useState } from 'react';
+import { Modal, Button, Space, Image, Typography, Alert, Card, Row } from 'antd';
+import { CheckCircleOutlined, CloseCircleOutlined } from '@ant-design/icons';
 import { BASE_URL } from '../api';
+
+const { Text, Paragraph } = Typography;
 
 interface VerifyPictureModalProps {
   user: any;
@@ -10,97 +14,93 @@ interface VerifyPictureModalProps {
 export default function VerifyPictureModal({ user, onClose, onVerify }: VerifyPictureModalProps) {
   const [confirmAction, setConfirmAction] = useState<boolean | null>(null);
 
+  const imageUrl = user.pending_url 
+    ? (user.pending_url.startsWith('http') ? user.pending_url : `${BASE_URL}${user.pending_url}`)
+    : '';
+
   return (
-    <div className="modal-overlay" onClick={onClose}>
-      <div className="modal-content" onClick={(e) => e.stopPropagation()}>
-        <div className="modal-header">
-          <h3>بررسی تصویر ارسالی جهت احراز هویت</h3>
-          <button className="modal-close" onClick={onClose}>&times;</button>
-        </div>
+    <Modal
+      open={true}
+      title="بررسی تصویر ارسالی جهت احراز هویت"
+      onCancel={onClose}
+      footer={null}
+      width={520}
+      centered
+    >
+      {confirmAction !== null ? (
+        <Space direction="vertical" style={{ width: '100%' }} size="medium">
+          <Alert
+            message={confirmAction ? 'تایید نهایی تصویر پروفایل' : 'رد نهایی تصویر پروفایل'}
+            description={
+              confirmAction
+                ? `آیا از تایید تصویر پروفایل کاربر «${user.name}» اطمینان دارید؟ تصویر جدید پس از تایید در اپلیکیشن فعال خواهد شد.`
+                : `آیا از رد تصویر پروفایل کاربر «${user.name}» اطمینان دارید؟ تصویر ارسالی حذف خواهد شد.`
+            }
+            type={confirmAction ? 'success' : 'error'}
+            showIcon
+            icon={confirmAction ? <CheckCircleOutlined /> : <CloseCircleOutlined />}
+          />
 
-        {confirmAction !== null ? (
-          <div style={{ animation: 'fadeIn 0.2s ease-out', padding: '12px 0' }}>
-            <div style={{ 
-              backgroundColor: confirmAction ? 'rgba(16, 185, 129, 0.08)' : 'rgba(239, 68, 68, 0.08)', 
-              border: `1px solid ${confirmAction ? 'rgba(16, 185, 129, 0.3)' : 'rgba(239, 68, 68, 0.3)'}`, 
-              padding: '16px', 
-              borderRadius: '12px', 
-              marginBottom: '20px' 
-            }}>
-              <h4 style={{ fontSize: '15px', color: confirmAction ? 'var(--success)' : 'var(--danger)', fontWeight: 'bold', marginBottom: '8px' }}>
-                {confirmAction ? 'تایید نهایی تصویر پروفایل' : 'رد نهایی تصویر پروفایل'}
-              </h4>
-              <p style={{ fontSize: '13px', color: 'var(--text-primary)', lineHeight: '1.6' }}>
-                {confirmAction 
-                  ? `آیا از تایید تصویر پروفایل کاربر «${user.name}» اطمینان دارید؟ تصویر جدید پس از تایید در اپلیکیشن فعال و به سایر کاربران نمایش داده خواهد شد.`
-                  : `آیا از رد تصویر پروفایل کاربر «${user.name}» اطمینان دارید؟ تصویر ارسالی حذف گردیده و کاربر به حالت تعلیق تصویر باقی خواهد ماند.`}
-              </p>
-            </div>
-            <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end' }}>
-              <button 
-                className={`btn ${confirmAction ? 'btn-success' : 'btn-danger'}`}
-                style={{ padding: '10px 20px', fontWeight: 'bold' }}
-                onClick={() => onVerify(user.id, user.role, confirmAction)}
-              >
-                {confirmAction ? 'تایید قطعی و ثبت انتشار' : 'ثبت قطعی رد تصویر'}
-              </button>
-              <button 
-                className="btn btn-secondary"
-                onClick={() => setConfirmAction(null)}
-              >
-                انصراف و بازگشت
-              </button>
-            </div>
+          <Row justify="end" style={{ gap: '8px', marginTop: '16px' }}>
+            <Button
+              type="primary"
+              danger={!confirmAction}
+              style={confirmAction ? { backgroundColor: '#10B981', borderColor: '#10B981', fontWeight: 'bold' } : { fontWeight: 'bold' }}
+              onClick={() => onVerify(user.id, user.role, confirmAction)}
+            >
+              {confirmAction ? 'تایید قطعی و ثبت انتشار' : 'ثبت قطعی رد تصویر'}
+            </Button>
+            <Button onClick={() => setConfirmAction(null)}>
+              انصراف و بازگشت
+            </Button>
+          </Row>
+        </Space>
+      ) : (
+        <Space direction="vertical" style={{ width: '100%', textAlign: 'center' }} size="large">
+          <div style={{ textAlign: 'center' }}>
+            {imageUrl ? (
+              <Image
+                width={220}
+                height={220}
+                src={imageUrl}
+                style={{ borderRadius: 16, objectFit: 'cover', boxShadow: '0 8px 24px rgba(0,0,0,0.1)' }}
+              />
+            ) : (
+              <Card style={{ width: 220, margin: '0 auto', textAlign: 'center' }}>
+                <Text type="secondary">فاقد تصویر ارسالی</Text>
+              </Card>
+            )}
           </div>
-        ) : (
-          <>
-            <div style={{ textAlign: 'center', marginBottom: '20px' }}>
-              {user.pending_url ? (
-                <img 
-                  src={`${BASE_URL}${user.pending_url}`} 
-                  alt="Enlarged User Profile" 
-                  style={{ width: '220px', height: '220px', borderRadius: '16px', objectFit: 'cover', border: '2px solid var(--border)', boxShadow: '0 8px 24px rgba(0,0,0,0.1)' }}
-                  onError={(e) => {
-                    e.currentTarget.src = user.pending_url;
-                  }}
-                />
-              ) : (
-                <div style={{ padding: '40px', backgroundColor: 'var(--bg-dark)', borderRadius: '12px' }}>فاقد تصویر ارسالی</div>
-              )}
-            </div>
 
-            <div style={{ marginBottom: '24px', backgroundColor: 'rgba(0,0,0,0.02)', padding: '14px', borderRadius: '8px', border: '1px solid var(--border)' }}>
-              <p style={{ fontSize: '13px', color: 'var(--text-secondary)', marginBottom: '8px' }}>
-                کاربر: <strong style={{ color: 'var(--text-primary)' }}>{user.name}</strong> ({user.role === 'WELDER' ? 'جوشکار' : 'کارفرما'})
-              </p>
-              <p style={{ fontSize: '13px', color: 'var(--text-secondary)' }}>
-                بیوگرافی/توضیحات: <span style={{ color: 'var(--text-primary)', fontStyle: 'italic' }}>{user.bio || 'توضیحاتی وارد نشده است.'}</span>
-              </p>
-            </div>
+          <Card size="small" style={{ textAlign: 'right', backgroundColor: '#fafafa' }}>
+            <Paragraph style={{ margin: '0 0 6px 0', fontSize: '13px' }}>
+              <Text type="secondary">کاربر: </Text>
+              <Text strong>{user.name}</Text>
+              <Text type="secondary"> ({user.role === 'WELDER' ? 'جوشکار' : 'کارفرما'})</Text>
+            </Paragraph>
+            <Paragraph style={{ margin: 0, fontSize: '13px' }}>
+              <Text type="secondary">بیوگرافی / توضیحات: </Text>
+              <Text italic>{user.bio || 'توضیحاتی وارد نشده است.'}</Text>
+            </Paragraph>
+          </Card>
 
-            <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end', flexWrap: 'wrap' }}>
-              <button 
-                className="btn btn-success" 
-                onClick={() => setConfirmAction(true)}
-              >
-                تایید تصویر و انتشار در اپ
-              </button>
-              <button 
-                className="btn btn-danger" 
-                onClick={() => setConfirmAction(false)}
-              >
-                رد تصویر
-              </button>
-              <button 
-                className="btn btn-secondary" 
-                onClick={onClose}
-              >
-                بستن
-              </button>
-            </div>
-          </>
-        )}
-      </div>
-    </div>
+          <Row justify="end" style={{ gap: '8px' }}>
+            <Button
+              type="primary"
+              style={{ backgroundColor: '#10B981', borderColor: '#10B981', fontWeight: 'bold' }}
+              onClick={() => setConfirmAction(true)}
+            >
+              تایید تصویر و انتشار
+            </Button>
+            <Button danger onClick={() => setConfirmAction(false)}>
+              رد تصویر
+            </Button>
+            <Button onClick={onClose}>
+              بستن
+            </Button>
+          </Row>
+        </Space>
+      )}
+    </Modal>
   );
 }

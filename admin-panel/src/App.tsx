@@ -462,10 +462,25 @@ function AppContent() {
   );
 }
 
+import { ConfigProvider } from 'antd';
+import fa_IR from 'antd/locale/fa_IR';
+
 export default function App() {
   return (
-    <BrowserRouter>
-      <AppContent />
-    </BrowserRouter>
+    <ConfigProvider
+      direction="rtl"
+      locale={fa_IR}
+      theme={{
+        token: {
+          fontFamily: 'Vazirmatn, Inter, sans-serif',
+          colorPrimary: '#4169E1',
+          borderRadius: 8,
+        },
+      }}
+    >
+      <BrowserRouter>
+        <AppContent />
+      </BrowserRouter>
+    </ConfigProvider>
   );
 }

@@ -1,5 +1,8 @@
-import { useState } from 'react';
+import { Card, Form, Input, Button, Typography } from 'antd';
+import { UserOutlined, LockOutlined } from '@ant-design/icons';
 import logoImg from '../assets/logo/joftojoor.png';
+
+const { Title, Text } = Typography;
 
 interface LoginProps {
   onLoginSuccess: (username: string, pass: string) => Promise<void>;
@@ -8,59 +11,70 @@ interface LoginProps {
 }
 
 export default function Login({ onLoginSuccess, isLoading }: LoginProps) {
-  const [username, setUsername] = useState('');
-  const [password, setPassword] = useState('');
-
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    onLoginSuccess(username, password);
+  const onFinish = (values: { username: string; password: string }) => {
+    onLoginSuccess(values.username, values.password);
   };
 
   return (
     <div style={{ display: 'flex', minHeight: '100vh', alignItems: 'center', justifyContent: 'center', backgroundColor: '#F8FAFC', padding: '16px' }}>
-      <div className="glass-card" style={{ width: '100%', maxWidth: '420px', padding: '32px', boxShadow: '0 10px 30px rgba(15, 23, 42, 0.08)' }}>
+      <Card 
+        style={{ width: '100%', maxWidth: '420px', borderRadius: '16px', boxShadow: '0 10px 30px rgba(15, 23, 42, 0.08)' }}
+        bodyStyle={{ padding: '32px 24px' }}
+      >
         <div style={{ textAlign: 'center', marginBottom: '24px' }}>
           <img src={logoImg} alt="جفت و جور" style={{ width: '64px', height: '64px', marginBottom: '12px', borderRadius: '16px' }} />
-          <h2 style={{ fontSize: '20px', fontWeight: '800', color: 'var(--text-primary)' }}>ورود به پنل مدیریت جفت‌وجور</h2>
-          <p style={{ fontSize: '12px', color: 'var(--text-secondary)', marginTop: '6px' }}>
+          <Title level={4} style={{ margin: 0, fontWeight: 800, color: 'var(--text-primary)' }}>
+            ورود به پنل مدیریت جفت‌وجور
+          </Title>
+          <Text type="secondary" style={{ fontSize: '12px', marginTop: '6px', display: 'block' }}>
             احراز هویت کنترل ادمین سیستم
-          </p>
+          </Text>
         </div>
 
-        <form onSubmit={handleSubmit}>
-          <div className="form-group">
-            <label htmlFor="adminUser">نام کاربری ادمین (Username)</label>
-            <input 
-              type="text" 
-              id="adminUser"
-              className="input-control"
-              placeholder="نام کاربری را وارد کنید"
-              value={username}
-              onChange={(e) => setUsername(e.target.value)}
+        <Form
+          name="admin_login"
+          layout="vertical"
+          onFinish={onFinish}
+          autoComplete="off"
+          size="large"
+        >
+          <Form.Item
+            label="نام کاربری ادمین (Username)"
+            name="username"
+            rules={[{ required: true, message: 'لطفاً نام کاربری را وارد کنید.' }]}
+          >
+            <Input 
+              prefix={<UserOutlined style={{ color: 'rgba(0,0,0,0.25)' }} />} 
+              placeholder="نام کاربری"
               disabled={isLoading}
-              required
             />
-          </div>
-          
-          <div className="form-group">
-            <label htmlFor="adminPass">رمز عبور (Password)</label>
-            <input 
-              type="password" 
-              id="adminPass"
-              className="input-control"
-              placeholder="رمز عبور را وارد کنید"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              disabled={isLoading}
-              required
-            />
-          </div>
+          </Form.Item>
 
-          <button type="submit" className="btn btn-primary" style={{ width: '100%', height: '44px', marginTop: '8px' }} disabled={isLoading}>
-            {isLoading ? 'در حال بررسی...' : 'ورود به پنل مدیریت'}
-          </button>
-        </form>
-      </div>
+          <Form.Item
+            label="رمز عبور (Password)"
+            name="password"
+            rules={[{ required: true, message: 'لطفاً رمز عبور را وارد کنید.' }]}
+          >
+            <Input.Password 
+              prefix={<LockOutlined style={{ color: 'rgba(0,0,0,0.25)' }} />} 
+              placeholder="رمز عبور"
+              disabled={isLoading}
+            />
+          </Form.Item>
+
+          <Form.Item style={{ marginTop: '24px', marginBottom: 0 }}>
+            <Button 
+              type="primary" 
+              htmlType="submit" 
+              loading={isLoading} 
+              block 
+              style={{ height: '46px', fontWeight: 'bold' }}
+            >
+              {isLoading ? 'در حال بررسی...' : 'ورود به پنل مدیریت'}
+            </Button>
+          </Form.Item>
+        </Form>
+      </Card>
     </div>
   );
 }

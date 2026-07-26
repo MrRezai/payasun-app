@@ -1,5 +1,9 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
+import { Row, Col, Card, Form, Input, Button, Table, Space, Typography, Popconfirm } from 'antd';
+import { PlusOutlined, EditOutlined, DeleteOutlined, CheckOutlined, CloseOutlined } from '@ant-design/icons';
 import { Skill } from '../types';
+
+const { Title, Text } = Typography;
 
 interface SkillsProps {
   skills: Skill[];
@@ -9,15 +13,20 @@ interface SkillsProps {
 }
 
 export default function Skills({ skills, onAddSkill, onEditSkill, onDeleteSkill }: SkillsProps) {
-  const [newSkillName, setNewSkillName] = useState('');
+  const [form] = Form.useForm();
+  const [loading, setLoading] = useState(false);
   const [editingSkillId, setEditingSkillId] = useState<number | null>(null);
   const [editingSkillName, setEditingSkillName] = useState('');
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!newSkillName.trim()) return;
-    await onAddSkill(newSkillName.trim());
-    setNewSkillName('');
+  const handleSubmit = async (values: { name: string }) => {
+    if (!values.name?.trim()) return;
+    setLoading(true);
+    try {
+      await onAddSkill(values.name.trim());
+      form.resetFields();
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleStartEdit = (skill: Skill) => {
@@ -31,111 +40,142 @@ export default function Skills({ skills, onAddSkill, onEditSkill, onDeleteSkill 
     setEditingSkillId(null);
   };
 
-  return (
-    <div className="modal-grid-2col" style={{ alignItems: 'start' }}>
-      {/* Create Skill Form */}
-      <div className="glass-card">
-        <h3 style={{ fontSize: '15px', fontWeight: '700', marginBottom: '18px' }}>افزودن تخصص جوشکاری جدید</h3>
-        <form onSubmit={handleSubmit}>
-          <div className="form-group">
-            <label htmlFor="skillName">عنوان تخصص (فارسی)</label>
-            <input 
-              type="text" 
-              id="skillName"
-              className="input-control"
-              placeholder="مثال: جوشکاری آرگون تحت فشار"
-              value={newSkillName}
-              onChange={(e) => setNewSkillName(e.target.value)}
-              required
+  const columns = [
+    {
+      title: 'شناسه',
+      dataIndex: 'id',
+      key: 'id',
+      width: 90,
+      render: (id: number) => <Text type="secondary">#{id}</Text>,
+    },
+    {
+      title: 'عنوان تخصص',
+      dataIndex: 'name',
+      key: 'name',
+      render: (text: string, record: Skill) => {
+        if (editingSkillId === record.id) {
+          return (
+            <Input
+              value={editingSkillName}
+              onChange={(e) => setEditingSkillName(e.target.value)}
+              onPressEnter={() => handleSave(record.id)}
+              autoFocus
             />
-          </div>
-          <button type="submit" className="btn btn-primary" style={{ width: '100%', height: '42px' }}>
-            ثبت تخصص جدید
-          </button>
-        </form>
-      </div>
+          );
+        }
+        return <Text strong>{text}</Text>;
+      },
+    },
+    {
+      title: 'عملیات مدیریتی',
+      key: 'actions',
+      width: 180,
+      align: 'left' as const,
+      render: (_: any, record: Skill) => {
+        if (editingSkillId === record.id) {
+          return (
+            <Space size="small">
+              <Button
+                type="primary"
+                size="small"
+                icon={<CheckOutlined />}
+                onClick={() => handleSave(record.id)}
+              >
+                ذخیره
+              </Button>
+              <Button
+                size="small"
+                icon={<CloseOutlined />}
+                onClick={() => setEditingSkillId(null)}
+              >
+                انصراف
+              </Button>
+            </Space>
+          );
+        }
+
+        return (
+          <Space size="small">
+            <Button
+              size="small"
+              icon={<EditOutlined />}
+              onClick={() => handleStartEdit(record)}
+            >
+              ویرایش
+            </Button>
+            <Popconfirm
+              title="حذف تخصص"
+              description="آیا از حذف این تخصص اطمینان دارید؟"
+              onConfirm={() => onDeleteSkill(record.id)}
+              okText="بله، حذف کن"
+              cancelText="خیر"
+              okButtonProps={{ danger: true }}
+            >
+              <Button danger size="small" icon={<DeleteOutlined />}>
+                حذف
+              </Button>
+            </Popconfirm>
+          </Space>
+        );
+      },
+    },
+  ];
+
+  return (
+    <Row gutter={[24, 24]} align="top">
+      {/* Create Skill Form */}
+      <Col xs={24} lg={9}>
+        <Card title={<Title level={5} style={{ margin: 0 }}>افزودن تخصص جوشکاری جدید</Title>}>
+          <Form
+            form={form}
+            layout="vertical"
+            onFinish={handleSubmit}
+            size="large"
+          >
+            <Form.Item
+              label="عنوان تخصص (فارسی)"
+              name="name"
+              rules={[{ required: true, message: 'لطفاً عنوان تخصص را وارد کنید.' }]}
+            >
+              <Input placeholder="مثال: جوشکاری آرگون تحت فشار" />
+            </Form.Item>
+
+            <Form.Item style={{ marginBottom: 0 }}>
+              <Button
+                type="primary"
+                htmlType="submit"
+                loading={loading}
+                icon={<PlusOutlined />}
+                block
+                style={{ fontWeight: 'bold' }}
+              >
+                ثبت تخصص جدید
+              </Button>
+            </Form.Item>
+          </Form>
+        </Card>
+      </Col>
 
       {/* Skills Table List */}
-      <div className="glass-card">
-        <h3 style={{ fontSize: '15px', fontWeight: '700', marginBottom: '16px' }}>لیست کل تخصص‌های مجاز پلتفرم</h3>
-        
-        {skills.length === 0 ? (
-          <div style={{ padding: '30px 0', textAlign: 'center', color: 'var(--text-secondary)' }}>هیچ تخصصی در سیستم ثبت نشده است.</div>
-        ) : (
-          <div className="table-responsive">
-            <table className="custom-table">
-              <thead>
-                <tr>
-                  <th style={{ width: '80px' }}>شناسه</th>
-                  <th>عنوان تخصص</th>
-                  <th style={{ width: '160px', textAlign: 'left' }}>عملیات مدیریتی</th>
-                </tr>
-              </thead>
-              <tbody>
-                {skills.map((skill) => (
-                  <tr key={skill.id}>
-                    <td>#{skill.id}</td>
-                    <td>
-                      {editingSkillId === skill.id ? (
-                        <input 
-                          type="text" 
-                          className="input-control" 
-                          style={{ padding: '4px 8px', fontSize: '13px' }}
-                          value={editingSkillName}
-                          onChange={(e) => setEditingSkillName(e.target.value)}
-                          onKeyDown={(e) => {
-                            if (e.key === 'Enter') handleSave(skill.id);
-                            else if (e.key === 'Escape') setEditingSkillId(null);
-                          }}
-                        />
-                      ) : (
-                        <span style={{ fontWeight: '500' }}>{skill.name}</span>
-                      )}
-                    </td>
-                    <td style={{ textAlign: 'left' }}>
-                      {editingSkillId === skill.id ? (
-                        <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
-                          <button 
-                            className="btn btn-success" 
-                            style={{ padding: '4px 10px', fontSize: '11px' }}
-                            onClick={() => handleSave(skill.id)}
-                          >
-                            ذخیره
-                          </button>
-                          <button 
-                            className="btn btn-secondary" 
-                            style={{ padding: '4px 10px', fontSize: '11px' }}
-                            onClick={() => setEditingSkillId(null)}
-                          >
-                            انصراف
-                          </button>
-                        </div>
-                      ) : (
-                        <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
-                          <button 
-                            className="btn btn-secondary" 
-                            style={{ padding: '4px 10px', fontSize: '11px' }}
-                            onClick={() => handleStartEdit(skill)}
-                          >
-                            ویرایش
-                          </button>
-                          <button 
-                            className="btn btn-danger" 
-                            style={{ padding: '4px 10px', fontSize: '11px' }}
-                            onClick={() => onDeleteSkill(skill.id)}
-                          >
-                            حذف
-                          </button>
-                        </div>
-                      )}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
-      </div>
-    </div>
+      <Col xs={24} lg={15}>
+        <Card 
+          title={
+            <Row justify="space-between" align="middle">
+              <Col><Title level={5} style={{ margin: 0 }}>لیست کل تخصص‌های مجاز پلتفرم</Title></Col>
+              <Col><Text type="secondary" style={{ fontSize: '13px' }}>تعداد: {skills.length} مورد</Text></Col>
+            </Row>
+          }
+        >
+          <Table
+            dataSource={skills}
+            columns={columns}
+            rowKey="id"
+            pagination={{ pageSize: 8, responsive: true }}
+            scroll={{ x: true }}
+            size="middle"
+          />
+        </Card>
+      </Col>
+    </Row>
   );
 }

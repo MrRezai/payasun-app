@@ -1,4 +1,8 @@
+import { Row, Col, Card, Statistic, Progress, Timeline, Typography, Tag, Space } from 'antd';
+import { UserOutlined, ShopOutlined, PictureOutlined, FileTextOutlined } from '@ant-design/icons';
 import { Inquiry } from '../types';
+
+const { Title, Text } = Typography;
 
 interface OverviewProps {
   weldersCount: number;
@@ -41,7 +45,7 @@ export default function Overview({
           id: `inq-pending-${i.id}`,
           time: dateStr,
           message: `استعلام جدید با عنوان «${i.title}» ثبت شد و در انتظار کارشناسی نقشه است.`,
-          color: 'var(--primary)',
+          color: '#4169E1',
           timestamp: dateObj.getTime(),
         });
       } else if (i.status === 'REJECTED') {
@@ -49,7 +53,7 @@ export default function Overview({
           id: `inq-rejected-${i.id}`,
           time: dateStr,
           message: `استعلام «${i.title}» به علت «${i.rejection_reason || ''}» رد شد.`,
-          color: 'var(--danger)',
+          color: '#EF4444',
           timestamp: dateObj.getTime(),
         });
       } else if (i.status === 'BROADCASTED') {
@@ -57,7 +61,7 @@ export default function Overview({
           id: `inq-broadcasted-${i.id}`,
           time: dateStr,
           message: `استعلام «${i.title}» تایید و در پلتفرم منتشر گردید.`,
-          color: 'var(--success)',
+          color: '#10B981',
           timestamp: dateObj.getTime(),
         });
       }
@@ -72,7 +76,7 @@ export default function Overview({
         id: `usr-reg-${u.id}`,
         time: dateStr,
         message: `کاربر جدید (${roleLabel}) با نام «${u.name}» و شماره ${u.phone_number} در سامانه عضو شد.`,
-        color: 'var(--text-secondary)',
+        color: '#64748B',
         timestamp: dateObj.getTime(),
       });
     });
@@ -85,128 +89,134 @@ export default function Overview({
   const recentEvents = compileRecentEvents();
 
   return (
-    <div style={{ animation: 'fadeIn 0.3s ease-out' }}>
+    <Space direction="vertical" size="large" style={{ width: '100%' }}>
       {/* Stats Metrics Cards */}
-      <div className="grid-metrics">
-        <div className="glass-card metric-card">
-          <div className="metric-info">
-            <h3>جوشکاران فعال</h3>
-            <div className="value">{weldersCount}</div>
-          </div>
-          <div className="metric-icon">
-            <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" width="24" height="24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
-            </svg>
-          </div>
-        </div>
+      <Row gutter={[16, 16]}>
+        <Col xs={24} sm={12} lg={6}>
+          <Card size="small">
+            <Statistic
+              title={<Text type="secondary">جوشکاران فعال</Text>}
+              value={weldersCount}
+              prefix={<UserOutlined style={{ color: '#4169E1', marginLeft: 8 }} />}
+              valueStyle={{ fontWeight: 800 }}
+            />
+          </Card>
+        </Col>
 
-        <div className="glass-card metric-card">
-          <div className="metric-info">
-            <h3>کارفرمایان ثبت‌شده</h3>
-            <div className="value">{employersCount}</div>
-          </div>
-          <div className="metric-icon success">
-            <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" width="24" height="24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
-            </svg>
-          </div>
-        </div>
+        <Col xs={24} sm={12} lg={6}>
+          <Card size="small">
+            <Statistic
+              title={<Text type="secondary">کارفرمایان ثبت‌شده</Text>}
+              value={employersCount}
+              prefix={<ShopOutlined style={{ color: '#10B981', marginLeft: 8 }} />}
+              valueStyle={{ fontWeight: 800 }}
+            />
+          </Card>
+        </Col>
 
-        <div className="glass-card metric-card">
-          <div className="metric-info">
-            <h3>تصاویر معلق تایید</h3>
-            <div className="value">{pendingPicsCount}</div>
-          </div>
-          <div className={`metric-icon ${pendingPicsCount > 0 ? 'warning' : ''}`}>
-            <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" width="24" height="24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
-            </svg>
-          </div>
-        </div>
+        <Col xs={24} sm={12} lg={6}>
+          <Card size="small">
+            <Statistic
+              title={<Text type="secondary">تصاویر معلق تایید</Text>}
+              value={pendingPicsCount}
+              prefix={<PictureOutlined style={{ color: pendingPicsCount > 0 ? '#F59E0B' : '#64748B', marginLeft: 8 }} />}
+              valueStyle={{ fontWeight: 800, color: pendingPicsCount > 0 ? '#F59E0B' : undefined }}
+            />
+          </Card>
+        </Col>
 
-        <div className="glass-card metric-card">
-          <div className="metric-info">
-            <h3>انتظار برای کارشناسی</h3>
-            <div className="value">{pendingEstimationsCount}</div>
-          </div>
-          <div className={`metric-icon ${pendingEstimationsCount > 0 ? 'danger' : ''}`}>
-            <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" width="24" height="24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-            </svg>
-          </div>
-        </div>
-      </div>
+        <Col xs={24} sm={12} lg={6}>
+          <Card size="small">
+            <Statistic
+              title={<Text type="secondary">انتظار برای کارشناسی</Text>}
+              value={pendingEstimationsCount}
+              prefix={<FileTextOutlined style={{ color: pendingEstimationsCount > 0 ? '#EF4444' : '#64748B', marginLeft: 8 }} />}
+              valueStyle={{ fontWeight: 800, color: pendingEstimationsCount > 0 ? '#EF4444' : undefined }}
+            />
+          </Card>
+        </Col>
+      </Row>
 
-      {/* Visual Charts Section */}
-      <div className="modal-grid-2col" style={{ marginBottom: '28px' }}>
-        <div className="glass-card">
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px', flexWrap: 'wrap', gap: '8px' }}>
-            <h3 style={{ fontSize: '15px', fontWeight: '700' }}>آمار وضعیت استعلام‌های پروژه</h3>
-            <span style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>تعداد کل پروژه‌ها: {inquiries.length} عدد</span>
-          </div>
-          <div className="chart-container" style={{ minHeight: '180px' }}>
-            <div className="chart-bar-wrapper">
-              <div className="chart-bar" style={{ height: pendingBarHeight }}></div>
-              <span className="chart-label">انتظار کارشناسی ({pendingEstimationsCount})</span>
+      {/* Visual Charts & Distribution Section */}
+      <Row gutter={[24, 24]}>
+        <Col xs={24} lg={16}>
+          <Card
+            title={
+              <Row justify="space-between" align="middle">
+                <Col><Title level={5} style={{ margin: 0 }}>آمار وضعیت استعلام‌های پروژه</Title></Col>
+                <Col><Text type="secondary" style={{ fontSize: '12px' }}>کل: {inquiries.length} عدد</Text></Col>
+              </Row>
+            }
+          >
+            <div className="chart-container" style={{ minHeight: '180px' }}>
+              <div className="chart-bar-wrapper">
+                <div className="chart-bar" style={{ height: pendingBarHeight }}></div>
+                <span className="chart-label">انتظار کارشناسی ({pendingEstimationsCount})</span>
+              </div>
+              <div className="chart-bar-wrapper">
+                <div className="chart-bar" style={{ height: estimatedBarHeight, background: 'linear-gradient(to top, var(--secondary), rgba(245,158,11,0.3))' }}></div>
+                <span className="chart-label">تایید شده ({estimatedCount})</span>
+              </div>
+              <div className="chart-bar-wrapper">
+                <div className="chart-bar" style={{ height: broadcastedBarHeight, background: 'linear-gradient(to top, var(--success), rgba(16,185,129,0.3))' }}></div>
+                <span className="chart-label">انتشار یافته ({broadcastedCount})</span>
+              </div>
+              <div className="chart-bar-wrapper">
+                <div className="chart-bar" style={{ height: closedBarHeight, background: 'rgba(0, 0, 0, 0.05)' }}></div>
+                <span className="chart-label">بسته‌شده ({closedCount})</span>
+              </div>
             </div>
-            <div className="chart-bar-wrapper">
-              <div className="chart-bar" style={{ height: estimatedBarHeight, background: 'linear-gradient(to top, var(--secondary), rgba(245,158,11,0.3))' }}></div>
-              <span className="chart-label">تایید شده ({estimatedCount})</span>
-            </div>
-            <div className="chart-bar-wrapper">
-              <div className="chart-bar" style={{ height: broadcastedBarHeight, background: 'linear-gradient(to top, var(--success), rgba(16,185,129,0.3))' }}></div>
-              <span className="chart-label">انتشار یافته ({broadcastedCount})</span>
-            </div>
-            <div className="chart-bar-wrapper">
-              <div className="chart-bar" style={{ height: closedBarHeight, background: 'rgba(0, 0, 0, 0.05)' }}></div>
-              <span className="chart-label">بسته‌شده ({closedCount})</span>
-            </div>
-          </div>
-        </div>
+          </Card>
+        </Col>
 
-        <div className="glass-card" style={{ display: 'flex', flexDirection: 'column' }}>
-          <h3 style={{ fontSize: '15px', fontWeight: '700', marginBottom: '16px' }}>توزیع جغرافیایی پروژه‌ها</h3>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '14px', flex: 1, justifyContent: 'center' }}>
-            {inquiries.length === 0 ? (
-              <div style={{ fontSize: '12px', color: 'var(--text-secondary)', textAlign: 'center' }}>اطلاعات موقعیتی ثبت نشده است.</div>
-            ) : (
-              Array.from(new Set(inquiries.map(i => i.province))).slice(0, 3).map(prov => {
-                const count = inquiries.filter(i => i.province === prov).length;
-                const pct = Math.round((count / inquiries.length) * 100);
-                const provinceName = prov || 'نامشخص';
-                return (
-                  <div key={prov || 'unknown'}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', marginBottom: '4px' }}>
-                      <span>استان {provinceName} ({pct}٪)</span>
-                      <span>{count} استعلام</span>
+        <Col xs={24} lg={8}>
+          <Card title={<Title level={5} style={{ margin: 0 }}>توزیع جغرافیایی پروژه‌ها</Title>} style={{ height: '100%' }}>
+            <Space direction="vertical" style={{ width: '100%' }} size="middle">
+              {inquiries.length === 0 ? (
+                <Text type="secondary" style={{ display: 'block', textAlign: 'center' }}>اطلاعات موقعیتی ثبت نشده است.</Text>
+              ) : (
+                Array.from(new Set(inquiries.map(i => i.province))).slice(0, 4).map(prov => {
+                  const count = inquiries.filter(i => i.province === prov).length;
+                  const pct = Math.round((count / inquiries.length) * 100);
+                  const provinceName = prov || 'نامشخص';
+                  return (
+                    <div key={prov || 'unknown'}>
+                      <Row justify="space-between" style={{ fontSize: '12px', marginBottom: 4 }}>
+                        <Col><Text strong>استان {provinceName}</Text></Col>
+                        <Col><Text type="secondary">{count} استعلام ({pct}٪)</Text></Col>
+                      </Row>
+                      <Progress percent={pct} showInfo={false} strokeColor={provinceName === 'تهران' ? '#4169E1' : '#F59E0B'} />
                     </div>
-                    <div style={{ width: '100%', height: '6px', backgroundColor: 'rgba(0,0,0,0.05)', borderRadius: '3px', overflow: 'hidden' }}>
-                      <div style={{ width: `${pct}%`, height: '100%', backgroundColor: provinceName === 'تهران' ? 'var(--primary)' : 'var(--secondary)' }}></div>
-                    </div>
-                  </div>
-                );
-              })
-            )}
-          </div>
-        </div>
-      </div>
+                  );
+                })
+              )}
+            </Space>
+          </Card>
+        </Col>
+      </Row>
 
       {/* Dynamic Live Event Reports */}
-      <div className="glass-card">
-        <h3 style={{ fontSize: '15px', fontWeight: '700', marginBottom: '16px' }}>گزارش رویدادهای اخیر پلتفرم</h3>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-          {recentEvents.length === 0 ? (
-            <div style={{ fontSize: '12px', color: 'var(--text-secondary)', textAlign: 'center' }}>رویدادی ثبت نشده است.</div>
-          ) : (
-            recentEvents.map((evt) => (
-              <div key={evt.id} style={{ display: 'flex', gap: '12px', fontSize: '13px', borderBottom: '1px solid var(--border)', paddingBottom: '12px', flexWrap: 'wrap', alignItems: 'baseline' }}>
-                <span style={{ color: evt.color, fontWeight: 'bold', minWidth: '90px' }}>{evt.time}</span>
-                <span style={{ flex: 1, minWidth: '200px' }}>{evt.message}</span>
-              </div>
-            ))
-          )}
-        </div>
-      </div>
-    </div>
+      <Card title={<Title level={5} style={{ margin: 0 }}>گزارش رویدادهای اخیر پلتفرم</Title>}>
+        {recentEvents.length === 0 ? (
+          <Text type="secondary" style={{ display: 'block', textAlign: 'center', padding: '16px 0' }}>
+            رویدادی ثبت نشده است.
+          </Text>
+        ) : (
+          <Timeline
+            items={recentEvents.map(evt => ({
+              color: evt.color,
+              children: (
+                <Space wrap align="baseline">
+                  <Tag color={evt.color === '#4169E1' ? 'processing' : evt.color === '#10B981' ? 'success' : evt.color === '#EF4444' ? 'error' : 'default'}>
+                    {evt.time}
+                  </Tag>
+                  <Text>{evt.message}</Text>
+                </Space>
+              ),
+            }))}
+          />
+        )}
+      </Card>
+    </Space>
   );
 }

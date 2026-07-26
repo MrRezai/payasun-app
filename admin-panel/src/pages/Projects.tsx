@@ -1,6 +1,10 @@
 import { useState } from 'react';
+import { Card, Table, Tag, Button, Typography, Segmented, Row, Col } from 'antd';
+import { EyeOutlined, FormOutlined } from '@ant-design/icons';
 import { Inquiry } from '../types';
 import ViewUserHistoryModal from '../modals/ViewUserHistoryModal';
+
+const { Title, Text } = Typography;
 
 interface ProjectsProps {
   inquiries: Inquiry[];
@@ -28,122 +32,122 @@ export default function Projects({ inquiries, onEstimateClick, onViewDetailClick
 
   const filteredInquiries = getSubTabInquiries();
 
+  const columns = [
+    {
+      title: 'عنوان پروژه',
+      dataIndex: 'title',
+      key: 'title',
+      render: (title: string) => <Text strong>{title}</Text>,
+    },
+    {
+      title: 'کارفرما',
+      key: 'employer',
+      render: (_: any, inq: Inquiry) => (
+        inq.employerId ? (
+          <Text 
+            style={{ color: '#4169E1', cursor: 'pointer', textDecoration: 'underline' }} 
+            onClick={() => setSelectedEmployerId(inq.employerId || null)}
+          >
+            {inq.employer_name || 'کارفرمای پلتفرم'}
+          </Text>
+        ) : (
+          <Text>{inq.employer_name || 'کارفرمای پلتفرم'}</Text>
+        )
+      ),
+    },
+    {
+      title: 'موقعیت',
+      key: 'location',
+      render: (_: any, inq: Inquiry) => (
+        <Text type="secondary">{inq.province || 'نامشخص'}، {inq.city || 'نامشخص'}</Text>
+      ),
+    },
+    {
+      title: 'نوع نقشه',
+      key: 'blueprint',
+      render: (_: any, inq: Inquiry) => (
+        inq.has_blueprint ? (
+          <Tag color="blue">فایل نقشه فنی</Tag>
+        ) : (
+          <Tag>ورود دستی</Tag>
+        )
+      ),
+    },
+    {
+      title: 'تعداد اقلام',
+      key: 'items_count',
+      render: (_: any, inq: Inquiry) => (
+        <Text strong>{inq.items?.length || 0} ردیف</Text>
+      ),
+    },
+    {
+      title: 'وضعیت فنی',
+      key: 'status',
+      render: (_: any, inq: Inquiry) => {
+        if (inq.status === 'PENDING_ESTIMATION') return <Tag color="warning">در انتظار کارشناسی</Tag>;
+        if (inq.status === 'ESTIMATED') return <Tag color="gold">کارشناسی‌شده</Tag>;
+        if (inq.status === 'BROADCASTED') return <Tag color="success">انتشار یافته</Tag>;
+        if (inq.status === 'REJECTED') return <Tag color="error">رد شده</Tag>;
+        return <Tag>خاتمه‌یافته</Tag>;
+      },
+    },
+    {
+      title: 'عملیات',
+      key: 'actions',
+      align: 'left' as const,
+      render: (_: any, inq: Inquiry) => (
+        inq.status === 'PENDING_ESTIMATION' ? (
+          <Button
+            type="primary"
+            size="small"
+            icon={<FormOutlined />}
+            onClick={() => onEstimateClick(inq)}
+            style={{ fontWeight: 'bold' }}
+          >
+            افزودن اقلام و انتشار
+          </Button>
+        ) : (
+          <Button
+            size="small"
+            icon={<EyeOutlined />}
+            onClick={() => onViewDetailClick(inq)}
+          >
+            مشاهده اقلام
+          </Button>
+        )
+      ),
+    },
+  ];
+
   return (
-    <div className="glass-card" style={{ animation: 'fadeIn 0.3s ease-out' }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px', borderBottom: '1px solid var(--border)', paddingBottom: '12px' }}>
-        <h3 style={{ fontSize: '16px', fontWeight: '700' }}>مدیریت استعلام‌ها و پروژه‌های پلتفرم</h3>
-        <span style={{ fontSize: '13px', color: 'var(--text-secondary)' }}>تعداد استعلام‌های این بخش: {filteredInquiries.length} پروژه</span>
-      </div>
-
-      {/* Sub-tab Navigation Bar */}
-      <div style={{ display: 'flex', gap: '8px', marginBottom: '20px', backgroundColor: 'var(--bg-dark)', padding: '6px', borderRadius: '8px', border: '1px solid var(--border)', flexWrap: 'wrap' }}>
-        <button 
-          className={`btn ${projectSubTab === 'pending' ? 'btn-primary' : 'btn-secondary'}`}
-          style={{ padding: '6px 16px', fontSize: '12px', border: 'none' }}
-          onClick={() => setProjectSubTab('pending')}
-        >
-          در انتظار تایید ادمین یا کارفرما ({pendingCount})
-        </button>
-        <button 
-          className={`btn ${projectSubTab === 'broadcasted' ? 'btn-primary' : 'btn-secondary'}`}
-          style={{ padding: '6px 16px', fontSize: '12px', border: 'none' }}
-          onClick={() => setProjectSubTab('broadcasted')}
-        >
-          انتشار یافته‌ها ({broadcastedCount})
-        </button>
-        <button 
-          className={`btn ${projectSubTab === 'closed' ? 'btn-primary' : 'btn-secondary'}`}
-          style={{ padding: '6px 16px', fontSize: '12px', border: 'none' }}
-          onClick={() => setProjectSubTab('closed')}
-        >
-          اتمام یافته و رد شده ({closedCount})
-        </button>
-      </div>
-
-      {/* Inquiries Table */}
-      {filteredInquiries.length === 0 ? (
-        <div style={{ padding: '50px 0', textAlign: 'center', color: 'var(--text-secondary)' }}>
-          <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" width="48" height="48" style={{ marginBottom: '12px', opacity: 0.4 }}>
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0a2 2 0 01-2 2H6a2 2 0 01-2-2m16 0V9a2 2 0 00-2-2M6 20h12a2 2 0 002-2v-5M6 20v-5a2 2 0 012-2h8a2 2 0 012 2v5" />
-          </svg>
-          <p>هیچ پروژه‌ای در این بخش یافت نشد.</p>
-        </div>
-      ) : (
-        <div className="table-responsive">
-          <table className="custom-table">
-            <thead>
-              <tr>
-                <th>عنوان پروژه</th>
-                <th>کارفرما</th>
-                <th>محدوده جغرافیایی</th>
-                <th>نوع نقشه</th>
-                <th>تعداد اقلام فنی</th>
-                <th>وضعیت فنی</th>
-                <th style={{ textAlign: 'left' }}>عملیات</th>
-              </tr>
-            </thead>
-            <tbody>
-              {filteredInquiries.map((inq) => {
-                const itemsCount = inq.items ? inq.items.length : 0;
-                return (
-                  <tr key={inq.id}>
-                    <td style={{ fontWeight: 'bold' }}>{inq.title}</td>
-                    <td>
-                      {inq.employerId ? (
-                        <span 
-                          style={{ color: 'var(--primary)', cursor: 'pointer', textDecoration: 'underline', fontWeight: '500' }}
-                          onClick={() => setSelectedEmployerId(inq.employerId || null)}
-                        >
-                          {inq.employer_name || 'کارفرمای پلتفرم'}
-                        </span>
-                      ) : (
-                        <span>{inq.employer_name || 'کارفرمای پلتفرم'}</span>
-                      )}
-                    </td>
-                    <td>{inq.province || 'نامشخص'}، {inq.city || 'نامشخص'}</td>
-                    <td>
-                      {inq.has_blueprint ? (
-                        <span style={{ color: 'var(--primary)', fontWeight: 'bold', fontSize: '12px' }}>فایل نقشه فنی</span>
-                      ) : (
-                        <span style={{ color: 'var(--text-secondary)', fontSize: '12px' }}>ورود اطلاعات دستی</span>
-                      )}
-                    </td>
-                    <td>
-                      <span style={{ fontWeight: 'bold' }}>{itemsCount} ردیف</span>
-                    </td>
-                    <td>
-                      {inq.status === 'PENDING_ESTIMATION' && <span className="status-chip pending">در انتظار کارشناسی</span>}
-                      {inq.status === 'ESTIMATED' && <span className="status-chip warning" style={{ backgroundColor: 'rgba(245,158,11,0.15)', color: 'var(--secondary)' }}>کارشناسی‌شده (تایید کارفرما)</span>}
-                      {inq.status === 'BROADCASTED' && <span className="status-chip approved">انتشار یافته</span>}
-                      {inq.status === 'REJECTED' && <span className="status-chip danger" style={{ backgroundColor: 'rgba(239,68,68,0.15)', color: 'var(--danger)' }}>رد شده</span>}
-                      {(inq.status === 'CLOSED' || inq.status === 'EXPIRED') && <span className="status-chip" style={{ backgroundColor: 'rgba(0,0,0,0.06)', color: 'var(--text-secondary)' }}>خاتمه‌یافته</span>}
-                    </td>
-                    <td style={{ textAlign: 'left' }}>
-                      {inq.status === 'PENDING_ESTIMATION' ? (
-                        <button 
-                          className="btn btn-primary" 
-                          style={{ padding: '6px 12px', fontSize: '11px' }}
-                          onClick={() => onEstimateClick(inq)}
-                        >
-                          افزودن اقلام و تایید انتشار
-                        </button>
-                      ) : (
-                        <button 
-                          className="btn btn-secondary" 
-                          style={{ padding: '6px 12px', fontSize: '11px' }}
-                          onClick={() => onViewDetailClick(inq)}
-                        >
-                          مشاهده اقلام فنی
-                        </button>
-                      )}
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
-      )}
+    <Card 
+      title={
+        <Row justify="space-between" align="middle" gutter={[12, 12]}>
+          <Col xs={24} sm={12}>
+            <Title level={5} style={{ margin: 0 }}>مدیریت استعلام‌ها و پروژه‌ها</Title>
+          </Col>
+          <Col xs={24} sm={12} style={{ textAlign: 'left' }}>
+            <Segmented
+              value={projectSubTab}
+              onChange={(val) => setProjectSubTab(val as any)}
+              options={[
+                { label: `در انتظار (${pendingCount})`, value: 'pending' },
+                { label: `منتشرشده (${broadcastedCount})`, value: 'broadcasted' },
+                { label: `خاتمه‌یافته (${closedCount})`, value: 'closed' },
+              ]}
+            />
+          </Col>
+        </Row>
+      }
+    >
+      <Table
+        dataSource={filteredInquiries}
+        columns={columns}
+        rowKey="id"
+        pagination={{ pageSize: 10, responsive: true }}
+        scroll={{ x: true }}
+        size="middle"
+      />
 
       {selectedEmployerId && (
         <ViewUserHistoryModal 
@@ -151,6 +155,6 @@ export default function Projects({ inquiries, onEstimateClick, onViewDetailClick
           onClose={() => setSelectedEmployerId(null)} 
         />
       )}
-    </div>
+    </Card>
   );
 }
