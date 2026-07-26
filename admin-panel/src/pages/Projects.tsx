@@ -36,7 +36,7 @@ export default function Projects({ inquiries, onEstimateClick, onViewDetailClick
       </div>
 
       {/* Sub-tab Navigation Bar */}
-      <div style={{ display: 'flex', gap: '8px', marginBottom: '20px', backgroundColor: 'var(--bg-dark)', padding: '6px', borderRadius: '8px', border: '1px solid var(--border)', width: 'fit-content' }}>
+      <div style={{ display: 'flex', gap: '8px', marginBottom: '20px', backgroundColor: 'var(--bg-dark)', padding: '6px', borderRadius: '8px', border: '1px solid var(--border)', flexWrap: 'wrap' }}>
         <button 
           className={`btn ${projectSubTab === 'pending' ? 'btn-primary' : 'btn-secondary'}`}
           style={{ padding: '6px 16px', fontSize: '12px', border: 'none' }}

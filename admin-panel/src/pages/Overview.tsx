@@ -138,9 +138,9 @@ export default function Overview({
       </div>
 
       {/* Visual Charts Section */}
-      <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '24px', marginBottom: '28px' }}>
+      <div className="modal-grid-2col" style={{ marginBottom: '28px' }}>
         <div className="glass-card">
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px', flexWrap: 'wrap', gap: '8px' }}>
             <h3 style={{ fontSize: '15px', fontWeight: '700' }}>آمار وضعیت استعلام‌های پروژه</h3>
             <span style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>تعداد کل پروژه‌ها: {inquiries.length} عدد</span>
           </div>
@@ -199,9 +199,9 @@ export default function Overview({
             <div style={{ fontSize: '12px', color: 'var(--text-secondary)', textAlign: 'center' }}>رویدادی ثبت نشده است.</div>
           ) : (
             recentEvents.map((evt) => (
-              <div key={evt.id} style={{ display: 'flex', gap: '12px', fontSize: '13px', borderBottom: '1px solid var(--border)', paddingBottom: '12px' }}>
-                <span style={{ color: evt.color, fontWeight: 'bold', width: '100px', display: 'inline-block' }}>{evt.time}</span>
-                <span>{evt.message}</span>
+              <div key={evt.id} style={{ display: 'flex', gap: '12px', fontSize: '13px', borderBottom: '1px solid var(--border)', paddingBottom: '12px', flexWrap: 'wrap', alignItems: 'baseline' }}>
+                <span style={{ color: evt.color, fontWeight: 'bold', minWidth: '90px' }}>{evt.time}</span>
+                <span style={{ flex: 1, minWidth: '200px' }}>{evt.message}</span>
               </div>
             ))
           )}

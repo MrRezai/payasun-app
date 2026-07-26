@@ -3,11 +3,11 @@ import logoImg from '../assets/logo/joftojoor.png';
 
 interface LoginProps {
   onLoginSuccess: (username: string, pass: string) => Promise<void>;
-  isOnline: boolean;
+  isOnline?: boolean;
   isLoading: boolean;
 }
 
-export default function Login({ onLoginSuccess, isOnline, isLoading }: LoginProps) {
+export default function Login({ onLoginSuccess, isLoading }: LoginProps) {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
 
@@ -60,13 +60,6 @@ export default function Login({ onLoginSuccess, isOnline, isLoading }: LoginProp
             {isLoading ? 'در حال بررسی...' : 'ورود به پنل مدیریت'}
           </button>
         </form>
-
-        <div style={{ marginTop: '24px', paddingTop: '16px', borderTop: '1px solid var(--border)', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
-          <span className={`badge-dot ${isOnline ? 'pulse' : ''}`} style={{ backgroundColor: isOnline ? 'var(--success)' : 'var(--warning)' }}></span>
-          <span style={{ fontSize: '11px', color: 'var(--text-secondary)' }}>
-            {isOnline ? 'سیستم آنلاین و متصل به دیتابیس است' : 'سیستم در حالت شبیه‌ساز آفلاین است'}
-          </span>
-        </div>
       </div>
     </div>
   );

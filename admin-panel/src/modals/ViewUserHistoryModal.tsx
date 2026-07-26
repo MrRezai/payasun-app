@@ -65,7 +65,7 @@ export default function ViewUserHistoryModal({ userId, onClose }: ViewUserHistor
         {data && !loading && !error && (
           <div>
             {/* Header Profile Section */}
-            <div style={{ display: 'flex', gap: '20px', alignItems: 'center', padding: '16px', backgroundColor: 'var(--bg-dark)', borderRadius: '12px', marginBottom: '24px', border: '1px solid var(--border)' }}>
+            <div style={{ display: 'flex', gap: '20px', alignItems: 'center', flexWrap: 'wrap', padding: '16px', backgroundColor: 'var(--bg-dark)', borderRadius: '12px', marginBottom: '24px', border: '1px solid var(--border)' }}>
               <div className="avatar" style={{ width: '70px', height: '70px', fontSize: '24px', borderRadius: '50%', backgroundColor: 'var(--primary)', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden' }}>
                 {data.user.role === 'WELDER' && data.welderProfile?.profile_picture_url ? (
                   <img src={`${BASE_URL}${data.welderProfile.profile_picture_url}`} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
@@ -100,7 +100,7 @@ export default function ViewUserHistoryModal({ userId, onClose }: ViewUserHistor
             </div>
 
             {/* General & Financial Details */}
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px', marginBottom: '24px' }}>
+            <div className="modal-grid-2col" style={{ marginBottom: '24px' }}>
               {/* Profile details */}
               <div className="glass-card" style={{ padding: '16px', margin: 0 }}>
                 <h4 style={{ fontSize: '13px', fontWeight: '700', borderBottom: '1px solid var(--border)', paddingBottom: '8px', marginBottom: '12px', color: 'var(--primary)' }}>

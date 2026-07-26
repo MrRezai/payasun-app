@@ -1,11 +1,11 @@
 import { useLocation } from 'react-router-dom';
 
 interface TopbarProps {
-  isOnline: boolean;
+  isOnline?: boolean;
   onToggleMobileMenu?: () => void;
 }
 
-export default function Topbar({ isOnline, onToggleMobileMenu }: TopbarProps) {
+export default function Topbar({ onToggleMobileMenu }: TopbarProps) {
   const location = useLocation();
   const path = location.pathname;
 
@@ -36,18 +36,6 @@ export default function Topbar({ isOnline, onToggleMobileMenu }: TopbarProps) {
       </div>
       
       <div className="topbar-actions">
-        {isOnline ? (
-          <div className="server-badge online">
-            <span className="badge-dot pulse"></span>
-            <span>متصل به سرور</span>
-          </div>
-        ) : (
-          <div className="server-badge offline">
-            <span className="badge-dot"></span>
-            <span>شبیه‌ساز محلی (Offline)</span>
-          </div>
-        )}
-        
         <div className="avatar" style={{ border: '1px solid var(--border)' }}>
           <span>AD</span>
         </div>

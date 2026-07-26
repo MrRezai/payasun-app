@@ -32,7 +32,7 @@ export default function Skills({ skills, onAddSkill, onEditSkill, onDeleteSkill 
   };
 
   return (
-    <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 2fr', gap: '24px', alignItems: 'start' }}>
+    <div className="modal-grid-2col" style={{ alignItems: 'start' }}>
       {/* Create Skill Form */}
       <div className="glass-card">
         <h3 style={{ fontSize: '15px', fontWeight: '700', marginBottom: '18px' }}>افزودن تخصص جوشکاری جدید</h3>

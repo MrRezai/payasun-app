@@ -711,7 +711,7 @@ select::placeholder {
 
   .main-wrapper {
     margin-right: 0 !important;
-    padding: 16px;
+    padding: 16px 12px;
   }
 
   .topbar {
@@ -719,6 +719,7 @@ select::placeholder {
     align-items: center;
     justify-content: space-between;
     gap: 12px;
+    margin-bottom: 20px;
   }
 
   .topbar-actions {
@@ -726,9 +727,54 @@ select::placeholder {
     gap: 8px;
   }
 
+  .grid-metrics {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 12px;
+    margin-bottom: 20px;
+  }
+
+  .metric-card {
+    padding: 14px;
+  }
+
+  .metric-info h3 {
+    font-size: 11px;
+  }
+
+  .metric-info .value {
+    font-size: 22px;
+  }
+
+  .metric-icon {
+    width: 40px;
+    height: 40px;
+  }
+
+  .glass-card {
+    padding: 16px;
+    border-radius: 12px;
+  }
+
+  .chart-container {
+    height: 180px;
+    padding: 12px 0;
+  }
+
+  .chart-bar-wrapper {
+    width: 32px;
+  }
+
+  .chart-label {
+    font-size: 9px;
+    white-space: normal;
+    word-break: break-word;
+    max-width: 60px;
+    line-height: 1.2;
+  }
+
   .modal-grid-2col {
     grid-template-columns: 1fr;
-    gap: 12px;
+    gap: 16px;
   }
 
   .est-item-row {
@@ -751,9 +797,23 @@ select::placeholder {
     padding: 18px;
     max-height: 94vh;
   }
+
+  .table-responsive {
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .custom-table th, 
+  .custom-table td {
+    padding: 10px 12px;
+    font-size: 12px;
+  }
 }
 
 @media (max-width: 480px) {
+  .grid-metrics {
+    grid-template-columns: 1fr;
+  }
+
   .est-item-row {
     grid-template-columns: 1fr;
   }
@@ -767,4 +827,5 @@ select::placeholder {
     font-size: 14px;
   }
 }
+
 
