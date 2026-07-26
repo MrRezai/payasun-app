@@ -72,7 +72,7 @@ export class InquiryService {
   }
 
   /**
-   * Admin-side estimation fulfillment. Fills the items array and changes status to ESTIMATED.
+   * Admin-side estimation fulfillment. Fills the items array and changes status to BROADCASTED to deliver items to welders.
    */
   async estimate(inquiryId: string, dto: EstimateInquiryDto): Promise<Inquiry> {
     const inquiry = await this.inquiryRepository.findOne({ where: { id: inquiryId } });
@@ -86,7 +86,7 @@ export class InquiryService {
     }
 
     inquiry.items = dto.items;
-    inquiry.status = InquiryStatus.ESTIMATED;
+    inquiry.status = InquiryStatus.BROADCASTED;
 
     return this.inquiryRepository.save(inquiry);
   }
@@ -106,7 +106,7 @@ export class InquiryService {
     }
 
     if (inquiry.status !== InquiryStatus.ESTIMATED && inquiry.status !== InquiryStatus.DRAFT) {
-      throw new BadRequestException('فقط استعلام‌های برآورد شده یا پیش‌نویس قابل تأیید و انتشار هستند.');
+      throw new BadRequestException('فقط استعلام‌های تایید شده یا پیش‌نویس قابل تأیید و انتشار هستند.');
     }
 
     if (dto.items && dto.items.length > 0) {

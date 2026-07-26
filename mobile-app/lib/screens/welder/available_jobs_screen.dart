@@ -449,10 +449,11 @@ class _AvailableJobsScreenState extends State<AvailableJobsScreen> {
         return StatefulBuilder(
           builder: (context, setSheetState) {
             double totalSum = 0;
-            for (var controller in controllers) {
-              final cleanText = Formatters.cleanNumber(controller.text);
+            for (int i = 0; i < job.items.length; i++) {
+              final cleanText = Formatters.cleanNumber(controllers[i].text);
               final val = double.tryParse(cleanText) ?? 0.0;
-              totalSum += val;
+              final qty = job.items[i].quantity;
+              totalSum += val * qty;
             }
 
             final bool allChecked = scaffoldChecked && powerChecked && rodChecked && deliveryChecked;
@@ -502,7 +503,7 @@ class _AvailableJobsScreenState extends State<AvailableJobsScreen> {
                         const SizedBox(height: 16),
 
                         const Text(
-                          'لطفاً قیمت پیشنهادی خود را برای هر کدام از اقلام به صورت مجزا وارد کنید:',
+                          'لطفاً مبلغ پیشنهادی به ازای هر یک واحد را وارد کنید (جمع کل بر اساس تعداد اقلام محاسبه می‌شود):',
                           style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: AppColors.textDark, fontFamily: 'Vazirmatn'),
                         ),
                         const SizedBox(height: 12),
@@ -701,6 +702,7 @@ class _AvailableJobsScreenState extends State<AvailableJobsScreen> {
                                     );
 
                                     if (success && context.mounted) {
+                                      inquiryProvider.loadAllInquiries(token);
                                       Navigator.pop(context);
                                       ScaffoldMessenger.of(context).showSnackBar(
                                         SnackBar(

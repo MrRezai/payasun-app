@@ -32,8 +32,8 @@ export default function ViewUserHistoryModal({ userId, onClose }: ViewUserHistor
   const getStatusText = (status: string) => {
     switch (status) {
       case 'DRAFT': return 'پیش‌نویس';
-      case 'PENDING_ESTIMATION': return 'در انتظار برآورد';
-      case 'ESTIMATED': return 'برآورد شده';
+      case 'PENDING_ESTIMATION': return 'در انتظار تایید';
+      case 'ESTIMATED': return 'تایید شده';
       case 'BROADCASTED': return 'منتشر شده';
       case 'REJECTED': return 'رد شده';
       default: return status;

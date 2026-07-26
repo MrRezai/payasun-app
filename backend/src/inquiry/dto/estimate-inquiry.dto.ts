@@ -4,7 +4,7 @@ import { Type } from 'class-transformer';
 import { InquiryItemDto } from './create-inquiry.dto';
 
 export class EstimateInquiryDto {
-  @ApiProperty({ description: 'لیست اقلام برآورد شده توسط کارشناس', type: [InquiryItemDto] })
+  @ApiProperty({ description: 'لیست اقلام تایید شده توسط کارشناس', type: [InquiryItemDto] })
   @IsArray()
   @ValidateNested({ each: true })
   @Type(() => InquiryItemDto)

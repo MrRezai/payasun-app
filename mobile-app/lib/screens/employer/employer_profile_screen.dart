@@ -527,21 +527,57 @@ class _EmployerProfileScreenState extends State<EmployerProfileScreen> {
                         children: [
                           GestureDetector(
                             onTap: showPhotoOptions,
-                            child: CircleAvatar(
-                              radius: 42,
-                              backgroundColor: avatarImage != null ? Colors.transparent : AppColors.white,
-                              backgroundImage: avatarImage,
-                              child: avatarImage != null
-                                  ? null
-                                  : Text(
-                                      initials,
-                                      style: const TextStyle(
-                                        color: AppColors.royalBlue,
-                                        fontWeight: FontWeight.bold,
-                                        fontSize: 20,
-                                        fontFamily: 'Vazirmatn',
+                            child: ClipRRect(
+                              borderRadius: BorderRadius.circular(42),
+                              child: Container(
+                                width: 84,
+                                height: 84,
+                                color: AppColors.royalBlue.withValues(alpha: 0.12),
+                                child: avatarImage != null
+                                    ? Image(
+                                        image: avatarImage,
+                                        fit: BoxFit.cover,
+                                        loadingBuilder: (context, child, loadingProgress) {
+                                          if (loadingProgress == null) return child;
+                                          return Center(
+                                            child: SizedBox(
+                                              width: 24,
+                                              height: 24,
+                                              child: CircularProgressIndicator(
+                                                strokeWidth: 2,
+                                                valueColor: AlwaysStoppedAnimation<Color>(
+                                                  AppColors.royalBlue.withValues(alpha: 0.4),
+                                                ),
+                                              ),
+                                            ),
+                                          );
+                                        },
+                                        errorBuilder: (context, error, stackTrace) {
+                                          return Center(
+                                            child: Text(
+                                              initials,
+                                              style: const TextStyle(
+                                                color: AppColors.royalBlue,
+                                                fontWeight: FontWeight.bold,
+                                                fontSize: 20,
+                                                fontFamily: 'Vazirmatn',
+                                              ),
+                                            ),
+                                          );
+                                        },
+                                      )
+                                    : Center(
+                                        child: Text(
+                                          initials,
+                                          style: const TextStyle(
+                                            color: AppColors.royalBlue,
+                                            fontWeight: FontWeight.bold,
+                                            fontSize: 20,
+                                            fontFamily: 'Vazirmatn',
+                                          ),
+                                        ),
                                       ),
-                                    ),
+                              ),
                             ),
                           ),
                           Positioned(

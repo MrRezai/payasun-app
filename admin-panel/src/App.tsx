@@ -331,6 +331,8 @@ function AppContent() {
     }
   };
 
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+
   const pendingEstimationsCount = inquiries.filter(i => i.status === 'PENDING_ESTIMATION').length;
   const pendingPicsCount = pendingVerifications.length;
 
@@ -348,11 +350,18 @@ function AppContent() {
           pendingPicsCount={pendingPicsCount}
           pendingEstimationsCount={pendingEstimationsCount}
           onLogout={handleLogout}
+          isOpen={isMobileMenuOpen}
+          onCloseMobile={() => setIsMobileMenuOpen(false)}
         />
       )}
 
       <main className="main-wrapper">
-        {isAuthenticated && <Topbar isOnline={isOnline} />}
+        {isAuthenticated && (
+          <Topbar 
+            isOnline={isOnline} 
+            onToggleMobileMenu={() => setIsMobileMenuOpen(prev => !prev)}
+          />
+        )}
 
         {tabLoading ? <TabLoader /> : (
           <Routes>

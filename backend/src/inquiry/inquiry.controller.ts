@@ -155,7 +155,7 @@ export class InquiryController {
   @HttpCode(HttpStatus.OK)
   @ApiOperation({
     summary: 'ثبت برآورد اقلام استعلام (مخصوص ادمین / کارشناس)',
-    description: 'اقلام برآورد شده از روی نقشه را ثبت کرده و وضعیت استعلام را به ESTIMATED تغییر می‌دهد.',
+    description: 'اقلام تایید شده از روی نقشه را ثبت کرده و وضعیت استعلام را به ESTIMATED تغییر می‌دهد.',
   })
   @ApiBody({ type: EstimateInquiryDto })
   @ApiResponse({ status: 200, description: 'برآورد با موفقیت ثبت شد.', type: Inquiry })
@@ -175,7 +175,7 @@ export class InquiryController {
   @HttpCode(HttpStatus.OK)
   @ApiOperation({
     summary: 'تأیید نهایی و انتشار استعلام توسط کارفرما',
-    description: 'اقلام برآورد شده را تأیید یا ویرایش نهایی کرده و وضعیت استعلام را به BROADCASTED تغییر می‌دهد.',
+    description: 'اقلام تایید شده را تأیید یا ویرایش نهایی کرده و وضعیت استعلام را به BROADCASTED تغییر می‌دهد.',
   })
   @ApiBody({ type: ConfirmInquiryDto })
   @ApiResponse({ status: 200, description: 'استعلام با موفقیت تأیید و در سیستم منتشر شد.', type: Inquiry })

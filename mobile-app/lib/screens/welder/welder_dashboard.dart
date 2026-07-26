@@ -145,22 +145,59 @@ class _WelderDashboardState extends State<WelderDashboard> {
                     color: AppColors.amberOrange,
                     shape: BoxShape.circle,
                   ),
-                  child: CircleAvatar(
-                    radius: 28,
-                    backgroundColor: fullPicUrl != null ? Colors.transparent : AppColors.royalBlue.withValues(alpha: 0.12),
-                    backgroundImage: fullPicUrl != null ? NetworkImage(fullPicUrl) : null,
-                    child: fullPicUrl != null
-                        ? null
-                        : Text(
-                            initials,
-                            style: const TextStyle(
-                              color: AppColors.royalBlue,
-                              fontWeight: FontWeight.bold,
-                              fontSize: 15,
-                              fontFamily: 'Vazirmatn',
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(28),
+                    child: Container(
+                      width: 56,
+                      height: 56,
+                      color: AppColors.royalBlue.withValues(alpha: 0.12),
+                      child: fullPicUrl != null
+                          ? Image.network(
+                              fullPicUrl,
+                              fit: BoxFit.cover,
+                              loadingBuilder: (context, child, loadingProgress) {
+                                if (loadingProgress == null) return child;
+                                return Center(
+                                  child: SizedBox(
+                                    width: 16,
+                                    height: 16,
+                                    child: CircularProgressIndicator(
+                                      strokeWidth: 2,
+                                      valueColor: AlwaysStoppedAnimation<Color>(
+                                        AppColors.royalBlue.withValues(alpha: 0.4),
+                                      ),
+                                    ),
+                                  ),
+                                );
+                              },
+                              errorBuilder: (context, error, stackTrace) {
+                                return Center(
+                                  child: Text(
+                                    initials,
+                                    style: const TextStyle(
+                                      color: AppColors.royalBlue,
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 15,
+                                      fontFamily: 'Vazirmatn',
+                                    ),
+                                  ),
+                                );
+                              },
+                            )
+                          : Center(
+                              child: Text(
+                                initials,
+                                style: const TextStyle(
+                                  color: AppColors.royalBlue,
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 15,
+                                  fontFamily: 'Vazirmatn',
+                                ),
+                              ),
                             ),
-                          ),
+                    ),
                   ),
+
                 ),
               ),
             ),

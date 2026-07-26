@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:http_parser/http_parser.dart';
@@ -8,14 +9,27 @@ class ApiService {
 
   ApiService({this.baseUrl = 'https://api.joftojoor.com'});
 
+  Future<T> _retry<T>(Future<T> Function() action, {int retries = 3}) async {
+    int attempt = 0;
+    while (true) {
+      try {
+        return await action().timeout(const Duration(seconds: 10));
+      } catch (e) {
+        attempt++;
+        if (attempt >= retries) rethrow;
+        await Future.delayed(Duration(seconds: attempt));
+      }
+    }
+  }
+
   /// Request an OTP for a given phone number.
   /// Returns a map containing the message and optionally the otpCode if in debug mode.
   Future<Map<String, dynamic>> sendOtp(String phoneNumber) async {
-    final response = await http.post(
+    final response = await _retry(() => http.post(
       Uri.parse('$baseUrl/auth/send-otp'),
       headers: {'Content-Type': 'application/json'},
       body: jsonEncode({'phone_number': phoneNumber}),
-    );
+    ));
 
     final data = jsonDecode(response.body);
     if (response.statusCode == 201 || response.statusCode == 200) {
@@ -27,7 +41,7 @@ class ApiService {
 
   /// Verify the OTP code and return the JWT token.
   Future<String> verifyOtp(String phoneNumber, String code, String role) async {
-    final response = await http.post(
+    final response = await _retry(() => http.post(
       Uri.parse('$baseUrl/auth/verify-otp'),
       headers: {'Content-Type': 'application/json'},
       body: jsonEncode({
@@ -35,7 +49,7 @@ class ApiService {
         'code': code,
         'role': role,
       }),
-    );
+    ));
 
     final data = jsonDecode(response.body);
     if (response.statusCode == 201 || response.statusCode == 200) {
@@ -55,10 +69,10 @@ class ApiService {
 
   /// Fetch only the logged-in Employer's inquiries.
   Future<List<Inquiry>> fetchMyInquiries(String token) async {
-    final response = await http.get(
+    final response = await _retry(() => http.get(
       Uri.parse('$baseUrl/inquiry/my'),
       headers: _getHeaders(token),
-    );
+    ));
 
     if (response.statusCode == 200) {
       final List<dynamic> data = jsonDecode(response.body);
@@ -71,10 +85,10 @@ class ApiService {
 
   /// Fetch all inquiries in the system (welder marketplace feed).
   Future<List<Inquiry>> fetchAllInquiries(String token) async {
-    final response = await http.get(
+    final response = await _retry(() => http.get(
       Uri.parse('$baseUrl/inquiry'),
       headers: _getHeaders(token),
-    );
+    ));
 
     if (response.statusCode == 200) {
       final List<dynamic> data = jsonDecode(response.body);
@@ -104,11 +118,11 @@ class ApiService {
       'items': items.map((e) => e.toJson()).toList(),
     });
 
-    final response = await http.post(
+    final response = await _retry(() => http.post(
       Uri.parse('$baseUrl/inquiry'),
       headers: _getHeaders(token),
       body: body,
-    );
+    ));
 
     if (response.statusCode == 201) {
       return Inquiry.fromJson(jsonDecode(response.body));
@@ -136,11 +150,11 @@ class ApiService {
       'items': items.map((e) => e.toJson()).toList(),
     });
 
-    final response = await http.patch(
+    final response = await _retry(() => http.patch(
       Uri.parse('$baseUrl/inquiry/$inquiryId'),
       headers: _getHeaders(token),
       body: body,
-    );
+    ));
 
     if (response.statusCode == 200) {
       return Inquiry.fromJson(jsonDecode(response.body));
@@ -157,37 +171,39 @@ class ApiService {
     required List<int> fileBytes,
     required String filename,
   }) async {
-    final uri = Uri.parse('$baseUrl/inquiry/$inquiryId/blueprint');
-    final request = http.MultipartRequest('POST', uri);
+    final response = await _retry(() async {
+      final uri = Uri.parse('$baseUrl/inquiry/$inquiryId/blueprint');
+      final request = http.MultipartRequest('POST', uri);
 
-    request.headers.addAll({
-      'Authorization': 'Bearer $token',
-      'Accept': 'application/json',
+      request.headers.addAll({
+        'Authorization': 'Bearer $token',
+        'Accept': 'application/json',
+      });
+
+      String ext = filename.split('.').last.toLowerCase();
+      MediaType mediaType;
+      if (ext == 'pdf') {
+        mediaType = MediaType('application', 'pdf');
+      } else if (ext == 'png') {
+        mediaType = MediaType('image', 'png');
+      } else if (ext == 'jpg' || ext == 'jpeg') {
+        mediaType = MediaType('image', 'jpeg');
+      } else {
+        mediaType = MediaType('application', 'octet-stream');
+      }
+
+      final multipartFile = http.MultipartFile.fromBytes(
+        'file',
+        fileBytes,
+        filename: filename,
+        contentType: mediaType,
+      );
+
+      request.files.add(multipartFile);
+
+      final streamedResponse = await request.send();
+      return await http.Response.fromStream(streamedResponse);
     });
-
-    String ext = filename.split('.').last.toLowerCase();
-    MediaType mediaType;
-    if (ext == 'pdf') {
-      mediaType = MediaType('application', 'pdf');
-    } else if (ext == 'png') {
-      mediaType = MediaType('image', 'png');
-    } else if (ext == 'jpg' || ext == 'jpeg') {
-      mediaType = MediaType('image', 'jpeg');
-    } else {
-      mediaType = MediaType('application', 'octet-stream');
-    }
-
-    final multipartFile = http.MultipartFile.fromBytes(
-      'file',
-      fileBytes,
-      filename: filename,
-      contentType: mediaType,
-    );
-
-    request.files.add(multipartFile);
-
-    final streamedResponse = await request.send();
-    final response = await http.Response.fromStream(streamedResponse);
 
     if (response.statusCode == 200) {
       return Inquiry.fromJson(jsonDecode(response.body));
@@ -199,10 +215,10 @@ class ApiService {
 
   /// Fetch authenticated user profile details (User + Role specific details).
   Future<Map<String, dynamic>> fetchProfile(String token) async {
-    final response = await http.get(
+    final response = await _retry(() => http.get(
       Uri.parse('$baseUrl/profile'),
       headers: _getHeaders(token),
-    );
+    ));
 
     if (response.statusCode == 200) {
       return jsonDecode(response.body) as Map<String, dynamic>;
@@ -214,10 +230,10 @@ class ApiService {
 
   /// Fetch all available skills configured on the server
   Future<List<dynamic>> fetchSkills(String token) async {
-    final response = await http.get(
+    final response = await _retry(() => http.get(
       Uri.parse('$baseUrl/profile/skills'),
       headers: _getHeaders(token),
-    );
+    ));
 
     if (response.statusCode == 200) {
       return jsonDecode(response.body) as List<dynamic>;
@@ -256,11 +272,11 @@ class ApiService {
     if (shibaNumber != null) bodyMap['shiba_number'] = shibaNumber;
     if (bankName != null) bodyMap['bank_name'] = bankName;
 
-    final response = await http.patch(
+    final response = await _retry(() => http.patch(
       Uri.parse('$baseUrl/profile/welder'),
       headers: _getHeaders(token),
       body: jsonEncode(bodyMap),
-    );
+    ));
 
     if (response.statusCode == 200) {
       return jsonDecode(response.body) as Map<String, dynamic>;
@@ -294,11 +310,11 @@ class ApiService {
     if (shibaNumber != null) bodyMap['shiba_number'] = shibaNumber;
     if (bankName != null) bodyMap['bank_name'] = bankName;
 
-    final response = await http.patch(
+    final response = await _retry(() => http.patch(
       Uri.parse('$baseUrl/profile/employer'),
       headers: _getHeaders(token),
       body: jsonEncode(bodyMap),
-    );
+    ));
 
     if (response.statusCode == 200) {
       return jsonDecode(response.body) as Map<String, dynamic>;
@@ -311,11 +327,11 @@ class ApiService {
     String token,
     List<Map<String, dynamic>> priceList,
   ) async {
-    final response = await http.put(
+    final response = await _retry(() => http.put(
       Uri.parse('$baseUrl/profile/welder/prices'),
       headers: _getHeaders(token),
       body: jsonEncode({'base_price_list': priceList}),
-    );
+    ));
 
     if (response.statusCode == 200) {
       return jsonDecode(response.body) as Map<String, dynamic>;
@@ -328,11 +344,11 @@ class ApiService {
   /// Switch the active role of the authenticated user.
   /// Returns the new JWT access token.
   Future<String> switchRole(String token, String targetRole) async {
-    final response = await http.post(
+    final response = await _retry(() => http.post(
       Uri.parse('$baseUrl/auth/switch-role'),
       headers: _getHeaders(token),
       body: jsonEncode({'role': targetRole}),
-    );
+    ));
 
     if (response.statusCode == 200) {
       final data = jsonDecode(response.body);
@@ -344,7 +360,7 @@ class ApiService {
   }
 
   Future<Inquiry> confirmInquiry(String token, String inquiryId, List<InquiryItem> items) async {
-    final response = await http.patch(
+    final response = await _retry(() => http.patch(
       Uri.parse('$baseUrl/inquiry/$inquiryId/confirm'),
       headers: _getHeaders(token),
       body: jsonEncode({
@@ -354,7 +370,7 @@ class ApiService {
           'quantity': i.quantity,
         }).toList(),
       }),
-    );
+    ));
 
     if (response.statusCode == 200) {
       return Inquiry.fromJson(jsonDecode(response.body));
@@ -366,10 +382,10 @@ class ApiService {
 
   /// Fetch all Iranian provinces from Geo API.
   Future<List<dynamic>> fetchProvinces() async {
-    final response = await http.get(
+    final response = await _retry(() => http.get(
       Uri.parse('$baseUrl/geo/provinces'),
       headers: {'Accept': 'application/json'},
-    );
+    ));
 
     if (response.statusCode == 200) {
       return jsonDecode(response.body) as List<dynamic>;
@@ -380,10 +396,10 @@ class ApiService {
 
   /// Fetch all cities in a province.
   Future<List<dynamic>> fetchCities(int provinceId) async {
-    final response = await http.get(
+    final response = await _retry(() => http.get(
       Uri.parse('$baseUrl/geo/cities/$provinceId'),
       headers: {'Accept': 'application/json'},
-    );
+    ));
 
     if (response.statusCode == 200) {
       return jsonDecode(response.body) as List<dynamic>;
@@ -398,21 +414,23 @@ class ApiService {
     List<int> fileBytes,
     String filename,
   ) async {
-    final request = http.MultipartRequest(
-      'POST',
-      Uri.parse('$baseUrl/profile/picture'),
-    );
-    request.headers.addAll(_getHeaders(token));
-    request.files.add(
-      http.MultipartFile.fromBytes(
-        'file',
-        fileBytes,
-        filename: filename,
-      ),
-    );
+    final response = await _retry(() async {
+      final request = http.MultipartRequest(
+        'POST',
+        Uri.parse('$baseUrl/profile/picture'),
+      );
+      request.headers.addAll(_getHeaders(token));
+      request.files.add(
+        http.MultipartFile.fromBytes(
+          'file',
+          fileBytes,
+          filename: filename,
+        ),
+      );
 
-    final streamedResponse = await request.send();
-    final response = await http.Response.fromStream(streamedResponse);
+      final streamedResponse = await request.send();
+      return await http.Response.fromStream(streamedResponse);
+    });
 
     if (response.statusCode == 200) {
       return jsonDecode(response.body) as Map<String, dynamic>;
@@ -424,10 +442,10 @@ class ApiService {
 
   /// Delete profile picture.
   Future<Map<String, dynamic>> deleteProfilePicture(String token) async {
-    final response = await http.delete(
+    final response = await _retry(() => http.delete(
       Uri.parse('$baseUrl/profile/picture'),
       headers: _getHeaders(token),
-    );
+    ));
 
     if (response.statusCode == 200) {
       return jsonDecode(response.body) as Map<String, dynamic>;
@@ -448,7 +466,7 @@ class ApiService {
     required bool rodChecked,
     required bool deliveryChecked,
   }) async {
-    final response = await http.post(
+    final response = await _retry(() => http.post(
       Uri.parse('$baseUrl/inquiry/$inquiryId/offer'),
       headers: _getHeaders(token),
       body: jsonEncode({
@@ -459,7 +477,7 @@ class ApiService {
         'rod_checked': rodChecked,
         'delivery_checked': deliveryChecked,
       }),
-    );
+    ));
 
     if (response.statusCode != 200 && response.statusCode != 201) {
       final error = jsonDecode(response.body);
@@ -472,10 +490,10 @@ class ApiService {
     required String token,
     required String inquiryId,
   }) async {
-    final response = await http.get(
+    final response = await _retry(() => http.get(
       Uri.parse('$baseUrl/inquiry/$inquiryId/offers'),
       headers: _getHeaders(token),
-    );
+    ));
 
     if (response.statusCode == 200) {
       return jsonDecode(response.body) as List<dynamic>;

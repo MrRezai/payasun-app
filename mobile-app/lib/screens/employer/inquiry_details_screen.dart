@@ -904,8 +904,14 @@ class _InquiryDetailsScreenState extends State<InquiryDetailsScreen> {
                       border: Border.all(color: AppColors.borderGrey),
                     ),
                     child: Column(
-                      children: ((bid['items_prices'] as List<dynamic>?) ?? []).map<Widget>((item) {
-                        final itemPriceVal = int.tryParse(item['price']?.toString() ?? '0') ?? 0;
+                      children: ((bid['items_prices'] as List<dynamic>?) ?? []).asMap().entries.map<Widget>((entry) {
+                        final idx = entry.key;
+                        final item = entry.value;
+                        final unitPrice = int.tryParse(item['price']?.toString() ?? '0') ?? 0;
+                        final inqItem = idx < inquiry.items.length ? inquiry.items[idx] : null;
+                        final qty = inqItem?.quantity ?? 1;
+                        final lineTotal = unitPrice * qty.toInt();
+                        final unitText = inqItem != null ? ' (${qty.toStringAsFixed(0)} ${inqItem.unit} × ${Formatters.formatPrice(unitPrice)})' : '';
                         return Padding(
                           padding: const EdgeInsets.symmetric(vertical: 4.0),
                           child: Row(
@@ -913,12 +919,12 @@ class _InquiryDetailsScreenState extends State<InquiryDetailsScreen> {
                             children: [
                               Expanded(
                                 child: Text(
-                                  item['title'] as String? ?? '',
+                                  '${item['title'] as String? ?? ''}$unitText',
                                   style: const TextStyle(fontSize: 11, color: AppColors.textDark, fontFamily: 'Vazirmatn'),
                                 ),
                               ),
                               Text(
-                                '${Formatters.formatPrice(itemPriceVal)} تومان',
+                                '${Formatters.formatPrice(lineTotal)} تومان',
                                 style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: AppColors.royalBlue, fontFamily: 'Vazirmatn'),
                               ),
                             ],

@@ -55,8 +55,8 @@ export default function ViewProjectDetailModal({
   const getStatusText = (status: string) => {
     switch (status) {
       case 'DRAFT': return 'پیش‌نویس';
-      case 'PENDING_ESTIMATION': return 'در انتظار برآورد';
-      case 'ESTIMATED': return 'برآورد شده';
+      case 'PENDING_ESTIMATION': return 'در انتظار تایید';
+      case 'ESTIMATED': return 'تایید شده';
       case 'BROADCASTED': return 'منتشر شده';
       case 'REJECTED': return 'رد شده توسط ادمین';
       default: return status;
@@ -73,7 +73,7 @@ export default function ViewProjectDetailModal({
           <button className="modal-close" onClick={onClose} disabled={isActionLoading}>&times;</button>
         </div>
 
-        <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 1fr', gap: '20px', marginBottom: '20px' }}>
+        <div className="modal-grid-2col">
           <div>
             <h4 style={{ fontSize: '13px', color: 'var(--text-secondary)', marginBottom: '8px' }}>نقشه فنی پروژه</h4>
             {inquiry.has_blueprint ? (() => {
@@ -226,14 +226,20 @@ export default function ViewProjectDetailModal({
                   {/* Per-item rates breakdown */}
                   {off.items_prices && off.items_prices.length > 0 && (
                     <div style={{ padding: '8px', backgroundColor: 'rgba(0,0,0,0.02)', borderRadius: '6px', border: '1px solid var(--border)', marginTop: '4px' }}>
-                      <div style={{ fontWeight: '600', marginBottom: '6px', fontSize: '10px', color: 'var(--text-secondary)' }}>ریز قیمت پیشنهادی هر آیتم:</div>
+                      <div style={{ fontWeight: '600', marginBottom: '6px', fontSize: '10px', color: 'var(--text-secondary)' }}>ریز قیمت پیشنهادی و محاسباتی هر آیتم:</div>
                       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
-                        {off.items_prices.map((item: any, idx: number) => (
-                          <div key={idx} style={{ display: 'flex', justifyContent: 'space-between', fontSize: '10px', padding: '2px 0', borderBottom: '1px dashed var(--border)' }}>
-                            <span style={{ color: 'var(--text-secondary)' }}>{item.title}</span>
-                            <strong style={{ color: 'var(--text-primary)' }}>{item.price.toLocaleString('fa-IR')} تومان</strong>
-                          </div>
-                        ))}
+                        {off.items_prices.map((item: any, idx: number) => {
+                          const inqItem = inquiry.items?.[idx];
+                          const qty = inqItem?.quantity || 1;
+                          const unitPrice = item.price || 0;
+                          const lineTotal = unitPrice * qty;
+                          return (
+                            <div key={idx} style={{ display: 'flex', justifyContent: 'space-between', fontSize: '10px', padding: '2px 0', borderBottom: '1px dashed var(--border)' }}>
+                              <span style={{ color: 'var(--text-secondary)' }}>{item.title} ({qty} {inqItem?.unit || ''} × {unitPrice.toLocaleString('fa-IR')})</span>
+                              <strong style={{ color: 'var(--text-primary)' }}>{lineTotal.toLocaleString('fa-IR')} تومان</strong>
+                            </div>
+                          );
+                        })}
                       </div>
                     </div>
                   )}

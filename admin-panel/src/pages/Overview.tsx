@@ -151,7 +151,7 @@ export default function Overview({
             </div>
             <div className="chart-bar-wrapper">
               <div className="chart-bar" style={{ height: estimatedBarHeight, background: 'linear-gradient(to top, var(--secondary), rgba(245,158,11,0.3))' }}></div>
-              <span className="chart-label">برآورد شده ({estimatedCount})</span>
+              <span className="chart-label">تایید شده ({estimatedCount})</span>
             </div>
             <div className="chart-bar-wrapper">
               <div className="chart-bar" style={{ height: broadcastedBarHeight, background: 'linear-gradient(to top, var(--success), rgba(16,185,129,0.3))' }}></div>

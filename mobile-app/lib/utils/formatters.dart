@@ -114,10 +114,8 @@ class PersianDigitsFormatter extends TextInputFormatter {
       text = text.replaceAll(english[i], persian[i]);
       text = text.replaceAll(arabic[i], persian[i]);
     }
-    
-    // 2. Keep only Persian digits (Unicode range \u06f0 to \u06f9)
-    text = text.replaceAll(RegExp(r'[^\u06f0-\u06f9]'), '');
-    
+    // 2. Keep only Persian digits and zero-width spaces
+    text = text.replaceAll(RegExp(r'[^\u06f0-\u06f9\u200b\u200B]'), '');
     // 3. Strip leading zeroes
     if (stripLeadingZero) {
       while (text.startsWith('۰')) {
