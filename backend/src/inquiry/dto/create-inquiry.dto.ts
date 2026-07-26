@@ -45,6 +45,11 @@ export class CreateInquiryDto {
   @IsBoolean()
   has_blueprint?: boolean;
 
+  @ApiPropertyOptional({ description: 'نوع برآورد (ROUGH یا EXACT)', example: 'ROUGH' })
+  @IsOptional()
+  @IsString()
+  estimation_type?: string;
+
   @ApiPropertyOptional({ description: 'لیست اقلام استعلام (اگر پلان آپلود نشود)', type: [InquiryItemDto] })
   @IsOptional()
   @IsArray()

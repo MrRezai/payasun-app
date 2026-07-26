@@ -48,6 +48,9 @@ export class Inquiry {
   @Column({ type: 'varchar', length: 500, nullable: true })
   blueprint_url: string | null;
 
+  @Column({ type: 'varchar', length: 50, nullable: true, default: 'ROUGH' })
+  estimation_type: string | null;
+
   @Column({ type: 'text', nullable: true })
   rejection_reason: string | null;
 

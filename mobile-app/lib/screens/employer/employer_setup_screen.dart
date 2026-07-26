@@ -185,9 +185,10 @@ class _EmployerSetupScreenState extends State<EmployerSetupScreen> {
       builder: (context) {
         return StatefulBuilder(
           builder: (context, setSheetState) {
+            final cleanFilter = searchFilter.trim();
             final filteredProvinces = _provinces.where((prov) {
               final name = prov['name'] as String;
-              return name.contains(searchFilter);
+              return cleanFilter.isEmpty || name.contains(cleanFilter);
             }).toList();
 
             return Directionality(
@@ -302,9 +303,10 @@ class _EmployerSetupScreenState extends State<EmployerSetupScreen> {
       builder: (context) {
         return StatefulBuilder(
           builder: (context, setSheetState) {
+            final cleanFilter = searchFilter.trim();
             final filteredCities = _citiesOfSelectedProvince.where((city) {
               final cityName = city['name'] as String;
-              return cityName.contains(searchFilter);
+              return cleanFilter.isEmpty || cityName.contains(cleanFilter);
             }).toList();
 
             return Directionality(

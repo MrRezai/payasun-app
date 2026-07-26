@@ -61,6 +61,7 @@ export interface Inquiry {
   city: string;
   has_blueprint: boolean;
   blueprint_url: string | null;
+  estimation_type?: string | null;
   status: InquiryStatus;
   rejection_reason?: string | null;
   items: InquiryItem[];

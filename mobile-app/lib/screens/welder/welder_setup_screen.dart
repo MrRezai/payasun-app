@@ -363,19 +363,31 @@ class _WelderSetupScreenState extends State<WelderSetupScreen> {
                     itemBuilder: (context, idx) {
                       final u = units[idx];
                       final isSelected = controller.text == u;
-                      return ListTile(
-                        title: Text(
-                          u,
-                          style: TextStyle(
-                            fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-                            color: isSelected ? AppColors.royalBlue : AppColors.textDark,
-                          ),
+                      return Container(
+                        margin: const EdgeInsets.symmetric(vertical: 3),
+                        decoration: BoxDecoration(
+                          color: isSelected ? AppColors.royalBlue.withValues(alpha: 0.08) : Colors.transparent,
+                          borderRadius: BorderRadius.circular(12),
+                          border: isSelected
+                              ? Border.all(color: AppColors.royalBlue.withValues(alpha: 0.5), width: 1.5)
+                              : Border.all(color: Colors.transparent, width: 1.5),
                         ),
-                        trailing: isSelected ? const Icon(Icons.check_circle, color: AppColors.royalBlue) : null,
-                        onTap: () {
-                          controller.text = u;
-                          Navigator.pop(context);
-                        },
+                        child: ListTile(
+                          title: Text(
+                            u,
+                            style: TextStyle(
+                              fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                              color: isSelected ? AppColors.royalBlue : AppColors.textDark,
+                              fontSize: 14,
+                              fontFamily: 'Vazirmatn',
+                            ),
+                          ),
+                          trailing: isSelected ? const Icon(Icons.check_circle, color: AppColors.royalBlue, size: 20) : null,
+                          onTap: () {
+                            controller.text = u;
+                            Navigator.pop(context);
+                          },
+                        ),
                       );
                     },
                   ),
@@ -1156,9 +1168,10 @@ class _WelderSetupScreenState extends State<WelderSetupScreen> {
       builder: (context) {
         return StatefulBuilder(
           builder: (context, setSheetState) {
+            final cleanFilter = searchFilter.trim();
             final filteredProvinces = _provinces.where((prov) {
               final name = prov['name'] as String;
-              return name.contains(searchFilter);
+              return cleanFilter.isEmpty || name.contains(cleanFilter);
             }).toList();
 
             return Directionality(
@@ -1273,9 +1286,10 @@ class _WelderSetupScreenState extends State<WelderSetupScreen> {
       builder: (context) {
         return StatefulBuilder(
           builder: (context, setSheetState) {
+            final cleanFilter = searchFilter.trim();
             final filteredCities = _citiesOfSelectedProvince.where((city) {
               final cityName = city['name'] as String;
-              return cityName.contains(searchFilter);
+              return cleanFilter.isEmpty || cityName.contains(cleanFilter);
             }).toList();
 
             return Directionality(
@@ -1416,9 +1430,10 @@ class _WelderSetupScreenState extends State<WelderSetupScreen> {
       builder: (context) {
         return StatefulBuilder(
           builder: (context, setSheetState) {
+            final cleanFilter = searchFilter.trim();
             final filteredProvinces = _provinces.where((prov) {
               final name = prov['name'] as String;
-              return name.contains(searchFilter);
+              return cleanFilter.isEmpty || name.contains(cleanFilter);
             }).toList();
 
             return Directionality(
@@ -1533,9 +1548,10 @@ class _WelderSetupScreenState extends State<WelderSetupScreen> {
       builder: (context) {
         return StatefulBuilder(
           builder: (context, setSheetState) {
+            final cleanFilter = searchFilter.trim();
             final filteredCities = _citiesOfHomeProvince.where((city) {
               final cityName = city['name'] as String;
-              return cityName.contains(searchFilter);
+              return cleanFilter.isEmpty || cityName.contains(cleanFilter);
             }).toList();
 
             return Directionality(

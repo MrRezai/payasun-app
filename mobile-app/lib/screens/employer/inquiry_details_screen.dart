@@ -548,7 +548,7 @@ class _InquiryDetailsScreenState extends State<InquiryDetailsScreen> {
                         ),
                         alignment: Alignment.center,
                         child: Text(
-                          '${index + 1}',
+                          Formatters.toPersianNumbers((index + 1).toString()),
                           style: const TextStyle(
                             color: AppColors.royalBlue,
                             fontWeight: FontWeight.bold,
@@ -577,7 +577,7 @@ class _InquiryDetailsScreenState extends State<InquiryDetailsScreen> {
                           border: Border.all(color: AppColors.borderGrey),
                         ),
                         child: Text(
-                          '${item.quantity.toStringAsFixed(0)} ${item.unit}',
+                          '${Formatters.toPersianNumbers(item.quantity.toStringAsFixed(0))} ${item.unit}',
                           style: const TextStyle(
                             fontSize: 12,
                             fontWeight: FontWeight.bold,
@@ -694,7 +694,8 @@ class _InquiryDetailsScreenState extends State<InquiryDetailsScreen> {
                           onPressed: () {
                             final title = titleController.text.trim();
                             final unit = unitController.text.trim();
-                            final qty = double.tryParse(qtyController.text.trim()) ?? 0;
+                            final cleanQty = Formatters.cleanNumber(qtyController.text.trim());
+                            final qty = double.tryParse(cleanQty) ?? 0;
                             if (title.isNotEmpty && unit.isNotEmpty && qty > 0) {
                               setSheetState(() {
                                 tempItems.add(InquiryItem(title: title, unit: unit, quantity: qty));

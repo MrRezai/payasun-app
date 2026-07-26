@@ -96,8 +96,9 @@ class PersianPriceInputFormatter extends TextInputFormatter {
 }
 class PersianDigitsFormatter extends TextInputFormatter {
   final bool stripLeadingZero;
+  final bool keepText;
 
-  PersianDigitsFormatter({this.stripLeadingZero = false});
+  PersianDigitsFormatter({this.stripLeadingZero = false, this.keepText = false});
 
   @override
   TextEditingValue formatEditUpdate(
@@ -114,8 +115,12 @@ class PersianDigitsFormatter extends TextInputFormatter {
       text = text.replaceAll(english[i], persian[i]);
       text = text.replaceAll(arabic[i], persian[i]);
     }
-    // 2. Keep only Persian digits and zero-width spaces
-    text = text.replaceAll(RegExp(r'[^\u06f0-\u06f9\u200b\u200B]'), '');
+    
+    // 2. Keep only Persian digits if keepText is false
+    if (!keepText) {
+      text = text.replaceAll(RegExp(r'[^\u06f0-\u06f9\u200b\u200B]'), '');
+    }
+    
     // 3. Strip leading zeroes
     if (stripLeadingZero) {
       while (text.startsWith('۰')) {
@@ -123,8 +128,11 @@ class PersianDigitsFormatter extends TextInputFormatter {
       }
     }
     
-    // 4. Calculate selection index
-    int selectionIndex = text.length;
+    // 4. Calculate selection index preserving cursor offset
+    int selectionIndex = newValue.selection.end;
+    if (selectionIndex > text.length) {
+      selectionIndex = text.length;
+    }
     
     return TextEditingValue(
       text: text,

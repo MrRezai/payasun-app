@@ -1013,8 +1013,9 @@ class _EmployerProfileScreenState extends State<EmployerProfileScreen> {
       builder: (context) {
         return StatefulBuilder(
           builder: (context, setModalState) {
+            final cleanQuery = _provinceSearchQuery.trim();
             final filteredProvinces = _provinces
-                .where((element) => (element['name'] as String).contains(_provinceSearchQuery))
+                .where((element) => cleanQuery.isEmpty || (element['name'] as String).contains(cleanQuery))
                 .toList();
 
             return Directionality(
@@ -1156,8 +1157,9 @@ class _EmployerProfileScreenState extends State<EmployerProfileScreen> {
       builder: (context) {
         return StatefulBuilder(
           builder: (context, setModalState) {
+            final cleanQuery = _citySearchQuery.trim();
             final filteredCities = _citiesList
-                .where((element) => (element['name'] as String).contains(_citySearchQuery))
+                .where((element) => cleanQuery.isEmpty || (element['name'] as String).contains(cleanQuery))
                 .toList();
 
             return Directionality(

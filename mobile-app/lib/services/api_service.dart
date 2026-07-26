@@ -107,6 +107,7 @@ class ApiService {
     required String city,
     required String province,
     required bool hasBlueprint,
+    String? estimationType,
     required List<InquiryItem> items,
   }) async {
     final body = jsonEncode({
@@ -115,6 +116,7 @@ class ApiService {
       'city': city,
       'province': province,
       'has_blueprint': hasBlueprint,
+      if (estimationType != null) 'estimation_type': estimationType,
       'items': items.map((e) => e.toJson()).toList(),
     });
 

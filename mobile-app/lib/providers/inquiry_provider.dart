@@ -145,6 +145,7 @@ class InquiryProvider with ChangeNotifier {
     required String description,
     required String city,
     required String province,
+    String? estimationType,
   }) async {
     _isLoading = true;
     _errorMessage = null;
@@ -152,7 +153,6 @@ class InquiryProvider with ChangeNotifier {
 
     try {
       if (title.trim().isEmpty) throw Exception('لطفاً عنوان استعلام را وارد کنید.');
-      if (description.trim().isEmpty) throw Exception('لطفاً توضیحات استعلام را وارد کنید.');
       if (city.trim().isEmpty) throw Exception('لطفاً شهر محل پروژه را وارد کنید.');
       if (province.trim().isEmpty) throw Exception('لطفاً استان محل پروژه را وارد کنید.');
       
@@ -173,6 +173,7 @@ class InquiryProvider with ChangeNotifier {
         city: city,
         province: province,
         hasBlueprint: _hasBlueprint,
+        estimationType: estimationType,
         items: _hasBlueprint ? [] : _manualItems,
       );
 

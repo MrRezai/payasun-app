@@ -5,6 +5,7 @@ import '../../providers/auth_provider.dart';
 import '../../providers/inquiry_provider.dart';
 import '../../services/api_service.dart';
 import '../../models/inquiry.dart';
+import '../../utils/formatters.dart';
 
 class CreateInquiryScreen extends StatefulWidget {
   final Inquiry? inquiryToEdit;
@@ -18,6 +19,8 @@ class _CreateInquiryScreenState extends State<CreateInquiryScreen> {
   final _formKey = GlobalKey<FormState>();
   final _titleController = TextEditingController();
   final _descController = TextEditingController();
+  final _areaController = TextEditingController();
+  final _floorsController = TextEditingController();
 
   final _itemTitleController = TextEditingController();
   final _itemUnitController = TextEditingController();
@@ -147,6 +150,8 @@ class _CreateInquiryScreenState extends State<CreateInquiryScreen> {
   void dispose() {
     _titleController.dispose();
     _descController.dispose();
+    _areaController.dispose();
+    _floorsController.dispose();
     _itemTitleController.dispose();
     _itemUnitController.dispose();
     _itemQtyController.dispose();
@@ -179,21 +184,35 @@ class _CreateInquiryScreenState extends State<CreateInquiryScreen> {
       return;
     }
 
+    String finalDescription = _descController.text.trim();
+    final areaText = _areaController.text.trim();
+    final floorsText = _floorsController.text.trim();
+    List<String> extraDetails = [];
+    if (areaText.isNotEmpty) extraDetails.add('متراژ زیربنا: ${Formatters.toPersianNumbers(areaText)} مترمربع');
+    if (floorsText.isNotEmpty) extraDetails.add('تعداد طبقات: ${Formatters.toPersianNumbers(floorsText)} طبقه');
+    if (extraDetails.isNotEmpty) {
+      final extraStr = extraDetails.join(' | ');
+      finalDescription = finalDescription.isNotEmpty
+          ? '$finalDescription ($extraStr)'
+          : extraStr;
+    }
+
     final result = widget.inquiryToEdit != null
         ? await provider.updateInquiry(
             token: auth.token,
             inquiryId: widget.inquiryToEdit!.id,
             title: _titleController.text,
-            description: _descController.text,
+            description: finalDescription,
             city: _selectedCityName!,
             province: _selectedProvinceName!,
           )
         : await provider.submitInquiry(
             token: auth.token,
             title: _titleController.text,
-            description: _descController.text,
+            description: finalDescription,
             city: _selectedCityName!,
             province: _selectedProvinceName!,
+            estimationType: _estimationType,
           );
 
     if (result != null && mounted) {
@@ -208,6 +227,8 @@ class _CreateInquiryScreenState extends State<CreateInquiryScreen> {
       );
       _titleController.clear();
       _descController.clear();
+      _areaController.clear();
+      _floorsController.clear();
       setState(() {
         _selectedProvinceId = null;
         _selectedProvinceName = null;
@@ -254,9 +275,10 @@ class _CreateInquiryScreenState extends State<CreateInquiryScreen> {
       builder: (context) {
         return StatefulBuilder(
           builder: (context, setSheetState) {
+            final cleanFilter = searchFilter.trim();
             final filteredProvinces = _provinces.where((prov) {
               final name = prov['name'] as String;
-              return name.contains(searchFilter);
+              return cleanFilter.isEmpty || name.contains(cleanFilter);
             }).toList();
 
             return Directionality(
@@ -284,9 +306,11 @@ class _CreateInquiryScreenState extends State<CreateInquiryScreen> {
                       ),
                     ),
                     const SizedBox(height: 18),
-                    const Text(
-                      'انتخاب استان پروژه',
-                      style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: AppColors.burgundy),
+                    const Center(
+                      child: Text(
+                        'انتخاب استان پروژه',
+                        style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: AppColors.burgundy),
+                      ),
                     ),
                     const SizedBox(height: 12),
 
@@ -312,8 +336,7 @@ class _CreateInquiryScreenState extends State<CreateInquiryScreen> {
                     const Divider(color: AppColors.borderGrey, height: 1),
                     const SizedBox(height: 8),
 
-                    SizedBox(
-                      height: 300,
+                    Expanded(
                       child: _isLoadingProvinces
                           ? const Center(child: CircularProgressIndicator(color: AppColors.royalBlue))
                           : filteredProvinces.isEmpty
@@ -328,25 +351,37 @@ class _CreateInquiryScreenState extends State<CreateInquiryScreen> {
                               itemBuilder: (context, index) {
                                 final prov = filteredProvinces[index];
                                 final isSelected = prov['name'] == _selectedProvinceName;
-                                return ListTile(
-                                  title: Text(
-                                    prov['name'] as String,
-                                    style: TextStyle(
-                                      fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-                                      color: isSelected ? AppColors.royalBlue : AppColors.textDark,
-                                    ),
+                                return Container(
+                                  margin: const EdgeInsets.symmetric(vertical: 3),
+                                  decoration: BoxDecoration(
+                                    color: isSelected ? AppColors.royalBlue.withValues(alpha: 0.08) : Colors.transparent,
+                                    borderRadius: BorderRadius.circular(12),
+                                    border: isSelected
+                                        ? Border.all(color: AppColors.royalBlue.withValues(alpha: 0.5), width: 1.5)
+                                        : Border.all(color: Colors.transparent, width: 1.5),
                                   ),
-                                  trailing: isSelected
-                                      ? const Icon(Icons.check_circle, color: AppColors.royalBlue)
-                                      : null,
-                                  onTap: () {
-                                    setState(() {
-                                      _selectedProvinceId = prov['id'] as int;
-                                      _selectedProvinceName = prov['name'] as String;
-                                    });
-                                    _loadCities(_selectedProvinceId!);
-                                    Navigator.pop(context);
-                                  },
+                                  child: ListTile(
+                                    title: Text(
+                                      prov['name'] as String,
+                                      style: TextStyle(
+                                        fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                                        color: isSelected ? AppColors.royalBlue : AppColors.textDark,
+                                        fontSize: 14,
+                                        fontFamily: 'Vazirmatn',
+                                      ),
+                                    ),
+                                    trailing: isSelected
+                                        ? const Icon(Icons.check_circle, color: AppColors.royalBlue, size: 20)
+                                        : null,
+                                    onTap: () {
+                                      setState(() {
+                                        _selectedProvinceId = prov['id'] as int;
+                                        _selectedProvinceName = prov['name'] as String;
+                                      });
+                                      _loadCities(_selectedProvinceId!);
+                                      Navigator.pop(context);
+                                    },
+                                  ),
                                 );
                               },
                             ),
@@ -373,9 +408,10 @@ class _CreateInquiryScreenState extends State<CreateInquiryScreen> {
       builder: (context) {
         return StatefulBuilder(
           builder: (context, setSheetState) {
+            final cleanFilter = searchFilter.trim();
             final filteredCities = _citiesOfSelectedProvince.where((city) {
               final cityName = city['name'] as String;
-              return cityName.contains(searchFilter);
+              return cleanFilter.isEmpty || cityName.contains(cleanFilter);
             }).toList();
 
             return Directionality(
@@ -403,9 +439,11 @@ class _CreateInquiryScreenState extends State<CreateInquiryScreen> {
                       ),
                     ),
                     const SizedBox(height: 18),
-                    Text(
-                      'انتخاب شهر ($_selectedProvinceName)',
-                      style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: AppColors.burgundy),
+                    Center(
+                      child: Text(
+                        'انتخاب شهر ($_selectedProvinceName)',
+                        style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: AppColors.burgundy),
+                      ),
                     ),
                     const SizedBox(height: 12),
 
@@ -431,8 +469,7 @@ class _CreateInquiryScreenState extends State<CreateInquiryScreen> {
                     const Divider(color: AppColors.borderGrey, height: 1),
                     const SizedBox(height: 8),
 
-                    SizedBox(
-                      height: 300,
+                    Expanded(
                       child: _isLoadingCities
                           ? const Center(child: CircularProgressIndicator(color: AppColors.royalBlue))
                           : filteredCities.isEmpty
@@ -442,23 +479,35 @@ class _CreateInquiryScreenState extends State<CreateInquiryScreen> {
                                   itemBuilder: (context, index) {
                                     final city = filteredCities[index];
                                     final isSelected = city['name'] == _selectedCityName;
-                                    return ListTile(
-                                      title: Text(
-                                        city['name'] as String,
-                                        style: TextStyle(
-                                          fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-                                          color: isSelected ? AppColors.royalBlue : AppColors.textDark,
-                                        ),
+                                    return Container(
+                                      margin: const EdgeInsets.symmetric(vertical: 3),
+                                      decoration: BoxDecoration(
+                                        color: isSelected ? AppColors.royalBlue.withValues(alpha: 0.08) : Colors.transparent,
+                                        borderRadius: BorderRadius.circular(12),
+                                        border: isSelected
+                                            ? Border.all(color: AppColors.royalBlue.withValues(alpha: 0.5), width: 1.5)
+                                            : Border.all(color: Colors.transparent, width: 1.5),
                                       ),
-                                      trailing: isSelected
-                                          ? const Icon(Icons.check_circle, color: AppColors.royalBlue)
-                                          : null,
-                                      onTap: () {
-                                        setState(() {
-                                          _selectedCityName = city['name'] as String;
-                                        });
-                                        Navigator.pop(context);
-                                      },
+                                      child: ListTile(
+                                        title: Text(
+                                          city['name'] as String,
+                                          style: TextStyle(
+                                            fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                                            color: isSelected ? AppColors.royalBlue : AppColors.textDark,
+                                            fontSize: 14,
+                                            fontFamily: 'Vazirmatn',
+                                          ),
+                                        ),
+                                        trailing: isSelected
+                                            ? const Icon(Icons.check_circle, color: AppColors.royalBlue, size: 20)
+                                            : null,
+                                        onTap: () {
+                                          setState(() {
+                                            _selectedCityName = city['name'] as String;
+                                          });
+                                          Navigator.pop(context);
+                                        },
+                                      ),
                                     );
                                   },
                                 ),
@@ -489,9 +538,11 @@ class _CreateInquiryScreenState extends State<CreateInquiryScreen> {
               mainAxisSize: MainAxisSize.min,
               children: [
                 const SizedBox(height: 16),
-                const Text(
-                  'انتخاب واحد محاسبه',
-                  style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: AppColors.burgundy),
+                const Center(
+                  child: Text(
+                    'انتخاب واحد محاسبه',
+                    style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: AppColors.burgundy),
+                  ),
                 ),
                 const SizedBox(height: 12),
                 const Divider(color: AppColors.borderGrey, height: 1),
@@ -502,21 +553,35 @@ class _CreateInquiryScreenState extends State<CreateInquiryScreen> {
                     itemBuilder: (context, idx) {
                       final u = units[idx];
                       final isSelected = _itemUnitController.text == u;
-                      return ListTile(
-                        title: Text(
-                          u,
-                          style: TextStyle(
-                            fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-                            color: isSelected ? AppColors.royalBlue : AppColors.textDark,
-                          ),
+                      return Container(
+                        margin: const EdgeInsets.symmetric(vertical: 3),
+                        decoration: BoxDecoration(
+                          color: isSelected ? AppColors.royalBlue.withValues(alpha: 0.08) : Colors.transparent,
+                          borderRadius: BorderRadius.circular(12),
+                          border: isSelected
+                              ? Border.all(color: AppColors.royalBlue.withValues(alpha: 0.5), width: 1.5)
+                              : Border.all(color: Colors.transparent, width: 1.5),
                         ),
-                        trailing: isSelected ? const Icon(Icons.check_circle, color: AppColors.royalBlue) : null,
-                        onTap: () {
-                          setState(() {
-                            _itemUnitController.text = u;
-                          });
-                          Navigator.pop(context);
-                        },
+                        child: ListTile(
+                          title: Text(
+                            u,
+                            style: TextStyle(
+                              fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                              color: isSelected ? AppColors.royalBlue : AppColors.textDark,
+                              fontSize: 14,
+                              fontFamily: 'Vazirmatn',
+                            ),
+                          ),
+                          trailing: isSelected
+                              ? const Icon(Icons.check_circle, color: AppColors.royalBlue, size: 20)
+                              : null,
+                          onTap: () {
+                            setState(() {
+                              _itemUnitController.text = u;
+                            });
+                            Navigator.pop(context);
+                          },
+                        ),
                       );
                     },
                   ),
@@ -658,13 +723,69 @@ class _CreateInquiryScreenState extends State<CreateInquiryScreen> {
               ),
               const SizedBox(height: 12),
 
-              // Description Field
+              // Area & Floor Count Row (Optional for blueprint project, Mandatory for manual inquiry)
+              Row(
+                children: [
+                  Expanded(
+                    child: _buildTextField(
+                      controller: _areaController,
+                      label: provider.hasBlueprint ? 'متراژ زیربنا (اختیاری)' : 'متراژ زیربنا (اجباری)',
+                      hint: 'مثال: ۲۰۰',
+                      validator: (value) {
+                        if (!provider.hasBlueprint && (value == null || value.trim().isEmpty)) {
+                          return 'لطفاً متراژ را وارد کنید';
+                        }
+                        return null;
+                      },
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: _buildTextField(
+                      controller: _floorsController,
+                      label: provider.hasBlueprint ? 'تعداد طبقات (اختیاری)' : 'تعداد طبقات (اجباری)',
+                      hint: 'مثال: ۵',
+                      validator: (value) {
+                        if (!provider.hasBlueprint && (value == null || value.trim().isEmpty)) {
+                          return 'لطفاً تعداد طبقات را وارد کنید';
+                        }
+                        return null;
+                      },
+                    ),
+                  ),
+                ],
+              ),
+              // Explanatory guidance text for Employer
+              const Padding(
+                padding: EdgeInsets.only(top: 6, bottom: 4, right: 4, left: 4),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Icon(Icons.info_outline, size: 15, color: AppColors.royalBlue),
+                    SizedBox(width: 6),
+                    Expanded(
+                      child: Text(
+                        'اعلام متراژ و طبقات به منظور ارجاع به جوشکار مناسب برای استعلام فعلی میباشد.',
+                        style: TextStyle(
+                          fontSize: 11,
+                          color: AppColors.textMuted,
+                          height: 1.4,
+                          fontFamily: 'Vazirmatn',
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 12),
+
+              // Description Field (Optional)
               _buildTextField(
                 controller: _descController,
-                label: 'توضیحات تکمیلی پروژه',
+                label: 'توضیحات تکمیلی پروژه (اختیاری)',
                 hint: 'توضیحات درباره زمان شروع، جزئیات جوشکاری و شرایط کارگاه...',
-                maxLines: 4,
-                validator: (value) => value == null || value.trim().isEmpty ? 'لطفاً توضیحات را وارد کنید' : null,
+                maxLines: 3,
+                validator: null,
               ),
               const SizedBox(height: 20),
 
@@ -762,9 +883,34 @@ class _CreateInquiryScreenState extends State<CreateInquiryScreen> {
       controller: controller,
       maxLines: maxLines,
       validator: validator,
+      inputFormatters: [PersianDigitsFormatter(keepText: true)],
+      style: const TextStyle(
+        fontSize: 13,
+        fontWeight: FontWeight.normal,
+        color: AppColors.textDark,
+        fontFamily: 'Vazirmatn',
+      ),
       decoration: InputDecoration(
         labelText: label,
         hintText: hint,
+        hintStyle: const TextStyle(
+          color: Color(0xFFBDBDBD),
+          fontWeight: FontWeight.w300,
+          fontSize: 12,
+          fontFamily: 'Vazirmatn',
+        ),
+        labelStyle: const TextStyle(
+          color: AppColors.textDark,
+          fontWeight: FontWeight.normal,
+          fontSize: 13,
+          fontFamily: 'Vazirmatn',
+        ),
+        floatingLabelStyle: const TextStyle(
+          color: AppColors.royalBlue,
+          fontWeight: FontWeight.bold,
+          fontSize: 13,
+          fontFamily: 'Vazirmatn',
+        ),
         filled: true,
         fillColor: AppColors.white,
         contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 15),
@@ -1142,7 +1288,8 @@ class _CreateInquiryScreenState extends State<CreateInquiryScreen> {
                   onPressed: () {
                     final title = _itemTitleController.text.trim();
                     final unit = _itemUnitController.text.trim();
-                    final qty = double.tryParse(_itemQtyController.text.trim()) ?? 0.0;
+                    final cleanQty = Formatters.cleanNumber(_itemQtyController.text.trim());
+                    final qty = double.tryParse(cleanQty) ?? 0.0;
 
                     if (title.isEmpty || unit.isEmpty || qty <= 0) {
                       ScaffoldMessenger.of(context).showSnackBar(
@@ -1191,7 +1338,7 @@ class _CreateInquiryScreenState extends State<CreateInquiryScreen> {
                   borderRadius: BorderRadius.circular(10),
                 ),
                 child: Text(
-                  '${provider.manualItems.length}',
+                  Formatters.toPersianNumbers(provider.manualItems.length.toString()),
                   style: const TextStyle(
                     color: AppColors.white,
                     fontWeight: FontWeight.bold,
@@ -1219,7 +1366,7 @@ class _CreateInquiryScreenState extends State<CreateInquiryScreen> {
                 margin: const EdgeInsets.symmetric(vertical: 4),
                 child: ListTile(
                   title: Text(item.title, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
-                  subtitle: Text('مقدار: ${item.quantity} ${item.unit}', style: const TextStyle(fontSize: 12)),
+                  subtitle: Text('مقدار: ${Formatters.toPersianNumbers(item.quantity.toStringAsFixed(0))} ${item.unit}', style: const TextStyle(fontSize: 12)),
                   trailing: IconButton(
                     icon: const Icon(Icons.delete_outline, color: Colors.red),
                     onPressed: () {
@@ -1382,9 +1529,17 @@ class _CreateInquiryScreenState extends State<CreateInquiryScreen> {
                           const Divider(height: 20, color: AppColors.borderGrey),
                           _buildPreviewItem(
                             label: 'توضیحات پروژه:',
-                            value: _descController.text,
+                            value: _descController.text.trim().isNotEmpty ? _descController.text.trim() : 'ثبت نشده (اختیاری)',
                             icon: Icons.description_outlined,
                           ),
+                          if (_areaController.text.trim().isNotEmpty || _floorsController.text.trim().isNotEmpty) ...[
+                            const Divider(height: 20, color: AppColors.borderGrey),
+                            _buildPreviewItem(
+                              label: 'متراژ و تعداد طبقات:',
+                              value: '${_areaController.text.trim().isNotEmpty ? "متراژ: ${Formatters.toPersianNumbers(_areaController.text.trim())} مترمربع" : ""} ${_floorsController.text.trim().isNotEmpty ? "(${Formatters.toPersianNumbers(_floorsController.text.trim())} طبقه)" : ""}'.trim(),
+                              icon: Icons.domain_outlined,
+                            ),
+                          ],
                           const Divider(height: 20, color: AppColors.borderGrey),
                           if (provider.hasBlueprint)
                             _buildPreviewItem(

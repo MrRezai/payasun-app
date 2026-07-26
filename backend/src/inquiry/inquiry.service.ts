@@ -43,6 +43,7 @@ export class InquiryService {
       province: dto.province ?? null,
       status: initialStatus,
       has_blueprint: hasBlueprint,
+      estimation_type: dto.estimation_type ?? (hasBlueprint ? 'ROUGH' : null),
       items: dto.items ?? [],
       blueprint_url: null,
     });

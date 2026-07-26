@@ -98,9 +98,23 @@ export default function ViewProjectDetailModal({
         <Row gutter={[16, 16]}>
           {/* Blueprint Viewer */}
           <Col xs={24} md={12}>
-            <Text type="secondary" style={{ fontSize: '13px', display: 'block', marginBottom: '8px' }}>
-              نقشه فنی پروژه
-            </Text>
+            <Row justify="space-between" align="middle" style={{ marginBottom: '8px' }}>
+              <Col>
+                <Text type="secondary" style={{ fontSize: '13px' }}>
+                  نقشه‌ها و فایل‌های فنی پروژه
+                </Text>
+              </Col>
+              <Col>
+                {inquiry.has_blueprint && (
+                  inquiry.estimation_type === 'EXACT' ? (
+                    <Tag color="purple" style={{ fontWeight: 'bold' }}>محاسبه دقیق</Tag>
+                  ) : (
+                    <Tag color="orange" style={{ fontWeight: 'bold' }}>برآورد تقریبی</Tag>
+                  )
+                )}
+              </Col>
+            </Row>
+
             {inquiry.has_blueprint ? (() => {
               const urls = inquiry.blueprint_url 
                 ? inquiry.blueprint_url.split(',').filter((u: string) => u.trim().length > 0)
@@ -115,17 +129,21 @@ export default function ViewProjectDetailModal({
               }
 
               return (
-                <Space direction="vertical" style={{ width: '100%', maxHeight: '200px', overflowY: 'auto' }} size="small">
+                <Space direction="vertical" style={{ width: '100%', maxHeight: '220px', overflowY: 'auto' }} size="small">
+                  <Text style={{ fontSize: '11px', color: '#718096' }}>تعداد {urls.length} فایل بارگذاری شده است:</Text>
                   {urls.map((rawUrl: string, idx: number) => {
                     const fileUrl = rawUrl.startsWith('http') ? rawUrl : `${BASE_URL}${rawUrl}`;
+                    const fileName = rawUrl.split('/').pop() || `فایل ${idx + 1}`;
                     const isPdf = rawUrl.toLowerCase().endsWith('.pdf');
                     return (
                       <Card key={idx} size="small" style={{ borderRadius: '8px', border: '1px solid #e2e8f0' }}>
                         <Row justify="space-between" align="middle">
-                          <Col>
-                            <Space>
+                          <Col style={{ flex: 1, overflow: 'hidden', paddingLeft: '8px' }}>
+                            <Space wrap={false}>
                               {isPdf ? <FilePdfOutlined style={{ color: '#e74c3c', fontSize: '18px' }} /> : <PictureOutlined style={{ color: '#4169E1', fontSize: '18px' }} />}
-                              <Text strong style={{ fontSize: '12px' }}>فایل نقشه شماره {idx + 1}</Text>
+                              <Text strong style={{ fontSize: '12px' }} ellipsis title={fileName}>
+                                فایل {idx + 1}: {fileName}
+                              </Text>
                             </Space>
                           </Col>
                           <Col>
