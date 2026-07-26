@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Card, Table, Tag, Avatar, Button, Space, Typography, Popconfirm, Input, Row, Col } from 'antd';
+import { Card, Table, Tag, Avatar, Button, Space, Typography, Popconfirm, Input, Row, Col, Badge } from 'antd';
 import { UserOutlined, EyeOutlined, LockOutlined, UnlockOutlined, DeleteOutlined, SearchOutlined } from '@ant-design/icons';
 import { BASE_URL } from '../api';
 import ViewUserHistoryModal from '../modals/ViewUserHistoryModal';
@@ -134,7 +134,10 @@ export default function Users({ usersList, onDeleteUser, onToggleBlockUser }: Us
       title={
         <Row justify="space-between" align="middle" gutter={[12, 12]}>
           <Col xs={24} sm={12}>
-            <Title level={5} style={{ margin: 0 }}>لیست کاربران پلتفرم ({usersList.length} نفر)</Title>
+            <Space align="center" size="middle">
+              <Title level={5} style={{ margin: 0 }}>لیست کاربران پلتفرم</Title>
+              <Badge count={usersList.length} overflowCount={9999} showZero style={{ backgroundColor: '#4169E1' }} />
+            </Space>
           </Col>
           <Col xs={24} sm={12}>
             <Input 
@@ -153,7 +156,7 @@ export default function Users({ usersList, onDeleteUser, onToggleBlockUser }: Us
         columns={columns}
         rowKey="id"
         pagination={{ pageSize: 10, responsive: true }}
-        scroll={{ x: true }}
+        scroll={{ x: 'max-content' }}
         size="middle"
       />
 

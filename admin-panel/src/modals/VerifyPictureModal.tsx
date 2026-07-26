@@ -38,6 +38,7 @@ export default function VerifyPictureModal({ user, onClose, onVerify }: VerifyPi
             }
             type={confirmAction ? 'success' : 'error'}
             showIcon
+            closable
             icon={confirmAction ? <CheckCircleOutlined /> : <CloseCircleOutlined />}
           />
 

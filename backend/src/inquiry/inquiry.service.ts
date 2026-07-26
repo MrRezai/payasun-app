@@ -65,7 +65,11 @@ export class InquiryService {
     }
 
     inquiry.has_blueprint = true;
-    inquiry.blueprint_url = fileUrl;
+    if (inquiry.blueprint_url && inquiry.blueprint_url.trim().length > 0) {
+      inquiry.blueprint_url = `${inquiry.blueprint_url},${fileUrl}`;
+    } else {
+      inquiry.blueprint_url = fileUrl;
+    }
     inquiry.status = InquiryStatus.PENDING_ESTIMATION;
 
     return this.inquiryRepository.save(inquiry);

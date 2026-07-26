@@ -35,6 +35,11 @@ class _CreateInquiryScreenState extends State<CreateInquiryScreen> {
   bool _isLoadingProvinces = false;
   bool _isLoadingCities = false;
 
+  // Estimation type & dismissible guidance alerts
+  String _estimationType = 'ROUGH'; // 'ROUGH' or 'EXACT'
+  bool _showRoughAlert = true;
+  bool _showExactAlert = true;
+
   @override
   void initState() {
     super.initState();
@@ -542,7 +547,7 @@ class _CreateInquiryScreenState extends State<CreateInquiryScreen> {
             tooltip: 'بازگشت',
           ),
           title: const Text(
-            'ثبت استعلام جدید',
+            'ثبت پروژه جدید',
             style: TextStyle(
               fontWeight: FontWeight.bold,
               fontSize: 16,
@@ -559,7 +564,7 @@ class _CreateInquiryScreenState extends State<CreateInquiryScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              _buildSectionHeader('مشخصات استعلام جدید'),
+              _buildSectionHeader('مشخصات پروژه جدید'),
               const SizedBox(height: 15),
 
               // Title Field
@@ -813,15 +818,173 @@ class _CreateInquiryScreenState extends State<CreateInquiryScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        _buildSectionHeader('آپلود نقشه ساختمان'),
+        _buildSectionHeader('نوع برآورد و آپلود نقشه ساختمان'),
         const SizedBox(height: 12),
+
+        // Estimation Type Selector (Rough vs Exact)
+        Row(
+          children: [
+            Expanded(
+              child: GestureDetector(
+                onTap: () => setState(() => _estimationType = 'ROUGH'),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 8),
+                  decoration: BoxDecoration(
+                    color: _estimationType == 'ROUGH' ? AppColors.royalBlue.withValues(alpha: 0.1) : AppColors.white,
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(
+                      color: _estimationType == 'ROUGH' ? AppColors.royalBlue : AppColors.borderGrey,
+                      width: _estimationType == 'ROUGH' ? 2 : 1,
+                    ),
+                  ),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(
+                        _estimationType == 'ROUGH' ? Icons.radio_button_checked : Icons.radio_button_off,
+                        color: _estimationType == 'ROUGH' ? AppColors.royalBlue : AppColors.textMuted,
+                        size: 18,
+                      ),
+                      const SizedBox(width: 6),
+                      Text(
+                        'برآورد تقریبی',
+                        style: TextStyle(
+                          fontWeight: _estimationType == 'ROUGH' ? FontWeight.bold : FontWeight.normal,
+                          color: _estimationType == 'ROUGH' ? AppColors.royalBlue : AppColors.textDark,
+                          fontSize: 13,
+                          fontFamily: 'Vazirmatn',
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: GestureDetector(
+                onTap: () => setState(() => _estimationType = 'EXACT'),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 8),
+                  decoration: BoxDecoration(
+                    color: _estimationType == 'EXACT' ? AppColors.royalBlue.withValues(alpha: 0.1) : AppColors.white,
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(
+                      color: _estimationType == 'EXACT' ? AppColors.royalBlue : AppColors.borderGrey,
+                      width: _estimationType == 'EXACT' ? 2 : 1,
+                    ),
+                  ),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(
+                        _estimationType == 'EXACT' ? Icons.radio_button_checked : Icons.radio_button_off,
+                        color: _estimationType == 'EXACT' ? AppColors.royalBlue : AppColors.textMuted,
+                        size: 18,
+                      ),
+                      const SizedBox(width: 6),
+                      Text(
+                        'محاسبه دقیق',
+                        style: TextStyle(
+                          fontWeight: _estimationType == 'EXACT' ? FontWeight.bold : FontWeight.normal,
+                          color: _estimationType == 'EXACT' ? AppColors.royalBlue : AppColors.textDark,
+                          fontSize: 13,
+                          fontFamily: 'Vazirmatn',
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 12),
+
+        // Dismissible Guidance Alert Box for Rough Estimate
+        if (_estimationType == 'ROUGH' && _showRoughAlert)
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+            margin: const EdgeInsets.only(bottom: 12),
+            decoration: BoxDecoration(
+              color: Colors.blue[50],
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: Colors.blue[200]!),
+            ),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Icon(Icons.info_outline, color: AppColors.royalBlue, size: 20),
+                const SizedBox(width: 10),
+                const Expanded(
+                  child: Text(
+                    'لطفاً فقط نقشه معماری شامل پلان، نما و مقطع را بارگذاری کنید. نیازی به نقشه سازه و اجرایی نیست.',
+                    style: TextStyle(
+                      color: AppColors.textDark,
+                      fontSize: 12,
+                      height: 1.5,
+                      fontFamily: 'Vazirmatn',
+                    ),
+                  ),
+                ),
+                InkWell(
+                  onTap: () => setState(() => _showRoughAlert = false),
+                  borderRadius: BorderRadius.circular(20),
+                  child: const Padding(
+                    padding: EdgeInsets.all(2.0),
+                    child: Icon(Icons.close, size: 18, color: AppColors.textMuted),
+                  ),
+                ),
+              ],
+            ),
+          ),
+
+        // Dismissible Guidance Alert Box for Exact Calculation
+        if (_estimationType == 'EXACT' && _showExactAlert)
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+            margin: const EdgeInsets.only(bottom: 12),
+            decoration: BoxDecoration(
+              color: Colors.amber[50],
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: Colors.amber[300]!),
+            ),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Icon(Icons.privacy_tip_outlined, color: Colors.amber, size: 20),
+                const SizedBox(width: 10),
+                const Expanded(
+                  child: Text(
+                    'لطفاً نقشه معماری شامل پلان، نما و مقطع را به همراه دفترچه محاسبات و نقشه سازه و اجرایی بارگذاری کنید.',
+                    style: TextStyle(
+                      color: AppColors.textDark,
+                      fontSize: 12,
+                      height: 1.5,
+                      fontFamily: 'Vazirmatn',
+                    ),
+                  ),
+                ),
+                InkWell(
+                  onTap: () => setState(() => _showExactAlert = false),
+                  borderRadius: BorderRadius.circular(20),
+                  child: const Padding(
+                    padding: EdgeInsets.all(2.0),
+                    child: Icon(Icons.close, size: 18, color: AppColors.textMuted),
+                  ),
+                ),
+              ],
+            ),
+          ),
+
+        // Upload Container
         GestureDetector(
           onTap: () async {
-            await provider.pickBlueprintFile();
+            await provider.pickBlueprintFiles();
           },
           child: Container(
             width: double.infinity,
-            padding: const EdgeInsets.symmetric(vertical: 40, horizontal: 20),
+            padding: const EdgeInsets.symmetric(vertical: 28, horizontal: 20),
             decoration: BoxDecoration(
               color: AppColors.white,
               borderRadius: BorderRadius.circular(16),
@@ -838,42 +1001,88 @@ class _CreateInquiryScreenState extends State<CreateInquiryScreen> {
               children: [
                 const Icon(
                   Icons.cloud_upload_outlined,
-                  size: 54,
+                  size: 48,
                   color: AppColors.royalBlue,
                 ),
-                const SizedBox(height: 15),
-                if (provider.selectedFileName == null) ...[
-                  const Text(
-                    'انتخاب و آپلود پلان یا فایل فنی ساختمان',
-                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
-                  ),
-                  const SizedBox(height: 5),
-                  const Text(
-                    'فرمت‌های مجاز: PDF, DWG, PNG, JPG (حداکثر ۱۵ مگابایت)',
-                    style: TextStyle(color: AppColors.textMuted, fontSize: 11),
-                  ),
-                ] else ...[
-                  Text(
-                    provider.selectedFileName!,
-                    style: const TextStyle(fontWeight: FontWeight.bold, color: AppColors.burgundy, fontSize: 14),
-                    textAlign: TextAlign.center,
-                  ),
-                  const SizedBox(height: 10),
-                  TextButton.icon(
-                    onPressed: () {
-                      provider.clearSelectedFile();
-                    },
-                    icon: const Icon(Icons.delete_outline, color: Colors.red),
-                    label: const Text(
-                      'حذف فایل انتخابی',
-                      style: TextStyle(color: Colors.red),
-                    ),
-                  ),
-                ]
+                const SizedBox(height: 12),
+                Text(
+                  provider.selectedFiles.isEmpty
+                      ? 'انتخاب و آپلود نقشه‌ها و فایل‌های فنی (امکان انتخاب همزمان چند فایل)'
+                      : 'افزودن فایل‌های بیشتر...',
+                  style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13, fontFamily: 'Vazirmatn'),
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 5),
+                const Text(
+                  'فرمت‌های مجاز: PDF, DWG, PNG, JPG (حداکثر ۱۵ مگابایت برای هر فایل)',
+                  style: TextStyle(color: AppColors.textMuted, fontSize: 11, fontFamily: 'Vazirmatn'),
+                  textAlign: TextAlign.center,
+                ),
               ],
             ),
           ),
         ),
+
+        // List of selected files
+        if (provider.selectedFiles.isNotEmpty) ...[
+          const SizedBox(height: 14),
+          Row(
+            children: [
+              const Text(
+                'فایل‌های انتخابی شما:',
+                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: AppColors.textDark, fontFamily: 'Vazirmatn'),
+              ),
+              const SizedBox(width: 8),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                decoration: BoxDecoration(
+                  color: AppColors.royalBlue,
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Text(
+                  '${provider.selectedFiles.length} فایل',
+                  style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 11, fontFamily: 'Vazirmatn'),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          ListView.builder(
+            shrinkWrap: true,
+            physics: const NeverScrollableScrollPhysics(),
+            itemCount: provider.selectedFiles.length,
+            itemBuilder: (context, index) {
+              final file = provider.selectedFiles[index];
+              return Container(
+                margin: const EdgeInsets.symmetric(vertical: 4),
+                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                decoration: BoxDecoration(
+                  color: AppColors.white,
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: AppColors.borderGrey),
+                ),
+                child: Row(
+                  children: [
+                    const Icon(Icons.insert_drive_file_outlined, color: AppColors.royalBlue, size: 22),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Text(
+                        file.name,
+                        style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12, color: AppColors.textDark, fontFamily: 'Vazirmatn'),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                    IconButton(
+                      icon: const Icon(Icons.delete_outline, color: Colors.red, size: 20),
+                      onPressed: () => provider.removeSelectedFile(index),
+                    ),
+                  ],
+                ),
+              );
+            },
+          ),
+        ],
       ],
     );
   }

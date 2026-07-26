@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Row, Col, Card, Form, Input, Button, Table, Space, Typography, Popconfirm } from 'antd';
+import { Row, Col, Card, Form, Input, Button, Table, Space, Typography, Popconfirm, Badge, Alert } from 'antd';
 import { PlusOutlined, EditOutlined, DeleteOutlined, CheckOutlined, CloseOutlined } from '@ant-design/icons';
 import { Skill } from '../types';
 
@@ -126,6 +126,14 @@ export default function Skills({ skills, onAddSkill, onEditSkill, onDeleteSkill 
       {/* Create Skill Form */}
       <Col xs={24} lg={9}>
         <Card title={<Title level={5} style={{ margin: 0 }}>افزودن تخصص جوشکاری جدید</Title>}>
+          <Alert 
+            message="راهنمای تعریف تخصص"
+            description="عناوین تخصص‌ها را شفاف و استاندارد وارد کنید تا جوشکاران بتوانند به‌درستی مهارت‌های خود را انتخاب نمایند."
+            type="info"
+            showIcon
+            closable
+            style={{ marginBottom: 16 }}
+          />
           <Form
             form={form}
             layout="vertical"
@@ -161,8 +169,12 @@ export default function Skills({ skills, onAddSkill, onEditSkill, onDeleteSkill 
         <Card 
           title={
             <Row justify="space-between" align="middle">
-              <Col><Title level={5} style={{ margin: 0 }}>لیست کل تخصص‌های مجاز پلتفرم</Title></Col>
-              <Col><Text type="secondary" style={{ fontSize: '13px' }}>تعداد: {skills.length} مورد</Text></Col>
+              <Col>
+                <Space align="center" size="middle">
+                  <Title level={5} style={{ margin: 0 }}>لیست کل تخصص‌های مجاز پلتفرم</Title>
+                  <Badge count={skills.length} overflowCount={999} showZero style={{ backgroundColor: '#10B981' }} />
+                </Space>
+              </Col>
             </Row>
           }
         >
@@ -171,7 +183,7 @@ export default function Skills({ skills, onAddSkill, onEditSkill, onDeleteSkill 
             columns={columns}
             rowKey="id"
             pagination={{ pageSize: 8, responsive: true }}
-            scroll={{ x: true }}
+            scroll={{ x: 'max-content' }}
             size="middle"
           />
         </Card>

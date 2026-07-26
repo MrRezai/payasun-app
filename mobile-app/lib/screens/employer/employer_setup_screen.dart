@@ -5,6 +5,7 @@ import '../../constants/route_transitions.dart';
 import '../../providers/auth_provider.dart';
 import '../../services/api_service.dart';
 import '../main_shell_screen.dart';
+import '../auth/login_phone_screen.dart';
 
 class EmployerSetupScreen extends StatefulWidget {
   const EmployerSetupScreen({super.key});
@@ -456,6 +457,32 @@ class _EmployerSetupScreenState extends State<EmployerSetupScreen> {
       textDirection: TextDirection.rtl,
       child: Scaffold(
         backgroundColor: AppColors.white,
+        appBar: AppBar(
+          backgroundColor: AppColors.white,
+          elevation: 0,
+          title: const Text(
+            'تکمیل مشخصات کارفرما',
+            style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: AppColors.royalBlue, fontFamily: 'Vazirmatn'),
+          ),
+          centerTitle: true,
+          actions: [
+            TextButton.icon(
+              onPressed: () {
+                final auth = Provider.of<AuthProvider>(context, listen: false);
+                auth.logout();
+                Navigator.of(context).pushAndRemoveUntil(
+                  FadePageRoute(page: const LoginPhoneScreen()),
+                  (route) => false,
+                );
+              },
+              icon: const Icon(Icons.swap_horiz, size: 18, color: Colors.red),
+              label: const Text(
+                'تغییر نقش / خروج',
+                style: TextStyle(fontSize: 11, color: Colors.red, fontFamily: 'Vazirmatn'),
+              ),
+            ),
+          ],
+        ),
         bottomNavigationBar: _isSaving
             ? null
             : Container(

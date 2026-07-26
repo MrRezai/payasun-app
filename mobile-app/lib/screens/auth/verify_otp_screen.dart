@@ -28,21 +28,13 @@ class _VerifyOtpScreenState extends State<VerifyOtpScreen> {
   int _secondsRemaining = totalSeconds;
   Timer? _timer;
   // 5 digits verification code
-  final List<TextEditingController> _controllers = List.generate(5, (_) => TextEditingController(text: '\u200B'));
+  final List<TextEditingController> _controllers = List.generate(5, (_) => TextEditingController());
   final List<FocusNode> _focusNodes = List.generate(5, (_) => FocusNode());
 
   @override
   void initState() {
     super.initState();
     _startTimer();
-    for (int i = 0; i < 5; i++) {
-      _focusNodes[i].addListener(() {
-        if (_focusNodes[i].hasFocus) {
-          final text = _controllers[i].text;
-          _controllers[i].selection = TextSelection.collapsed(offset: text.length);
-        }
-      });
-    }
   }
 
   void _startTimer() {
@@ -96,7 +88,7 @@ class _VerifyOtpScreenState extends State<VerifyOtpScreen> {
   }
 
   void _submitCode() async {
-    final rawCode = _controllers.map((c) => c.text.replaceAll('\u200B', '')).join();
+    final rawCode = _controllers.map((c) => c.text).join();
     final code = Formatters.cleanNumber(rawCode);
     if (code.length != 5) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -405,13 +397,6 @@ class _VerifyOtpScreenState extends State<VerifyOtpScreen> {
     );
   }
 
-  void _setControllerText(int index, String text) {
-    _controllers[index].value = TextEditingValue(
-      text: text,
-      selection: TextSelection.collapsed(offset: text.length),
-    );
-  }
-
   Widget _buildOtpGrid() {
     return Directionality(
       textDirection: TextDirection.ltr,
@@ -421,58 +406,83 @@ class _VerifyOtpScreenState extends State<VerifyOtpScreen> {
           return SizedBox(
             width: 48,
             height: 52,
-            child: TextFormField(
-              controller: _controllers[index],
-              focusNode: _focusNodes[index],
-              keyboardType: TextInputType.number,
-              textAlign: TextAlign.center,
-              inputFormatters: [
-                PersianDigitsFormatter(),
-                LengthLimitingTextInputFormatter(3),
-              ],
-              style: const TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.w900,
-                color: AppColors.burgundy,
-              ),
-              decoration: InputDecoration(
-                filled: true,
-                fillColor: AppColors.lightGrey,
-                counterText: '',
-                contentPadding: EdgeInsets.zero,
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                  borderSide: const BorderSide(color: AppColors.borderGrey),
-                ),
-                enabledBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                  borderSide: const BorderSide(color: AppColors.borderGrey),
-                ),
-                focusedBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                  borderSide: const BorderSide(color: AppColors.royalBlue, width: 2),
-                ),
-              ),
-              onChanged: (value) {
-                if (value.length >= 2) {
-                  final digit = value.substring(value.length - 1);
-                  _setControllerText(index, '\u200B$digit');
-                  if (index < 4) {
-                    _focusNodes[index + 1].requestFocus();
-                  } else {
-                    _focusNodes[index].unfocus();
-                    _submitCode();
-                  }
-                } else if (value.isEmpty) {
-                  if (index > 0) {
-                    _setControllerText(index, '\u200B');
-                    _setControllerText(index - 1, '\u200B');
+            child: Focus(
+              onKeyEvent: (FocusNode node, KeyEvent event) {
+                if (event is KeyDownEvent && event.logicalKey == LogicalKeyboardKey.backspace) {
+                  if (_controllers[index].text.isEmpty && index > 0) {
+                    _controllers[index - 1].clear();
                     _focusNodes[index - 1].requestFocus();
-                  } else {
-                    _setControllerText(index, '\u200B');
+                    return KeyEventResult.handled;
                   }
                 }
+                return KeyEventResult.ignored;
               },
+              child: TextFormField(
+                controller: _controllers[index],
+                focusNode: _focusNodes[index],
+                keyboardType: TextInputType.number,
+                textAlign: TextAlign.center,
+                inputFormatters: [
+                  PersianDigitsFormatter(),
+                  LengthLimitingTextInputFormatter(5),
+                ],
+                style: const TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.w900,
+                  color: AppColors.burgundy,
+                ),
+                decoration: InputDecoration(
+                  filled: true,
+                  fillColor: AppColors.lightGrey,
+                  counterText: '',
+                  contentPadding: EdgeInsets.zero,
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: const BorderSide(color: AppColors.borderGrey),
+                  ),
+                  enabledBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: const BorderSide(color: AppColors.borderGrey),
+                  ),
+                  focusedBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: const BorderSide(color: AppColors.royalBlue, width: 2),
+                  ),
+                ),
+                onChanged: (value) {
+                  final cleaned = Formatters.cleanNumber(value);
+
+                  // Handle Paste (user pasted 2+ digits)
+                  if (cleaned.length > 1) {
+                    final digits = cleaned.split('');
+                    for (int i = 0; i < 5; i++) {
+                      _controllers[i].text = i < digits.length ? Formatters.toPersianNumbers(digits[i]) : '';
+                    }
+                    if (digits.length >= 5) {
+                      _focusNodes[4].unfocus();
+                      _submitCode();
+                    } else {
+                      _focusNodes[digits.length].requestFocus();
+                    }
+                    return;
+                  }
+
+                  // Single digit entered
+                  if (cleaned.isNotEmpty) {
+                    if (index < 4) {
+                      _focusNodes[index + 1].requestFocus();
+                    } else {
+                      _focusNodes[index].unfocus();
+                      _submitCode();
+                    }
+                  } else {
+                    // Deleted current digit -> move to previous
+                    if (index > 0) {
+                      _focusNodes[index - 1].requestFocus();
+                    }
+                  }
+                },
+              ),
             ),
           );
         }),

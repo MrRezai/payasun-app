@@ -141,12 +141,41 @@ export class AuthService {
         user.initial_role = user.role;
       }
 
-      // Check if user has the selected login role
-      const hasRole = user.roles.includes(role);
-      if (!hasRole) {
-        throw new BadRequestException(
-          `این شماره موبایل با نقش دیگری ثبت شده است. برای تغییر نقش ابتدا با نقش قبلی وارد شده و از داخل برنامه اقدام کنید.`,
-        );
+      // Automatically attach role if not yet present for this user
+      if (!user.roles.includes(role)) {
+        user.roles.push(role);
+        await this.createProfileForRole(user.id, role);
+
+        // Synchronize names upon initial role creation
+        if (role === Role.EMPLOYER) {
+          const welderProfile = await this.welderProfileRepository.findOne({
+            where: { user_id: user.id },
+          });
+          if (welderProfile && welderProfile.first_name) {
+            const employerProfile = await this.employerProfileRepository.findOne({
+              where: { user_id: user.id },
+            });
+            if (employerProfile) {
+              employerProfile.first_name = welderProfile.first_name;
+              employerProfile.last_name = welderProfile.last_name;
+              await this.employerProfileRepository.save(employerProfile);
+            }
+          }
+        } else if (role === Role.WELDER) {
+          const employerProfile = await this.employerProfileRepository.findOne({
+            where: { user_id: user.id },
+          });
+          if (employerProfile && employerProfile.first_name) {
+            const welderProfile = await this.welderProfileRepository.findOne({
+              where: { user_id: user.id },
+            });
+            if (welderProfile) {
+              welderProfile.first_name = employerProfile.first_name;
+              welderProfile.last_name = employerProfile.last_name;
+              await this.welderProfileRepository.save(welderProfile);
+            }
+          }
+        }
       }
 
       // Update active role to the logged-in role

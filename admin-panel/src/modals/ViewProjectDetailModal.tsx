@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Modal, Row, Col, Card, Table, Tag, Button, Space, Typography, Input, Alert, Popconfirm } from 'antd';
+import { Modal, Row, Col, Card, Table, Tag, Button, Space, Typography, Input, Alert, Popconfirm, Badge } from 'antd';
 import { FilePdfOutlined, PictureOutlined, DeleteOutlined, StopOutlined, EyeOutlined, EyeInvisibleOutlined } from '@ant-design/icons';
 import { BASE_URL } from '../api';
 import { Inquiry } from '../types';
@@ -102,45 +102,46 @@ export default function ViewProjectDetailModal({
               نقشه فنی پروژه
             </Text>
             {inquiry.has_blueprint ? (() => {
-              const isPdf = inquiry.blueprint_url?.toLowerCase().endsWith('.pdf');
-              const fileUrl = inquiry.blueprint_url 
-                ? (inquiry.blueprint_url.startsWith('http') ? inquiry.blueprint_url : `${BASE_URL}${inquiry.blueprint_url}`)
-                : '';
+              const urls = inquiry.blueprint_url 
+                ? inquiry.blueprint_url.split(',').filter((u: string) => u.trim().length > 0)
+                : [];
               
-              if (isPdf) {
+              if (urls.length === 0) {
                 return (
-                  <Card style={{ textAlign: 'center', height: '180px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                    <FilePdfOutlined style={{ fontSize: '38px', color: '#e74c3c', marginBottom: '8px' }} />
-                    <Text strong style={{ display: 'block', marginBottom: '6px' }}>فایل نقشه فنی PDF است</Text>
-                    <Button type="primary" danger size="small" href={fileUrl} target="_blank">
-                      دانلود و مشاهده PDF
-                    </Button>
+                  <Card style={{ textAlign: 'center', minHeight: '120px', display: 'flex', alignItems: 'center', justifyContent: 'center', backgroundColor: '#fafafa' }}>
+                    <Text type="secondary">در انتظار آپلود فایل پلان...</Text>
                   </Card>
                 );
               }
 
               return (
-                <div style={{ position: 'relative', height: '180px', borderRadius: '12px', overflow: 'hidden', border: '1px solid #f0f0f0' }}>
-                  <img 
-                    src={fileUrl} 
-                    alt="Blueprint" 
-                    style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-                  />
-                  <Button 
-                    size="small" 
-                    type="primary" 
-                    href={fileUrl} 
-                    target="_blank"
-                    icon={<PictureOutlined />}
-                    style={{ position: 'absolute', bottom: '8px', left: '8px', opacity: 0.9 }}
-                  >
-                    مشاهده اصلی
-                  </Button>
-                </div>
+                <Space direction="vertical" style={{ width: '100%', maxHeight: '200px', overflowY: 'auto' }} size="small">
+                  {urls.map((rawUrl: string, idx: number) => {
+                    const fileUrl = rawUrl.startsWith('http') ? rawUrl : `${BASE_URL}${rawUrl}`;
+                    const isPdf = rawUrl.toLowerCase().endsWith('.pdf');
+                    return (
+                      <Card key={idx} size="small" style={{ borderRadius: '8px', border: '1px solid #e2e8f0' }}>
+                        <Row justify="space-between" align="middle">
+                          <Col>
+                            <Space>
+                              {isPdf ? <FilePdfOutlined style={{ color: '#e74c3c', fontSize: '18px' }} /> : <PictureOutlined style={{ color: '#4169E1', fontSize: '18px' }} />}
+                              <Text strong style={{ fontSize: '12px' }}>فایل نقشه شماره {idx + 1}</Text>
+                            </Space>
+                          </Col>
+                          <Col>
+                            <Button size="small" type="primary" href={fileUrl} target="_blank">
+                              دانلود / مشاهده
+                            </Button>
+                          </Col>
+                        </Row>
+                      </Card>
+                    );
+                  })}
+                </Space>
               );
             })() : (
-              <Card style={{ textAlign: 'center', height: '180px', display: 'flex', alignItems: 'center', justifyContent: 'center', backgroundColor: '#fafafa' }}>
-                <Text type="secondary">بدون نقشه فنی (اقلام دستی)</Text>
+              <Card style={{ textAlign: 'center', minHeight: '120px', display: 'flex', alignItems: 'center', justifyContent: 'center', backgroundColor: '#fafafa' }}>
+                <Text type="secondary">بدون نقشه ارسالی (اقلام دستی)</Text>
               </Card>
             )}
           </Col>
@@ -172,6 +173,7 @@ export default function ViewProjectDetailModal({
             description={inquiry.rejection_reason || 'دلیلی ثبت نشده است.'}
             type="error"
             showIcon
+            closable
           />
         )}
 
@@ -182,12 +184,21 @@ export default function ViewProjectDetailModal({
             columns={itemsColumns}
             rowKey={(item, idx) => item.id || (idx !== undefined ? idx.toString() : '0')}
             pagination={false}
+            scroll={{ x: 'max-content' }}
             size="small"
           />
         </Card>
 
         {/* Welder Offers Section */}
-        <Card size="small" title={<Text strong style={{ color: '#4169E1' }}>پیشنهادهای دستمزد جوشکاران ({offers.length} مورد)</Text>}>
+        <Card 
+          size="small" 
+          title={
+            <Space align="center" size="middle">
+              <Text strong style={{ color: '#4169E1' }}>پیشنهادهای دستمزد جوشکاران</Text>
+              <Badge count={offers.length} overflowCount={999} showZero style={{ backgroundColor: '#4169E1' }} />
+            </Space>
+          }
+        >
           {offers.length === 0 ? (
             <Text type="secondary" style={{ display: 'block', textAlign: 'center', padding: '16px 0' }}>
               هنوز هیچ جوشکاری پیشنهادی روی این پروژه ثبت نکرده است.

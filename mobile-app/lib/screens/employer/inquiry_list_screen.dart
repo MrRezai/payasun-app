@@ -70,7 +70,7 @@ class _InquiryListScreenState extends State<InquiryListScreen> with SingleTicker
                 labelStyle: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13, fontFamily: 'Vazirmatn'),
                 unselectedLabelStyle: const TextStyle(fontSize: 13, fontFamily: 'Vazirmatn'),
                 tabs: const [
-                  Tab(text: 'در حال پردازش'),
+                  Tab(text: 'فهرست پروژه‌ها'),
                   Tab(text: 'تاریخچه انتشار'),
                 ],
               ),
@@ -85,8 +85,8 @@ class _InquiryListScreenState extends State<InquiryListScreen> with SingleTicker
           : TabBarView(
               controller: _tabController,
               children: [
-                _buildInquiryList(activeInquiries, 'هیچ استعلام فعالی یافت نشد.'),
-                _buildInquiryList(broadcastedInquiries, 'هیچ استعلام منتشر شده‌ای یافت نشد.'),
+                _buildInquiryList(activeInquiries, 'هیچ پروژه فعالی یافت نشد.'),
+                _buildInquiryList(broadcastedInquiries, 'هیچ پروژه منتشر شده‌ای یافت نشد.'),
               ],
             ),
       floatingActionButton: FloatingActionButton.extended(
@@ -107,7 +107,7 @@ class _InquiryListScreenState extends State<InquiryListScreen> with SingleTicker
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         icon: const Icon(Icons.add, size: 20),
         label: const Text(
-          'استعلام جدید',
+          'پروژه جدید',
           style: TextStyle(
             fontWeight: FontWeight.bold,
             fontSize: 14,

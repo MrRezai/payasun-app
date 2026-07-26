@@ -97,6 +97,7 @@ export default function EstimateProjectModal({
             description={`آیا از تایید کارشناسی و انتشار عمومی پروژه «${inquiry.title}» در پلتفرم اطمینان دارید؟ با تایید این مرحله، تعداد ${estimationItems.length} قلم فنی ثبت شده برای تمامی جوشکاران منتشر خواهد شد.`}
             type="info"
             showIcon
+            closable
             icon={<CheckCircleOutlined />}
           />
 
@@ -129,44 +130,45 @@ export default function EstimateProjectModal({
                 فایل نقشه پروژه (Blueprint)
               </Text>
               {inquiry.has_blueprint ? (() => {
-                const isPdf = inquiry.blueprint_url?.toLowerCase().endsWith('.pdf');
-                const fileUrl = inquiry.blueprint_url 
-                  ? (inquiry.blueprint_url.startsWith('http') ? inquiry.blueprint_url : `${BASE_URL}${inquiry.blueprint_url}`)
-                  : '';
+                const urls = inquiry.blueprint_url 
+                  ? inquiry.blueprint_url.split(',').filter((u: string) => u.trim().length > 0)
+                  : [];
                 
-                if (isPdf) {
+                if (urls.length === 0) {
                   return (
-                    <Card style={{ textAlign: 'center', height: '200px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                      <FilePdfOutlined style={{ fontSize: '42px', color: '#e74c3c', marginBottom: '8px' }} />
-                      <Text strong style={{ display: 'block', marginBottom: '8px' }}>فایل نقشه فنی PDF است</Text>
-                      <Button type="primary" danger size="small" href={fileUrl} target="_blank">
-                        دانلود و مشاهده PDF
-                      </Button>
+                    <Card style={{ textAlign: 'center', minHeight: '120px', display: 'flex', alignItems: 'center', justifyContent: 'center', backgroundColor: '#fafafa' }}>
+                      <Text type="secondary">در انتظار آپلود فایل پلان...</Text>
                     </Card>
                   );
                 }
 
                 return (
-                  <div style={{ position: 'relative', height: '200px', borderRadius: '12px', overflow: 'hidden', border: '1px solid #f0f0f0' }}>
-                    <img 
-                      src={fileUrl} 
-                      alt="Blueprint" 
-                      style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-                    />
-                    <Button 
-                      size="small" 
-                      type="primary" 
-                      href={fileUrl} 
-                      target="_blank"
-                      icon={<PictureOutlined />}
-                      style={{ position: 'absolute', bottom: '8px', left: '8px', opacity: 0.9 }}
-                    >
-                      مشاهده سایز اصلی
-                    </Button>
-                  </div>
+                  <Space direction="vertical" style={{ width: '100%', maxHeight: '220px', overflowY: 'auto' }} size="small">
+                    {urls.map((rawUrl: string, idx: number) => {
+                      const fileUrl = rawUrl.startsWith('http') ? rawUrl : `${BASE_URL}${rawUrl}`;
+                      const isPdf = rawUrl.toLowerCase().endsWith('.pdf');
+                      return (
+                        <Card key={idx} size="small" style={{ borderRadius: '8px', border: '1px solid #e2e8f0' }}>
+                          <Row justify="space-between" align="middle">
+                            <Col>
+                              <Space>
+                                {isPdf ? <FilePdfOutlined style={{ color: '#e74c3c', fontSize: '18px' }} /> : <PictureOutlined style={{ color: '#4169E1', fontSize: '18px' }} />}
+                                <Text strong style={{ fontSize: '12px' }}>فایل نقشه شماره {idx + 1}</Text>
+                              </Space>
+                            </Col>
+                            <Col>
+                              <Button size="small" type="primary" href={fileUrl} target="_blank">
+                                دانلود / دانلود فایل
+                              </Button>
+                            </Col>
+                          </Row>
+                        </Card>
+                      );
+                    })}
+                  </Space>
                 );
               })() : (
-                <Card style={{ textAlign: 'center', height: '200px', display: 'flex', alignItems: 'center', justifyContent: 'center', backgroundColor: '#fafafa' }}>
+                <Card style={{ textAlign: 'center', minHeight: '120px', display: 'flex', alignItems: 'center', justifyContent: 'center', backgroundColor: '#fafafa' }}>
                   <Text type="secondary">بدون نقشه ارسالی (اقلام دستی)</Text>
                 </Card>
               )}

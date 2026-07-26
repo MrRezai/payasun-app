@@ -3,6 +3,13 @@ import 'package:file_picker/file_picker.dart';
 import '../models/inquiry.dart';
 import '../services/api_service.dart';
 
+class BlueprintFile {
+  final String name;
+  final List<int> bytes;
+
+  BlueprintFile({required this.name, required this.bytes});
+}
+
 class InquiryProvider with ChangeNotifier {
   final ApiService _apiService = ApiService();
 
@@ -17,9 +24,8 @@ class InquiryProvider with ChangeNotifier {
   List<Inquiry> _allInquiries = [];
   List<dynamic> _inquiryOffers = [];
   
-  // Selected file state
-  List<int>? _selectedFileBytes;
-  String? _selectedFileName;
+  // Selected files state
+  final List<BlueprintFile> _selectedFiles = [];
 
   // Getters
   bool get isLoading => _isLoading;
@@ -29,8 +35,9 @@ class InquiryProvider with ChangeNotifier {
   List<Inquiry> get myInquiries => _myInquiries;
   List<Inquiry> get allInquiries => _allInquiries;
   List<dynamic> get inquiryOffers => _inquiryOffers;
-  List<int>? get selectedFileBytes => _selectedFileBytes;
-  String? get selectedFileName => _selectedFileName;
+  List<BlueprintFile> get selectedFiles => _selectedFiles;
+  String? get selectedFileName => _selectedFiles.isNotEmpty ? _selectedFiles.first.name : null;
+  List<int>? get selectedFileBytes => _selectedFiles.isNotEmpty ? _selectedFiles.first.bytes : null;
 
   void setHasBlueprint(bool value) {
     _hasBlueprint = value;
@@ -54,34 +61,47 @@ class InquiryProvider with ChangeNotifier {
     notifyListeners();
   }
 
-  Future<bool> pickBlueprintFile() async {
+  Future<bool> pickBlueprintFiles() async {
     try {
       final result = await FilePicker.platform.pickFiles(
         type: FileType.custom,
         allowedExtensions: ['pdf', 'png', 'jpg', 'jpeg', 'dwg'],
         withData: true,
+        allowMultiple: true,
       );
 
       if (result != null && result.files.isNotEmpty) {
-        final file = result.files.first;
-        _selectedFileBytes = file.bytes;
-        _selectedFileName = file.name;
+        for (var file in result.files) {
+          if (file.bytes != null && file.name.isNotEmpty) {
+            _selectedFiles.add(BlueprintFile(name: file.name, bytes: file.bytes!));
+          }
+        }
         _errorMessage = null;
         notifyListeners();
         return true;
       }
       return false;
     } catch (e) {
-      _errorMessage = 'خطا در انتخاب فایل: ${e.toString()}';
+      _errorMessage = 'خطا در انتخاب فایل‌ها: ${e.toString()}';
       notifyListeners();
       return false;
     }
   }
 
-  void clearSelectedFile() {
-    _selectedFileBytes = null;
-    _selectedFileName = null;
+  void removeSelectedFile(int index) {
+    if (index >= 0 && index < _selectedFiles.length) {
+      _selectedFiles.removeAt(index);
+      notifyListeners();
+    }
+  }
+
+  void clearSelectedFiles() {
+    _selectedFiles.clear();
     notifyListeners();
+  }
+
+  void clearSelectedFile() {
+    clearSelectedFiles();
   }
 
   /// Fetch logged-in employer's inquiries.
@@ -137,8 +157,8 @@ class InquiryProvider with ChangeNotifier {
       if (province.trim().isEmpty) throw Exception('لطفاً استان محل پروژه را وارد کنید.');
       
       if (_hasBlueprint) {
-        if (_selectedFileBytes == null || _selectedFileName == null) {
-          throw Exception('لطفاً ابتدا فایل پلان را انتخاب کنید.');
+        if (_selectedFiles.isEmpty) {
+          throw Exception('لطفاً حداقل یک فایل پلان/نقشه انتخاب کنید.');
         }
       } else {
         if (_manualItems.isEmpty) {
@@ -156,20 +176,23 @@ class InquiryProvider with ChangeNotifier {
         items: _hasBlueprint ? [] : _manualItems,
       );
 
-      if (_hasBlueprint && _selectedFileBytes != null && _selectedFileName != null) {
-        final updatedInquiry = await _apiService.uploadBlueprint(
-          token: token,
-          inquiryId: inquiry.id,
-          fileBytes: _selectedFileBytes!,
-          filename: _selectedFileName!,
-        );
+      if (_hasBlueprint && _selectedFiles.isNotEmpty) {
+        Inquiry? lastInquiry = inquiry;
+        for (var file in _selectedFiles) {
+          lastInquiry = await _apiService.uploadBlueprint(
+            token: token,
+            inquiryId: inquiry.id,
+            fileBytes: file.bytes,
+            filename: file.name,
+          );
+        }
         
         await loadMyInquiries(token);
         _isLoading = false;
-        clearSelectedFile();
+        clearSelectedFiles();
         clearManualItems();
         notifyListeners();
-        return updatedInquiry;
+        return lastInquiry;
       }
 
       await loadMyInquiries(token);
@@ -218,20 +241,23 @@ class InquiryProvider with ChangeNotifier {
         items: _hasBlueprint ? [] : _manualItems,
       );
 
-      if (_hasBlueprint && _selectedFileBytes != null && _selectedFileName != null) {
-        final updatedInquiry = await _apiService.uploadBlueprint(
-          token: token,
-          inquiryId: inquiry.id,
-          fileBytes: _selectedFileBytes!,
-          filename: _selectedFileName!,
-        );
+      if (_hasBlueprint && _selectedFiles.isNotEmpty) {
+        Inquiry? lastInquiry = inquiry;
+        for (var file in _selectedFiles) {
+          lastInquiry = await _apiService.uploadBlueprint(
+            token: token,
+            inquiryId: inquiry.id,
+            fileBytes: file.bytes,
+            filename: file.name,
+          );
+        }
         
         await loadMyInquiries(token);
         _isLoading = false;
-        clearSelectedFile();
+        clearSelectedFiles();
         clearManualItems();
         notifyListeners();
-        return updatedInquiry;
+        return lastInquiry;
       }
 
       await loadMyInquiries(token);

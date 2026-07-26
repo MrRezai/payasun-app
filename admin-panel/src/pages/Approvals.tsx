@@ -1,4 +1,4 @@
-import { Card, Table, Tag, Avatar, Button, Space, Typography, Image } from 'antd';
+import { Card, Table, Tag, Avatar, Button, Space, Typography, Image, Badge } from 'antd';
 import { UserOutlined, PictureOutlined } from '@ant-design/icons';
 import { BASE_URL } from '../api';
 
@@ -73,13 +73,20 @@ export default function Approvals({
   ];
 
   return (
-    <Card title={<Title level={5} style={{ margin: 0 }}>کاربران معلق احراز هویت تصویر پروفایل ({pendingVerifications.length} مورد)</Title>}>
+    <Card 
+      title={
+        <Space align="center" size="middle">
+          <Title level={5} style={{ margin: 0 }}>کاربران معلق احراز هویت تصویر پروفایل</Title>
+          <Badge count={pendingVerifications.length} overflowCount={999} showZero style={{ backgroundColor: pendingVerifications.length > 0 ? '#F59E0B' : '#94A3B8' }} />
+        </Space>
+      }
+    >
       <Table
         dataSource={pendingVerifications}
         columns={columns}
         rowKey="id"
         pagination={{ pageSize: 8, responsive: true }}
-        scroll={{ x: true }}
+        scroll={{ x: 'max-content' }}
         size="middle"
       />
     </Card>

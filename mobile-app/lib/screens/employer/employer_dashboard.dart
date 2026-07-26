@@ -491,7 +491,7 @@ class _EmployerDashboardState extends State<EmployerDashboard> {
           ),
           const SizedBox(height: 16),
           const Text(
-            'تاکنون استعلامی ثبت نکرده‌اید',
+            'تاکنون پروژه‌ای ثبت نکرده‌اید',
             style: TextStyle(
               color: AppColors.textDark,
               fontSize: 14,
@@ -500,7 +500,7 @@ class _EmployerDashboardState extends State<EmployerDashboard> {
           ),
           const SizedBox(height: 8),
           const Text(
-            'از منوی پایین می‌توانید با زدن دکمه «استعلام جدید»، اولین استعلام جوشکاری خود را در سامانه ثبت کنید.',
+            'از منوی پایین می‌توانید با زدن دکمه «پروژه جدید»، اولین پروژه جوشکاری خود را در سامانه ثبت کنید.',
             style: TextStyle(color: AppColors.textMuted, fontSize: 11, height: 1.6),
             textAlign: TextAlign.center,
           ),

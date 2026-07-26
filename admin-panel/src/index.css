@@ -170,12 +170,42 @@ body {
   height: 20px;
 }
 
+.menu-badge {
+  margin-inline-start: auto;
+  min-width: 20px;
+  height: 20px;
+  padding: 0 6px;
+  border-radius: 10px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 1;
+  text-align: center;
+  box-sizing: border-box;
+  flex-shrink: 0;
+}
+
+.menu-badge.warning {
+  background-color: var(--secondary);
+  color: #FFF;
+}
+
+.menu-badge.primary {
+  background-color: var(--primary);
+  color: #FFF;
+}
+
 /* Main Content Layout */
 .main-wrapper {
   flex: 1;
   margin-right: 260px;
   padding: 24px 32px;
   min-height: 100vh;
+  min-width: 0; /* Prevents flex children (like tables) from expanding layout horizontally */
+  max-width: 100%;
+  overflow-x: hidden;
 }
 
 /* Topbar */
@@ -818,14 +848,75 @@ select::placeholder {
     grid-template-columns: 1fr;
   }
 
-  .est-item-row button {
-    width: 100%;
-  }
-
   .btn {
     padding: 10px 14px;
     font-size: 14px;
   }
 }
+
+/* Ant Design Table & Responsive Scroll Containment Fixes */
+.ant-card,
+.ant-card-body,
+.ant-table-wrapper,
+.ant-table-container,
+.ant-table-content,
+.ant-row,
+.ant-col {
+  min-width: 0 !important;
+  max-width: 100% !important;
+}
+
+.ant-table-wrapper {
+  width: 100% !important;
+  overflow-x: auto !important;
+  -webkit-overflow-scrolling: touch;
+}
+
+.ant-table {
+  width: 100%;
+}
+
+.ant-table-content {
+  overflow-x: auto !important;
+}
+
+/* Card Header & List Title Padding Enhancements */
+.ant-card-head {
+  padding: 16px 20px !important;
+  min-height: auto !important;
+  border-bottom: 1px solid #f0f0f0 !important;
+}
+
+.ant-card-head-title {
+  padding: 0 !important;
+  white-space: normal !important;
+  overflow: visible !important;
+}
+
+.ant-card-head-title .ant-typography,
+.ant-card-head-title h1,
+.ant-card-head-title h2,
+.ant-card-head-title h3,
+.ant-card-head-title h4,
+.ant-card-head-title h5,
+.ant-card-head-title h6 {
+  margin-top: 0 !important;
+  margin-bottom: 0 !important;
+  padding-top: 2px;
+}
+
+.ant-card-body {
+  padding: 20px !important;
+}
+
+@media (max-width: 768px) {
+  .ant-card-head {
+    padding: 14px 14px !important;
+  }
+  .ant-card-body {
+    padding: 12px !important;
+  }
+}
+
 
 

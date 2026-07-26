@@ -155,6 +155,7 @@ class AuthProvider with ChangeNotifier {
 
   void setRole(UserRole role) {
     _currentRole = role;
+    _savePersistedData();
     notifyListeners();
   }
 

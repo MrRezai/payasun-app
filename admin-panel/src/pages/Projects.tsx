@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Card, Table, Tag, Button, Typography, Segmented, Row, Col } from 'antd';
+import { Card, Table, Tag, Button, Typography, Segmented, Row, Col, Badge, Space } from 'antd';
 import { EyeOutlined, FormOutlined } from '@ant-design/icons';
 import { Inquiry } from '../types';
 import ViewUserHistoryModal from '../modals/ViewUserHistoryModal';
@@ -16,17 +16,21 @@ export default function Projects({ inquiries, onEstimateClick, onViewDetailClick
   const [projectSubTab, setProjectSubTab] = useState<'pending' | 'broadcasted' | 'closed'>('pending');
   const [selectedEmployerId, setSelectedEmployerId] = useState<string | null>(null);
 
-  const pendingCount = inquiries.filter(i => i.status === 'PENDING_ESTIMATION' || i.status === 'ESTIMATED').length;
-  const broadcastedCount = inquiries.filter(i => i.status === 'BROADCASTED').length;
-  const closedCount = inquiries.filter(i => i.status === 'CLOSED' || i.status === 'EXPIRED' || i.status === 'REJECTED').length;
+  const pendingInquiries = inquiries.filter(i => i.status === 'PENDING_ESTIMATION');
+  const broadcastedInquiries = inquiries.filter(i => i.status === 'BROADCASTED' || i.status === 'ESTIMATED');
+  const closedInquiries = inquiries.filter(i => i.status === 'CLOSED' || i.status === 'EXPIRED' || i.status === 'REJECTED');
+
+  const pendingCount = pendingInquiries.length;
+  const broadcastedCount = broadcastedInquiries.length;
+  const closedCount = closedInquiries.length;
 
   const getSubTabInquiries = () => {
     if (projectSubTab === 'pending') {
-      return inquiries.filter(i => i.status === 'PENDING_ESTIMATION' || i.status === 'ESTIMATED');
+      return pendingInquiries;
     } else if (projectSubTab === 'broadcasted') {
-      return inquiries.filter(i => i.status === 'BROADCASTED');
+      return broadcastedInquiries;
     } else {
-      return inquiries.filter(i => i.status === 'CLOSED' || i.status === 'EXPIRED' || i.status === 'REJECTED');
+      return closedInquiries;
     }
   };
 
@@ -77,7 +81,7 @@ export default function Projects({ inquiries, onEstimateClick, onViewDetailClick
       title: 'تعداد اقلام',
       key: 'items_count',
       render: (_: any, inq: Inquiry) => (
-        <Text strong>{inq.items?.length || 0} ردیف</Text>
+        <Badge count={inq.items?.length || 0} showZero style={{ backgroundColor: '#4169E1' }} />
       ),
     },
     {
@@ -123,17 +127,41 @@ export default function Projects({ inquiries, onEstimateClick, onViewDetailClick
     <Card 
       title={
         <Row justify="space-between" align="middle" gutter={[12, 12]}>
-          <Col xs={24} sm={12}>
+          <Col xs={24} sm={10}>
             <Title level={5} style={{ margin: 0 }}>مدیریت استعلام‌ها و پروژه‌ها</Title>
           </Col>
-          <Col xs={24} sm={12} style={{ textAlign: 'left' }}>
+          <Col xs={24} sm={14} style={{ textAlign: 'left' }}>
             <Segmented
               value={projectSubTab}
               onChange={(val) => setProjectSubTab(val as any)}
               options={[
-                { label: `در انتظار (${pendingCount})`, value: 'pending' },
-                { label: `منتشرشده (${broadcastedCount})`, value: 'broadcasted' },
-                { label: `خاتمه‌یافته (${closedCount})`, value: 'closed' },
+                {
+                  label: (
+                    <Space size={6}>
+                      <span>در انتظار</span>
+                      <Badge count={pendingCount} overflowCount={999} style={{ backgroundColor: pendingCount > 0 ? '#EF4444' : '#94A3B8' }} />
+                    </Space>
+                  ),
+                  value: 'pending',
+                },
+                {
+                  label: (
+                    <Space size={6}>
+                      <span>منتشرشده</span>
+                      <Badge count={broadcastedCount} overflowCount={999} style={{ backgroundColor: '#10B981' }} />
+                    </Space>
+                  ),
+                  value: 'broadcasted',
+                },
+                {
+                  label: (
+                    <Space size={6}>
+                      <span>خاتمه‌یافته</span>
+                      <Badge count={closedCount} overflowCount={999} style={{ backgroundColor: '#64748B' }} />
+                    </Space>
+                  ),
+                  value: 'closed',
+                },
               ]}
             />
           </Col>
@@ -145,7 +173,7 @@ export default function Projects({ inquiries, onEstimateClick, onViewDetailClick
         columns={columns}
         rowKey="id"
         pagination={{ pageSize: 10, responsive: true }}
-        scroll={{ x: true }}
+        scroll={{ x: 'max-content' }}
         size="middle"
       />
 

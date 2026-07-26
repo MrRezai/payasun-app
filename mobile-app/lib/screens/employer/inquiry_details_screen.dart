@@ -18,10 +18,13 @@ class InquiryDetailsScreen extends StatefulWidget {
 
 class _InquiryDetailsScreenState extends State<InquiryDetailsScreen> {
   Inquiry get inquiry => widget.inquiry;
+  List<InquiryItem> _editableItems = [];
+  bool _showEstimatedBanner = true;
 
   @override
   void initState() {
     super.initState();
+    _editableItems = List.from(widget.inquiry.items);
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final token = Provider.of<AuthProvider>(context, listen: false).token;
       Provider.of<InquiryProvider>(context, listen: false).loadInquiryOffers(
@@ -66,6 +69,46 @@ class _InquiryDetailsScreenState extends State<InquiryDetailsScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
+                // Guidance Alert for ESTIMATED status before publication
+                if (inquiry.status == 'ESTIMATED' && _showEstimatedBanner) ...[
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                    decoration: BoxDecoration(
+                      color: Colors.blue[50],
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(color: Colors.blue[200]!),
+                    ),
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Icon(Icons.info_outline, color: AppColors.royalBlue, size: 22),
+                        const SizedBox(width: 10),
+                        const Expanded(
+                          child: Text(
+                            'اقلام کارشناسی شده توسط مدیریت ثبت گردیده است. شما می‌توانید پیش از انتشار عمومی استعلام، لیست اقلام را ویرایش کرده و سپس انتشار دهید.',
+                            style: TextStyle(
+                              fontSize: 12,
+                              height: 1.5,
+                              color: AppColors.textDark,
+                              fontFamily: 'Vazirmatn',
+                            ),
+                          ),
+                        ),
+                        InkWell(
+                          onTap: () => setState(() => _showEstimatedBanner = false),
+                          borderRadius: BorderRadius.circular(20),
+                          child: const Padding(
+                            padding: EdgeInsets.all(2.0),
+                            child: Icon(Icons.close, size: 18, color: AppColors.textMuted),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                ],
+
                 // Overview Card
                 _buildOverviewCard(context, dateStr),
                 const SizedBox(height: 16),
@@ -86,6 +129,56 @@ class _InquiryDetailsScreenState extends State<InquiryDetailsScreen> {
             ),
           ),
         ),
+        bottomNavigationBar: inquiry.status == 'ESTIMATED'
+            ? Container(
+                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+                decoration: const BoxDecoration(
+                  color: AppColors.white,
+                  border: Border(top: BorderSide(color: AppColors.borderGrey, width: 1)),
+                ),
+                child: SafeArea(
+                  child: SizedBox(
+                    width: double.infinity,
+                    height: 50,
+                    child: ElevatedButton.icon(
+                      onPressed: () async {
+                        final token = Provider.of<AuthProvider>(context, listen: false).token;
+                        final provider = Provider.of<InquiryProvider>(context, listen: false);
+                        final success = await provider.confirmInquiry(
+                          token: token,
+                          inquiryId: inquiry.id,
+                          items: _editableItems,
+                        );
+                        if (success && context.mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                              content: Text('استعلام با موفقیت تأیید و در سیستم منتشر شد!'),
+                              backgroundColor: Colors.green,
+                            ),
+                          );
+                          Navigator.pop(context, true);
+                        }
+                      },
+                      icon: const Icon(Icons.send_rounded, color: Colors.white, size: 18),
+                      label: const Text(
+                        'تأیید نهایی و انتشار عمومی استعلام',
+                        style: TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.white,
+                          fontFamily: 'Vazirmatn',
+                        ),
+                      ),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppColors.royalBlue,
+                        elevation: 0,
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                      ),
+                    ),
+                  ),
+                ),
+              )
+            : null,
       ),
     );
   }
@@ -248,6 +341,10 @@ class _InquiryDetailsScreenState extends State<InquiryDetailsScreen> {
   }
 
   Widget _buildBlueprintSection(BuildContext context) {
+    final urls = inquiry.blueprintUrl != null && inquiry.blueprintUrl!.isNotEmpty
+        ? inquiry.blueprintUrl!.split(',').where((u) => u.trim().isNotEmpty).toList()
+        : <String>[];
+
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(20),
@@ -259,13 +356,13 @@ class _InquiryDetailsScreenState extends State<InquiryDetailsScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Row(
+          Row(
             children: [
-              Icon(Icons.map_outlined, color: AppColors.royalBlue, size: 20),
-              SizedBox(width: 8),
+              const Icon(Icons.map_outlined, color: AppColors.royalBlue, size: 20),
+              const SizedBox(width: 8),
               Text(
-                'فایل پلان فنی ساختمان',
-                style: TextStyle(
+                'فایل‌های پلان فنی ساختمان (${urls.length} فایل)',
+                style: const TextStyle(
                   fontSize: 14,
                   fontWeight: FontWeight.bold,
                   color: AppColors.textDark,
@@ -275,75 +372,92 @@ class _InquiryDetailsScreenState extends State<InquiryDetailsScreen> {
             ],
           ),
           const SizedBox(height: 14),
-          Container(
-            padding: const EdgeInsets.all(12),
-            decoration: BoxDecoration(
-              color: AppColors.lightGrey,
-              borderRadius: BorderRadius.circular(16),
-              border: Border.all(color: AppColors.borderGrey),
-            ),
-            child: Row(
-              children: [
-                const Icon(Icons.picture_as_pdf_outlined, color: Colors.red, size: 28),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
+          if (urls.isEmpty)
+            const Text(
+              'در انتظار آپلود یا پردازش فایل‌های پلان...',
+              style: TextStyle(fontSize: 11, color: AppColors.textMuted, fontFamily: 'Vazirmatn'),
+            )
+          else
+            ListView.builder(
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
+              itemCount: urls.length,
+              itemBuilder: (context, index) {
+                final url = urls[index];
+                final fileName = url.split('/').last;
+                return Container(
+                  margin: const EdgeInsets.symmetric(vertical: 4),
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: AppColors.lightGrey,
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(color: AppColors.borderGrey),
+                  ),
+                  child: Row(
                     children: [
-                      const Text(
-                        'پلان بارگذاری شده',
-                        style: TextStyle(
-                          fontSize: 12,
-                          fontWeight: FontWeight.bold,
-                          color: AppColors.textDark,
-                          fontFamily: 'Vazirmatn',
+                      const Icon(Icons.picture_as_pdf_outlined, color: Colors.red, size: 28),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'پلان شماره ${index + 1}',
+                              style: const TextStyle(
+                                fontSize: 12,
+                                fontWeight: FontWeight.bold,
+                                color: AppColors.textDark,
+                                fontFamily: 'Vazirmatn',
+                              ),
+                            ),
+                            const SizedBox(height: 2),
+                            Text(
+                              fileName,
+                              style: const TextStyle(
+                                fontSize: 10,
+                                color: AppColors.textMuted,
+                                fontFamily: 'Vazirmatn',
+                              ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ],
                         ),
                       ),
-                      const SizedBox(height: 4),
-                      Text(
-                        inquiry.blueprintUrl != null
-                            ? 'فرمت فایل ضمیمه شده'
-                            : 'در انتظار آپلود یا پردازش فایل پلان...',
-                        style: const TextStyle(
-                          fontSize: 10,
-                          color: AppColors.textMuted,
-                          fontFamily: 'Vazirmatn',
+                      ElevatedButton.icon(
+                        onPressed: () {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Text(
+                                'در حال باز کردن فایل $fileName...',
+                                style: const TextStyle(fontFamily: 'Vazirmatn'),
+                              ),
+                            ),
+                          );
+                        },
+                        icon: const Icon(Icons.download_rounded, size: 16),
+                        label: const Text('دانلود فایل', style: TextStyle(fontSize: 11, fontFamily: 'Vazirmatn')),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: AppColors.royalBlue,
+                          foregroundColor: AppColors.white,
+                          elevation: 0,
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                         ),
                       ),
                     ],
                   ),
-                ),
-                if (inquiry.blueprintUrl != null)
-                  ElevatedButton.icon(
-                    onPressed: () {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                          content: Text(
-                            'در حال باز کردن نقشه فنی...',
-                            style: TextStyle(fontFamily: 'Vazirmatn'),
-                          ),
-                        ),
-                      );
-                    },
-                    icon: const Icon(Icons.download_rounded, size: 16),
-                    label: const Text('دانلود فایل', style: TextStyle(fontSize: 11, fontFamily: 'Vazirmatn')),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: AppColors.royalBlue,
-                      foregroundColor: AppColors.white,
-                      elevation: 0,
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                    ),
-                  ),
-              ],
+                );
+              },
             ),
-          ),
         ],
       ),
     );
   }
 
   Widget _buildItemsSection() {
+    final displayItems = _editableItems.isNotEmpty ? _editableItems : inquiry.items;
+
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(20),
@@ -355,23 +469,42 @@ class _InquiryDetailsScreenState extends State<InquiryDetailsScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Row(
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Icon(Icons.inventory_2_outlined, color: AppColors.royalBlue, size: 20),
-              SizedBox(width: 8),
-              Text(
-                'لیست اقلام استعلام',
-                style: TextStyle(
-                  fontSize: 14,
-                  fontWeight: FontWeight.bold,
-                  color: AppColors.textDark,
-                  fontFamily: 'Vazirmatn',
-                ),
+              const Row(
+                children: [
+                  Icon(Icons.inventory_2_outlined, color: AppColors.royalBlue, size: 20),
+                  SizedBox(width: 8),
+                  Text(
+                    'لیست اقلام استعلام',
+                    style: TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.bold,
+                      color: AppColors.textDark,
+                      fontFamily: 'Vazirmatn',
+                    ),
+                  ),
+                ],
               ),
+              if (inquiry.status == 'ESTIMATED')
+                TextButton.icon(
+                  onPressed: () => _showEditEstimatedItemsBottomSheet(context),
+                  icon: const Icon(Icons.edit_outlined, size: 16, color: AppColors.royalBlue),
+                  label: const Text(
+                    'ویرایش اقلام',
+                    style: TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.bold,
+                      color: AppColors.royalBlue,
+                      fontFamily: 'Vazirmatn',
+                    ),
+                  ),
+                ),
             ],
           ),
           const SizedBox(height: 16),
-          if (inquiry.items.isEmpty)
+          if (displayItems.isEmpty)
             Center(
               child: Padding(
                 padding: const EdgeInsets.symmetric(vertical: 20),
@@ -381,7 +514,7 @@ class _InquiryDetailsScreenState extends State<InquiryDetailsScreen> {
                     const SizedBox(height: 8),
                     Text(
                       inquiry.hasBlueprint
-                          ? 'در انتظار تایید مدیریت...'
+                          ? 'در انتظار برآورد اولیه مدیریت...'
                           : 'هیچ قلمی ثبت نشده است.',
                       style: TextStyle(
                         fontSize: 12,
@@ -398,10 +531,10 @@ class _InquiryDetailsScreenState extends State<InquiryDetailsScreen> {
             ListView.separated(
               shrinkWrap: true,
               physics: const NeverScrollableScrollPhysics(),
-              itemCount: inquiry.items.length,
+              itemCount: displayItems.length,
               separatorBuilder: (context, index) => const Divider(color: AppColors.borderGrey, height: 1),
               itemBuilder: (context, index) {
-                final item = inquiry.items[index];
+                final item = displayItems[index];
                 return Padding(
                   padding: const EdgeInsets.symmetric(vertical: 12),
                   child: Row(
@@ -460,6 +593,173 @@ class _InquiryDetailsScreenState extends State<InquiryDetailsScreen> {
             ),
         ],
       ),
+    );
+  }
+
+  void _showEditEstimatedItemsBottomSheet(BuildContext context) {
+    List<InquiryItem> tempItems = List.from(_editableItems.isNotEmpty ? _editableItems : inquiry.items);
+    final titleController = TextEditingController();
+    final unitController = TextEditingController();
+    final qtyController = TextEditingController();
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: AppColors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (modalContext) {
+        return StatefulBuilder(
+          builder: (context, setSheetState) {
+            return Directionality(
+              textDirection: TextDirection.rtl,
+              child: Padding(
+                padding: EdgeInsets.only(
+                  left: 20,
+                  right: 20,
+                  top: 20,
+                  bottom: MediaQuery.of(context).viewInsets.bottom + 20,
+                ),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        const Text(
+                          'ویرایش اقلام استعلام قبل از انتشار',
+                          style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: AppColors.burgundy, fontFamily: 'Vazirmatn'),
+                        ),
+                        IconButton(
+                          icon: const Icon(Icons.close, color: AppColors.textMuted),
+                          onPressed: () => Navigator.pop(modalContext),
+                        ),
+                      ],
+                    ),
+                    const Divider(color: AppColors.borderGrey),
+                    const SizedBox(height: 10),
+
+                    Row(
+                      children: [
+                        Expanded(
+                          flex: 3,
+                          child: TextField(
+                            controller: titleController,
+                            decoration: InputDecoration(
+                              labelText: 'عنوان قلم',
+                              hintText: 'مثال: ستون باکس ۲۰',
+                              filled: true,
+                              fillColor: AppColors.lightGrey,
+                              contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                              border: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide.none),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          flex: 2,
+                          child: TextField(
+                            controller: unitController,
+                            decoration: InputDecoration(
+                              labelText: 'واحد',
+                              hintText: 'متر/عدد',
+                              filled: true,
+                              fillColor: AppColors.lightGrey,
+                              contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                              border: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide.none),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          flex: 2,
+                          child: TextField(
+                            controller: qtyController,
+                            keyboardType: TextInputType.number,
+                            decoration: InputDecoration(
+                              labelText: 'تعداد',
+                              hintText: '۱۰',
+                              filled: true,
+                              fillColor: AppColors.lightGrey,
+                              contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                              border: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide.none),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 6),
+                        IconButton(
+                          icon: const Icon(Icons.add_circle, color: AppColors.royalBlue, size: 30),
+                          onPressed: () {
+                            final title = titleController.text.trim();
+                            final unit = unitController.text.trim();
+                            final qty = double.tryParse(qtyController.text.trim()) ?? 0;
+                            if (title.isNotEmpty && unit.isNotEmpty && qty > 0) {
+                              setSheetState(() {
+                                tempItems.add(InquiryItem(title: title, unit: unit, quantity: qty));
+                                titleController.clear();
+                                unitController.clear();
+                                qtyController.clear();
+                              });
+                            }
+                          },
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 14),
+
+                    ConstrainedBox(
+                      constraints: const BoxConstraints(maxHeight: 250),
+                      child: ListView.separated(
+                        shrinkWrap: true,
+                        itemCount: tempItems.length,
+                        separatorBuilder: (context, index) => const Divider(color: AppColors.borderGrey, height: 1),
+                        itemBuilder: (context, index) {
+                          final item = tempItems[index];
+                          return ListTile(
+                            contentPadding: EdgeInsets.zero,
+                            title: Text(item.title, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13, fontFamily: 'Vazirmatn')),
+                            subtitle: Text('${item.quantity.toStringAsFixed(0)} ${item.unit}', style: const TextStyle(fontSize: 11, fontFamily: 'Vazirmatn')),
+                            trailing: IconButton(
+                              icon: const Icon(Icons.delete_outline, color: Colors.red, size: 20),
+                              onPressed: () {
+                                setSheetState(() {
+                                  tempItems.removeAt(index);
+                                });
+                              },
+                            ),
+                          );
+                        },
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+
+                    SizedBox(
+                      width: double.infinity,
+                      height: 46,
+                      child: ElevatedButton(
+                        onPressed: () {
+                          setState(() {
+                            _editableItems = tempItems;
+                          });
+                          Navigator.pop(modalContext);
+                        },
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: AppColors.royalBlue,
+                          foregroundColor: AppColors.white,
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                        ),
+                        child: const Text('ذخیره و اعمال تغییرات', style: TextStyle(fontWeight: FontWeight.bold, fontFamily: 'Vazirmatn')),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            );
+          },
+        );
+      },
     );
   }
 

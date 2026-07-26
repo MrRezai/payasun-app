@@ -1,4 +1,5 @@
 import { NavLink } from 'react-router-dom';
+import { Badge } from 'antd';
 import logoImg from '../assets/logo/joftojoor.png';
 
 interface SidebarProps {
@@ -52,9 +53,11 @@ export default function Sidebar({ pendingPicsCount, pendingEstimationsCount, onL
             </svg>
             <span>تایید هویت تصاویر</span>
             {pendingPicsCount > 0 && (
-              <span style={{ marginRight: 'auto', backgroundColor: 'var(--secondary)', color: 'white', borderRadius: '50%', width: '18px', height: '18px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '10px', fontWeight: 'bold' }}>
-                {pendingPicsCount}
-              </span>
+              <Badge 
+                count={pendingPicsCount} 
+                overflowCount={99}
+                style={{ marginInlineStart: 'auto', backgroundColor: '#F59E0B' }} 
+              />
             )}
           </NavLink>
 
@@ -68,9 +71,11 @@ export default function Sidebar({ pendingPicsCount, pendingEstimationsCount, onL
             </svg>
             <span>مدیریت پروژه‌ها</span>
             {pendingEstimationsCount > 0 && (
-              <span style={{ marginRight: 'auto', backgroundColor: 'var(--primary)', color: 'white', borderRadius: '50%', width: '18px', height: '18px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '10px', fontWeight: 'bold' }}>
-                {pendingEstimationsCount}
-              </span>
+              <Badge 
+                count={pendingEstimationsCount} 
+                overflowCount={99}
+                style={{ marginInlineStart: 'auto', backgroundColor: '#4169E1' }} 
+              />
             )}
           </NavLink>
 

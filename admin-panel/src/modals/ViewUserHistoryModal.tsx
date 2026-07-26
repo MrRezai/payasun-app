@@ -266,6 +266,7 @@ export default function ViewUserHistoryModal({ userId, onClose }: ViewUserHistor
                 columns={welderOffersColumns}
                 rowKey="id"
                 pagination={{ pageSize: 5 }}
+                scroll={{ x: 'max-content' }}
                 size="small"
               />
             ) : (
@@ -274,6 +275,7 @@ export default function ViewUserHistoryModal({ userId, onClose }: ViewUserHistor
                 columns={employerInquiriesColumns}
                 rowKey="id"
                 pagination={{ pageSize: 5 }}
+                scroll={{ x: 'max-content' }}
                 size="small"
               />
             )}
