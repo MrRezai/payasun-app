@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Modal, Row, Col, Card, Input, InputNumber, Select, Button, Space, Typography, Alert, Tag } from 'antd';
-import { PlusOutlined, DeleteOutlined, CheckCircleOutlined, FilePdfOutlined, PictureOutlined } from '@ant-design/icons';
+import { PlusOutlined, DeleteOutlined, CheckCircleOutlined, FilePdfOutlined, PictureOutlined, DownloadOutlined } from '@ant-design/icons';
 import { BASE_URL } from '../api';
 import { Inquiry, InquiryItem } from '../types';
 
@@ -93,15 +93,15 @@ export default function EstimateProjectModal({
       {showConfirmStep ? (
         <Space direction="vertical" style={{ width: '100%' }} size="middle">
           <Alert
-            message="گام دوم: تایید نهایی انتشار پروژه در سیستم"
-            description={`آیا از تایید کارشناسی و انتشار عمومی پروژه «${inquiry.title}» در پلتفرم اطمینان دارید؟ با تایید این مرحله، تعداد ${estimationItems.length} قلم فنی ثبت شده برای تمامی جوشکاران منتشر خواهد شد.`}
+            message="گام دوم: تایید و ارسال برآورد کارشناسی به کارفرما"
+            description={`آیا از ثبت برآورد کارشناسی پروژه «${inquiry.title}» اطمینان دارید؟ با تایید این مرحله، تعداد ${estimationItems.length} قلم فنی جهت بررسی، ویرایش احتمالی و انتشار نهایی برای کارفرما ارسال خواهد شد.`}
             type="info"
             showIcon
             closable
             icon={<CheckCircleOutlined />}
           />
 
-          <Card size="small" title="خلاصه اقلام فنی آماده انتشار:">
+          <Card size="small" title="خلاصه اقلام فنی آماده ارسال به کارفرما:">
             <div style={{ maxHeight: '180px', overflowY: 'auto' }}>
               {estimationItems.map((item, idx) => (
                 <Row key={idx} justify="space-between" style={{ padding: '6px 0', borderBottom: '1px dashed #f0f0f0' }}>
@@ -114,7 +114,7 @@ export default function EstimateProjectModal({
 
           <Row justify="end" style={{ gap: '8px', marginTop: '12px' }}>
             <Button type="primary" size="large" onClick={handleApproveFinal} style={{ fontWeight: 'bold', backgroundColor: '#10B981', borderColor: '#10B981' }}>
-              تایید نهایی و انتشار عمومی پروژه
+              تایید و ارسال برآورد کارشناسی به کارفرما
             </Button>
             <Button size="large" onClick={() => setShowConfirmStep(false)}>
               بازگشت به ویرایش اقلام
@@ -125,23 +125,6 @@ export default function EstimateProjectModal({
           <Space direction="vertical" style={{ width: '100%' }} size="large">
             <Row gutter={[16, 16]}>
               <Col xs={24} md={12}>
-                <Row justify="space-between" align="middle" style={{ marginBottom: '8px' }}>
-                  <Col>
-                    <Text type="secondary" style={{ fontSize: '13px' }}>
-                      فایل‌های نقشه فنی پروژه
-                    </Text>
-                  </Col>
-                  <Col>
-                    {inquiry.has_blueprint && (
-                      inquiry.estimation_type === 'EXACT' ? (
-                        <Tag color="purple" style={{ fontWeight: 'bold' }}>محاسبه دقیق</Tag>
-                      ) : (
-                        <Tag color="orange" style={{ fontWeight: 'bold' }}>برآورد تقریبی</Tag>
-                      )
-                    )}
-                  </Col>
-                </Row>
-
                 {inquiry.has_blueprint ? (() => {
                   const urls = inquiry.blueprint_url 
                     ? inquiry.blueprint_url.split(',').filter((u: string) => u.trim().length > 0)
@@ -149,47 +132,88 @@ export default function EstimateProjectModal({
                   
                   if (urls.length === 0) {
                     return (
-                      <Card style={{ textAlign: 'center', minHeight: '120px', display: 'flex', alignItems: 'center', justifyContent: 'center', backgroundColor: '#fafafa' }}>
-                        <Text type="secondary">در انتظار آپلود فایل پلان...</Text>
+                      <Card style={{ textAlign: 'center', padding: '24px', backgroundColor: '#f8fafc', borderRadius: '12px', border: '1px dashed #cbd5e1' }}>
+                        <Text type="secondary">در انتظار بارگذاری فایل پلان توسط کارفرما...</Text>
                       </Card>
                     );
                   }
 
                   return (
-                    <Space direction="vertical" style={{ width: '100%', maxHeight: '220px', overflowY: 'auto' }} size="small">
-                      <Text style={{ fontSize: '11px', color: '#718096' }}>تعداد {urls.length} فایل بارگذاری شده است:</Text>
-                      {urls.map((rawUrl: string, idx: number) => {
-                        const fileUrl = rawUrl.startsWith('http') ? rawUrl : `${BASE_URL}${rawUrl}`;
-                        const fileName = rawUrl.split('/').pop() || `فایل ${idx + 1}`;
-                        const isPdf = rawUrl.toLowerCase().endsWith('.pdf');
-                        return (
-                          <Card key={idx} size="small" style={{ borderRadius: '8px', border: '1px solid #e2e8f0' }}>
-                            <Row justify="space-between" align="middle">
-                              <Col style={{ flex: 1, overflow: 'hidden', paddingLeft: '8px' }}>
-                                <Space wrap={false}>
-                                  {isPdf ? <FilePdfOutlined style={{ color: '#e74c3c', fontSize: '18px' }} /> : <PictureOutlined style={{ color: '#4169E1', fontSize: '18px' }} />}
-                                  <Text strong style={{ fontSize: '12px' }} ellipsis title={fileName}>
-                                    فایل {idx + 1}: {fileName}
-                                  </Text>
+                    <div style={{ backgroundColor: '#f8fafc', padding: '12px', borderRadius: '12px', border: '1px solid #e2e8f0' }}>
+                      <Row justify="space-between" align="middle" style={{ marginBottom: '10px', paddingBottom: '8px', borderBottom: '1px solid #edf2f7' }}>
+                        <Space align="center">
+                          <FilePdfOutlined style={{ color: '#4169E1', fontSize: '16px' }} />
+                          <Text strong style={{ fontSize: '13px', color: '#2d3748' }}>
+                            لیست فایل‌های نقشه فنی ({urls.length} فایل)
+                          </Text>
+                        </Space>
+                        {inquiry.estimation_type === 'EXACT' ? (
+                          <Tag color="purple" style={{ borderRadius: '6px', fontWeight: 'bold' }}>محاسبه دقیق (پلان + سازه)</Tag>
+                        ) : (
+                          <Tag color="orange" style={{ borderRadius: '6px', fontWeight: 'bold' }}>برآورد تقریبی (معماری)</Tag>
+                        )}
+                      </Row>
+
+                      <Row gutter={[10, 10]} style={{ maxHeight: '200px', overflowY: 'auto', paddingRight: '2px' }}>
+                        {urls.map((rawUrl: string, idx: number) => {
+                          const fileUrl = rawUrl.startsWith('http') ? rawUrl : `${BASE_URL}${rawUrl}`;
+                          const fileName = rawUrl.split('/').pop() || `فایل ${idx + 1}`;
+                          const isPdf = rawUrl.toLowerCase().endsWith('.pdf');
+                          return (
+                            <Col xs={24} sm={12} key={idx}>
+                              <div 
+                                style={{
+                                  backgroundColor: '#ffffff',
+                                  padding: '10px 12px',
+                                  borderRadius: '10px',
+                                  border: '1px solid #e2e8f0',
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  justifyContent: 'space-between',
+                                  gap: '8px',
+                                  boxShadow: '0 1px 3px rgba(0,0,0,0.03)',
+                                }}
+                              >
+                                <Space wrap={false} style={{ flex: 1, overflow: 'hidden' }}>
+                                  {isPdf ? (
+                                    <FilePdfOutlined style={{ color: '#e74c3c', fontSize: '20px', flexShrink: 0 }} />
+                                  ) : (
+                                    <PictureOutlined style={{ color: '#4169E1', fontSize: '20px', flexShrink: 0 }} />
+                                  )}
+                                  <div style={{ overflow: 'hidden' }}>
+                                    <Text strong style={{ fontSize: '12px', display: 'block', color: '#1a202c' }}>
+                                      فایل {idx + 1}
+                                    </Text>
+                                    <Text type="secondary" style={{ fontSize: '11px', display: 'block' }} ellipsis title={fileName}>
+                                      {fileName}
+                                    </Text>
+                                  </div>
                                 </Space>
-                              </Col>
-                              <Col>
-                                <Button size="small" type="primary" href={fileUrl} target="_blank">
-                                  دانلود / مشاهده
+
+                                <Button 
+                                  size="small" 
+                                  type="primary" 
+                                  ghost
+                                  href={fileUrl} 
+                                  target="_blank"
+                                  icon={<DownloadOutlined />}
+                                  style={{ borderRadius: '6px', fontSize: '11px', flexShrink: 0 }}
+                                >
+                                  مشاهده
                                 </Button>
-                              </Col>
-                            </Row>
-                          </Card>
-                        );
-                      })}
-                    </Space>
+                              </div>
+                            </Col>
+                          );
+                        })}
+                      </Row>
+                    </div>
                   );
-              })() : (
-                <Card style={{ textAlign: 'center', minHeight: '120px', display: 'flex', alignItems: 'center', justifyContent: 'center', backgroundColor: '#fafafa' }}>
-                  <Text type="secondary">بدون نقشه ارسالی (اقلام دستی)</Text>
-                </Card>
-              )}
-            </Col>
+                })() : (
+                  <Card style={{ textAlign: 'center', padding: '16px', backgroundColor: '#f8fafc', borderRadius: '12px', border: '1px dashed #cbd5e1' }}>
+                    <Text type="secondary">پروژه بدون نقشه ارسالی (بر اساس اقلام دستی)</Text>
+                  </Card>
+                )}
+              </Col>
 
             {/* Project Summary */}
             <Col xs={24} md={12}>
@@ -292,7 +316,7 @@ export default function EstimateProjectModal({
             ) : (
               <Row justify="end" style={{ gap: '8px' }}>
                 <Button type="primary" onClick={handleApproveInitial} style={{ fontWeight: 'bold' }}>
-                  مرحله بعد: تایید فنی و انتشار عمومی پروژه
+                  مرحله بعد: تایید برآورد و ارسال به کارفرما
                 </Button>
                 <Button danger onClick={() => setShowRejectionForm(true)}>
                   رد کردن استعلام

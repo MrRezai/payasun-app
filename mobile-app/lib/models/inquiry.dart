@@ -33,9 +33,11 @@ class Inquiry {
   final String description;
   final String city;
   final String? province;
+  final String? address;
   final String status;
   final bool hasBlueprint;
   final String? blueprintUrl;
+  final String? estimationType;
   final String? rejectionReason;
   final List<InquiryItem> items;
   final DateTime createdAt;
@@ -49,9 +51,11 @@ class Inquiry {
     required this.description,
     required this.city,
     this.province,
+    this.address,
     required this.status,
     required this.hasBlueprint,
     this.blueprintUrl,
+    this.estimationType,
     this.rejectionReason,
     required this.items,
     required this.createdAt,
@@ -69,9 +73,11 @@ class Inquiry {
       description: json['description'] as String? ?? '',
       city: json['city'] as String? ?? '',
       province: json['province'] as String?,
+      address: json['address'] as String?,
       status: json['status'] as String? ?? 'DRAFT',
       hasBlueprint: json['has_blueprint'] as bool? ?? false,
       blueprintUrl: json['blueprint_url'] as String?,
+      estimationType: json['estimation_type'] as String?,
       rejectionReason: json['rejection_reason'] as String?,
       items: parsedItems,
       createdAt: DateTime.parse(json['created_at'] as String? ?? DateTime.now().toIso8601String()),
@@ -87,9 +93,11 @@ class Inquiry {
       'description': description,
       'city': city,
       'province': province,
+      'address': address,
       'status': status,
       'has_blueprint': hasBlueprint,
       'blueprint_url': blueprintUrl,
+      'estimation_type': estimationType,
       'rejection_reason': rejectionReason,
       'items': items.map((e) => e.toJson()).toList(),
       'created_at': createdAt.toIso8601String(),

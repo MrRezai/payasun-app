@@ -1,4 +1,5 @@
-import 'package:flutter/material.dart';
+import 'dart:io' as io;
+import 'package:flutter/foundation.dart';
 import 'package:file_picker/file_picker.dart';
 import '../models/inquiry.dart';
 import '../services/api_service.dart';
@@ -6,8 +7,9 @@ import '../services/api_service.dart';
 class BlueprintFile {
   final String name;
   final List<int> bytes;
+  final String? path;
 
-  BlueprintFile({required this.name, required this.bytes});
+  BlueprintFile({required this.name, required this.bytes, this.path});
 }
 
 class InquiryProvider with ChangeNotifier {
@@ -63,25 +65,60 @@ class InquiryProvider with ChangeNotifier {
 
   Future<bool> pickBlueprintFiles() async {
     try {
-      final result = await FilePicker.platform.pickFiles(
-        type: FileType.custom,
-        allowedExtensions: ['pdf', 'png', 'jpg', 'jpeg', 'dwg'],
-        withData: true,
-        allowMultiple: true,
-      );
+      FilePickerResult? result;
+      try {
+        result = await FilePicker.platform.pickFiles(
+          type: FileType.any,
+          withData: true,
+          allowMultiple: true,
+        );
+      } catch (e) {
+        debugPrint('pickFiles withData fallback: $e');
+        result = await FilePicker.platform.pickFiles(
+          type: FileType.any,
+          allowMultiple: true,
+        );
+      }
 
       if (result != null && result.files.isNotEmpty) {
         for (var file in result.files) {
-          if (file.bytes != null && file.name.isNotEmpty) {
-            _selectedFiles.add(BlueprintFile(name: file.name, bytes: file.bytes!));
+          if (file.name.isEmpty) continue;
+
+          List<int>? bytes = file.bytes;
+          String? filePath;
+          if (!kIsWeb) {
+            try {
+              filePath = file.path;
+            } catch (_) {}
+          }
+
+          if (!kIsWeb && (bytes == null || bytes.isEmpty) && filePath != null && filePath.isNotEmpty) {
+            try {
+              final f = io.File(filePath);
+              if (await f.exists()) {
+                bytes = await f.readAsBytes();
+              }
+            } catch (e) {
+              debugPrint('Error reading file bytes from path: $e');
+            }
+          }
+
+          final exists = _selectedFiles.any((f) => f.name == file.name);
+          if (!exists) {
+            _selectedFiles.add(BlueprintFile(
+              name: file.name,
+              bytes: bytes ?? [],
+              path: filePath,
+            ));
           }
         }
         _errorMessage = null;
         notifyListeners();
-        return true;
+        return _selectedFiles.isNotEmpty;
       }
       return false;
     } catch (e) {
+      debugPrint('Error in pickBlueprintFiles: $e');
       _errorMessage = 'خطا در انتخاب فایل‌ها: ${e.toString()}';
       notifyListeners();
       return false;
@@ -97,6 +134,25 @@ class InquiryProvider with ChangeNotifier {
 
   void clearSelectedFiles() {
     _selectedFiles.clear();
+    notifyListeners();
+  }
+
+  void loadExistingBlueprintUrls(String? blueprintUrlString) {
+    _selectedFiles.clear();
+    if (blueprintUrlString == null || blueprintUrlString.trim().isEmpty) {
+      notifyListeners();
+      return;
+    }
+
+    final urls = blueprintUrlString.split(',').map((u) => u.trim()).where((u) => u.isNotEmpty);
+    for (var url in urls) {
+      final fileName = url.split('/').last;
+      _selectedFiles.add(BlueprintFile(
+        name: fileName,
+        bytes: [],
+        path: url,
+      ));
+    }
     notifyListeners();
   }
 
@@ -182,10 +238,22 @@ class InquiryProvider with ChangeNotifier {
       if (_hasBlueprint && _selectedFiles.isNotEmpty) {
         Inquiry? lastInquiry = inquiry;
         for (var file in _selectedFiles) {
+          List<int> bytesToUpload = file.bytes;
+          if (bytesToUpload.isEmpty && file.path != null && file.path!.isNotEmpty && !kIsWeb) {
+            try {
+              final f = io.File(file.path!);
+              if (await f.exists()) {
+                bytesToUpload = await f.readAsBytes();
+              }
+            } catch (e) {
+              debugPrint('Error reading bytes for upload: $e');
+            }
+          }
+
           lastInquiry = await _apiService.uploadBlueprint(
             token: token,
             inquiryId: inquiry.id,
-            fileBytes: file.bytes,
+            fileBytes: bytesToUpload,
             filename: file.name,
           );
         }

@@ -92,7 +92,7 @@ export class InquiryService {
     }
 
     inquiry.items = dto.items;
-    inquiry.status = InquiryStatus.BROADCASTED;
+    inquiry.status = InquiryStatus.ESTIMATED;
 
     return this.inquiryRepository.save(inquiry);
   }

@@ -1,5 +1,7 @@
+import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../../constants/app_colors.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/inquiry_provider.dart';
@@ -49,17 +51,54 @@ class _CreateInquiryScreenState extends State<CreateInquiryScreen> {
     super.initState();
     _loadProvinces();
     if (widget.inquiryToEdit != null) {
-      _titleController.text = widget.inquiryToEdit!.title;
-      _descController.text = widget.inquiryToEdit!.description;
-      _selectedProvinceName = widget.inquiryToEdit!.province;
-      _selectedCityName = widget.inquiryToEdit!.city;
+      final inq = widget.inquiryToEdit!;
+      _titleController.text = inq.title;
+      _addressController.text = inq.address ?? '';
+      _selectedProvinceName = inq.province;
+      _selectedCityName = inq.city;
+      _estimationType = inq.estimationType ?? 'ROUGH';
+
+      // Parse extra details from description if embedded
+      String rawDesc = inq.description;
+      if (_addressController.text.isEmpty && rawDesc.contains('محل اجرای دقیق:')) {
+        final match = RegExp(r'محل اجرای دقیق:\s*([^|)\n]+)').firstMatch(rawDesc);
+        if (match != null) {
+          _addressController.text = match.group(1)!.trim();
+        }
+      }
+
+      if (rawDesc.contains('متراژ زیربنا:')) {
+        final match = RegExp(r'متراژ زیربنا:\s*([\d۰-۹]+)').firstMatch(rawDesc);
+        if (match != null) {
+          _areaController.text = Formatters.cleanNumber(match.group(1)!.trim());
+        }
+      }
+
+      if (rawDesc.contains('تعداد طبقات:')) {
+        final match = RegExp(r'تعداد طبقات:\s*([\d۰-۹]+)').firstMatch(rawDesc);
+        if (match != null) {
+          _floorsController.text = Formatters.cleanNumber(match.group(1)!.trim());
+        }
+      }
+
+      // Clean paren block from description if present
+      if (rawDesc.contains('(محل اجرای دقیق:') || rawDesc.contains('(متراژ زیربنا:') || rawDesc.contains('(تعداد طبقات:')) {
+        _descController.text = rawDesc.replaceAll(RegExp(r'\s*\((محل اجرای دقیق|متراژ زیربنا|تعداد طبقات)[^)]*\)'), '').trim();
+      } else {
+        _descController.text = rawDesc;
+      }
 
       WidgetsBinding.instance.addPostFrameCallback((_) {
         final provider = Provider.of<InquiryProvider>(context, listen: false);
-        provider.setHasBlueprint(widget.inquiryToEdit!.hasBlueprint);
-        provider.clearManualItems();
-        for (var item in widget.inquiryToEdit!.items) {
-          provider.addManualItem(item.title, item.unit, item.quantity);
+        provider.setHasBlueprint(inq.hasBlueprint);
+
+        if (inq.hasBlueprint) {
+          provider.loadExistingBlueprintUrls(inq.blueprintUrl);
+        } else {
+          provider.clearManualItems();
+          for (var item in inq.items) {
+            provider.addManualItem(item.title, item.unit, item.quantity);
+          }
         }
       });
     }
@@ -221,15 +260,6 @@ class _CreateInquiryScreenState extends State<CreateInquiryScreen> {
           );
 
     if (result != null && mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text(
-            'استعلام با موفقیت ثبت شد!',
-            style: TextStyle(fontWeight: FontWeight.bold),
-          ),
-          backgroundColor: Colors.green,
-        ),
-      );
       _titleController.clear();
       _descController.clear();
       _addressController.clear();
@@ -242,9 +272,74 @@ class _CreateInquiryScreenState extends State<CreateInquiryScreen> {
       });
       provider.clearSelectedFile();
       provider.clearManualItems();
-      
-      // Go back to the inquiries list screen
-      Navigator.pop(context, true);
+
+      await showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (context) => Directionality(
+          textDirection: TextDirection.rtl,
+          child: AlertDialog(
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+            backgroundColor: AppColors.white,
+            title: const Column(
+              children: [
+                Icon(Icons.check_circle_outline, color: Colors.green, size: 54),
+                SizedBox(height: 12),
+                Text(
+                  'ثبت با موفقیت انجام شد',
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                    color: AppColors.burgundy,
+                    fontFamily: 'Vazirmatn',
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+              ],
+            ),
+            content: const Text(
+              'درخواست شما برای جمعی از جوشکاران ارسال شد. نتیجه استعلام ظرف ۴۸ ساعت آینده به شما اطلاع‌رسانی خواهد شد.',
+              style: TextStyle(
+                fontSize: 13,
+                color: AppColors.textDark,
+                height: 1.6,
+                fontFamily: 'Vazirmatn',
+              ),
+              textAlign: TextAlign.center,
+            ),
+            actionsAlignment: MainAxisAlignment.center,
+            actions: [
+              SizedBox(
+                width: 140,
+                child: ElevatedButton(
+                  onPressed: () => Navigator.pop(context),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.royalBlue,
+                    foregroundColor: AppColors.white,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    padding: const EdgeInsets.symmetric(vertical: 10),
+                  ),
+                  child: const Text(
+                    'متوجه شدم',
+                    style: TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.bold,
+                      fontFamily: 'Vazirmatn',
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      );
+
+      if (mounted) {
+        // Go back to the inquiries list screen
+        Navigator.pop(context, true);
+      }
     } else if (provider.errorMessage != null && mounted) {
       showDialog(
         context: context,
@@ -617,9 +712,9 @@ class _CreateInquiryScreenState extends State<CreateInquiryScreen> {
             onPressed: () => Navigator.pop(context),
             tooltip: 'بازگشت',
           ),
-          title: const Text(
-            'ثبت پروژه جدید',
-            style: TextStyle(
+          title: Text(
+            widget.inquiryToEdit != null ? 'ویرایش و اصلاح پروژه' : 'ثبت پروژه جدید',
+            style: const TextStyle(
               fontWeight: FontWeight.bold,
               fontSize: 16,
               color: AppColors.burgundy,
@@ -848,9 +943,9 @@ class _CreateInquiryScreenState extends State<CreateInquiryScreen> {
                       height: 24,
                       child: CircularProgressIndicator(color: AppColors.white, strokeWidth: 2.5),
                     )
-                  : const Text(
-                      'ثبت و ارسال استعلام',
-                      style: TextStyle(
+                  : Text(
+                      widget.inquiryToEdit != null ? 'ویرایش و اصلاح پروژه' : 'ثبت و ارسال استعلام',
+                      style: const TextStyle(
                         fontSize: 15,
                         fontWeight: FontWeight.bold,
                         fontFamily: 'Vazirmatn',
@@ -1154,47 +1249,59 @@ class _CreateInquiryScreenState extends State<CreateInquiryScreen> {
           ),
 
         // Upload Container
-        GestureDetector(
-          onTap: () async {
-            await provider.pickBlueprintFiles();
-          },
-          child: Container(
-            width: double.infinity,
-            padding: const EdgeInsets.symmetric(vertical: 28, horizontal: 20),
-            decoration: BoxDecoration(
-              color: AppColors.white,
-              borderRadius: BorderRadius.circular(16),
-              border: Border.all(color: AppColors.royalBlue.withValues(alpha: 0.3), style: BorderStyle.solid),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.01),
-                  spreadRadius: 1,
-                  blurRadius: 10,
-                ),
-              ],
-            ),
-            child: Column(
-              children: [
-                const Icon(
-                  Icons.cloud_upload_outlined,
-                  size: 48,
-                  color: AppColors.royalBlue,
-                ),
-                const SizedBox(height: 12),
-                Text(
-                  provider.selectedFiles.isEmpty
-                      ? 'انتخاب و آپلود نقشه‌ها و فایل‌های فنی (امکان انتخاب همزمان چند فایل)'
-                      : 'افزودن فایل‌های بیشتر...',
-                  style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13, fontFamily: 'Vazirmatn'),
-                  textAlign: TextAlign.center,
-                ),
-                const SizedBox(height: 5),
-                const Text(
-                  'فرمت‌های مجاز: PDF, DWG, PNG, JPG (حداکثر ۱۵ مگابایت برای هر فایل)',
-                  style: TextStyle(color: AppColors.textMuted, fontSize: 11, fontFamily: 'Vazirmatn'),
-                  textAlign: TextAlign.center,
-                ),
-              ],
+        Material(
+          color: Colors.transparent,
+          child: InkWell(
+            onTap: () async {
+              final ok = await provider.pickBlueprintFiles();
+              if (!ok && provider.errorMessage != null && mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text(provider.errorMessage!),
+                    backgroundColor: Colors.red,
+                  ),
+                );
+              }
+            },
+            borderRadius: BorderRadius.circular(16),
+            child: Ink(
+              width: double.infinity,
+              padding: const EdgeInsets.symmetric(vertical: 28, horizontal: 20),
+              decoration: BoxDecoration(
+                color: AppColors.white,
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(color: AppColors.royalBlue.withValues(alpha: 0.3), style: BorderStyle.solid),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.01),
+                    spreadRadius: 1,
+                    blurRadius: 10,
+                  ),
+                ],
+              ),
+              child: Column(
+                children: [
+                  const Icon(
+                    Icons.cloud_upload_outlined,
+                    size: 48,
+                    color: AppColors.royalBlue,
+                  ),
+                  const SizedBox(height: 12),
+                  Text(
+                    provider.selectedFiles.isEmpty
+                        ? 'انتخاب و آپلود نقشه‌ها و فایل‌های فنی (امکان انتخاب همزمان چند فایل)'
+                        : 'افزودن فایل‌های بیشتر...',
+                    style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13, fontFamily: 'Vazirmatn'),
+                    textAlign: TextAlign.center,
+                  ),
+                  const SizedBox(height: 5),
+                  const Text(
+                    'فرمت‌های مجاز: PDF, DWG, PNG, JPG (حداکثر ۱۵ مگابایت برای هر فایل)',
+                    style: TextStyle(color: AppColors.textMuted, fontSize: 11, fontFamily: 'Vazirmatn'),
+                    textAlign: TextAlign.center,
+                  ),
+                ],
+              ),
             ),
           ),
         ),
@@ -1577,12 +1684,84 @@ class _CreateInquiryScreenState extends State<CreateInquiryScreen> {
                             ),
                           ],
                           const Divider(height: 20, color: AppColors.borderGrey),
-                          if (provider.hasBlueprint)
-                            _buildPreviewItem(
-                              label: 'نقشه فنی آپلود شده:',
-                              value: provider.selectedFileName ?? '',
-                              icon: Icons.map_outlined,
-                            )
+                          if (provider.hasBlueprint) ...[
+                            Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Row(
+                                  children: [
+                                    const Icon(Icons.folder_zip_outlined, size: 18, color: AppColors.royalBlue),
+                                    const SizedBox(width: 6),
+                                    Text(
+                                      'نقشه‌ها و فایل‌های آپلود شده (${Formatters.toPersianNumbers(provider.selectedFiles.length.toString())} فایل):',
+                                      style: const TextStyle(
+                                        fontWeight: FontWeight.bold,
+                                        fontSize: 13,
+                                        color: AppColors.textDark,
+                                        fontFamily: 'Vazirmatn',
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                                const SizedBox(height: 10),
+                                Wrap(
+                                  spacing: 8,
+                                  runSpacing: 8,
+                                  children: List.generate(provider.selectedFiles.length, (idx) {
+                                    final file = provider.selectedFiles[idx];
+                                    final ext = file.name.contains('.') ? file.name.split('.').last.toLowerCase() : '';
+                                    final isPdf = ext == 'pdf';
+                                    final isImage = ['png', 'jpg', 'jpeg'].contains(ext);
+
+                                    return Material(
+                                      color: Colors.transparent,
+                                      child: InkWell(
+                                        onTap: () => _openFilePreview(context, file, idx),
+                                        borderRadius: BorderRadius.circular(12),
+                                        child: Ink(
+                                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                                          decoration: BoxDecoration(
+                                            color: AppColors.white,
+                                            borderRadius: BorderRadius.circular(12),
+                                            border: Border.all(color: AppColors.royalBlue.withValues(alpha: 0.4), width: 1.2),
+                                            boxShadow: [
+                                              BoxShadow(
+                                                color: Colors.black.withValues(alpha: 0.03),
+                                                blurRadius: 4,
+                                                offset: const Offset(0, 2),
+                                              ),
+                                            ],
+                                          ),
+                                          child: Row(
+                                            mainAxisSize: MainAxisSize.min,
+                                            children: [
+                                              Icon(
+                                                isPdf ? Icons.picture_as_pdf : isImage ? Icons.image : Icons.insert_drive_file,
+                                                size: 16,
+                                                color: isPdf ? Colors.red : isImage ? AppColors.royalBlue : Colors.purple,
+                                              ),
+                                              const SizedBox(width: 6),
+                                              Text(
+                                                'فایل ${Formatters.toPersianNumbers((idx + 1).toString())}',
+                                                style: const TextStyle(
+                                                  fontWeight: FontWeight.bold,
+                                                  fontSize: 12,
+                                                  color: AppColors.royalBlue,
+                                                  fontFamily: 'Vazirmatn',
+                                                ),
+                                              ),
+                                              const SizedBox(width: 4),
+                                              const Icon(Icons.open_in_new, size: 13, color: AppColors.textMuted),
+                                            ],
+                                          ),
+                                        ),
+                                      ),
+                                    );
+                                  }),
+                                ),
+                              ],
+                            ),
+                          ]
                           else
                             Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
@@ -1759,5 +1938,98 @@ class _CreateInquiryScreenState extends State<CreateInquiryScreen> {
         ),
       ],
     );
+  }
+
+  void _openFilePreview(BuildContext context, BlueprintFile file, int index) async {
+    final ext = file.name.contains('.') ? file.name.split('.').last.toLowerCase() : '';
+    final isImage = ['png', 'jpg', 'jpeg'].contains(ext);
+
+    if (isImage && file.bytes.isNotEmpty) {
+      showDialog(
+        context: context,
+        builder: (context) => Dialog(
+          backgroundColor: Colors.transparent,
+          insetPadding: const EdgeInsets.all(12),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              AppBar(
+                backgroundColor: Colors.black.withValues(alpha: 0.85),
+                shape: const RoundedRectangleBorder(
+                  borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+                ),
+                leading: IconButton(
+                  icon: const Icon(Icons.close, color: Colors.white),
+                  onPressed: () => Navigator.pop(context),
+                ),
+                title: Text(
+                  'فایل ${Formatters.toPersianNumbers((index + 1).toString())}: ${file.name}',
+                  style: const TextStyle(fontSize: 13, color: Colors.white, fontFamily: 'Vazirmatn'),
+                ),
+                elevation: 0,
+              ),
+              Container(
+                color: Colors.black,
+                constraints: BoxConstraints(
+                  maxHeight: MediaQuery.of(context).size.height * 0.7,
+                ),
+                child: InteractiveViewer(
+                  panEnabled: true,
+                  minScale: 0.5,
+                  maxScale: 4.0,
+                  child: Image.memory(
+                    Uint8List.fromList(file.bytes),
+                    fit: BoxFit.contain,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      );
+    } else {
+      if (file.path != null && file.path!.isNotEmpty) {
+        try {
+          final uri = Uri.file(file.path!);
+          if (await canLaunchUrl(uri)) {
+            await launchUrl(uri);
+            return;
+          }
+        } catch (_) {}
+      }
+
+      if (!context.mounted) return;
+      showDialog(
+        context: context,
+        builder: (context) => Directionality(
+          textDirection: TextDirection.rtl,
+          child: AlertDialog(
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+            title: Row(
+              children: [
+                const Icon(Icons.insert_drive_file, color: AppColors.royalBlue, size: 24),
+                const SizedBox(width: 8),
+                Text('فایل ${Formatters.toPersianNumbers((index + 1).toString())}', style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold, fontFamily: 'Vazirmatn')),
+              ],
+            ),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text('نام فایل: ${file.name}', style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold, fontFamily: 'Vazirmatn')),
+                const SizedBox(height: 8),
+                Text('حجم فایل: ${(file.bytes.length / (1024 * 1024)).toStringAsFixed(2)} مگابایت', style: const TextStyle(fontSize: 12, color: AppColors.textMuted, fontFamily: 'Vazirmatn')),
+              ],
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: const Text('بستن'),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
   }
 }
