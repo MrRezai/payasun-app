@@ -231,8 +231,14 @@ export class InquiryService {
     inquiry.city = dto.city;
     inquiry.province = dto.province ?? null;
     
+    // Clear old blueprint_url on update so new/retained file selection replaces it
+    if (inquiry.has_blueprint || dto.has_blueprint) {
+      inquiry.has_blueprint = true;
+      inquiry.blueprint_url = null;
+    }
+
     // If it was rejected, move it back to PENDING_ESTIMATION so it gets reviewed again!
-    if (inquiry.status === InquiryStatus.REJECTED) {
+    if (inquiry.status === InquiryStatus.REJECTED || inquiry.has_blueprint) {
       inquiry.status = InquiryStatus.PENDING_ESTIMATION;
       inquiry.rejection_reason = null;
     }

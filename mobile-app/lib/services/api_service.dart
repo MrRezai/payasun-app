@@ -217,6 +217,25 @@ class ApiService {
     }
   }
 
+  Future<Inquiry> linkExistingBlueprint({
+    required String token,
+    required String inquiryId,
+    required String fileUrl,
+  }) async {
+    final response = await _retry(() => http.post(
+      Uri.parse('$baseUrl/inquiry/$inquiryId/link-blueprint'),
+      headers: _getHeaders(token),
+      body: jsonEncode({'fileUrl': fileUrl}),
+    ));
+
+    if (response.statusCode == 200 || response.statusCode == 201) {
+      return Inquiry.fromJson(jsonDecode(response.body));
+    } else {
+      final error = jsonDecode(response.body);
+      throw Exception(error['message'] ?? 'خطا در افزودن فایل نقشه فنی');
+    }
+  }
+
   /// Fetch authenticated user profile details (User + Role specific details).
   Future<Map<String, dynamic>> fetchProfile(String token) async {
     final response = await _retry(() => http.get(

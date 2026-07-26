@@ -148,6 +148,24 @@ export class InquiryController {
   }
 
   /**
+   * POST /inquiry/:id/link-blueprint
+   * Link an existing file URL to the inquiry
+   */
+  @Post(':id/link-blueprint')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'لینک کردن یک فایل موجود به استعلام در هنگام ویرایش' })
+  async linkExistingBlueprint(
+    @Param('id') id: string,
+    @CurrentUser() user: AuthenticatedUser,
+    @Body('fileUrl') fileUrl: string,
+  ): Promise<Inquiry> {
+    if (!fileUrl) {
+      throw new BadRequestException('آدرس فایل الزامی است.');
+    }
+    return this.inquiryService.uploadBlueprint(id, user.id, fileUrl);
+  }
+
+  /**
    * PATCH /inquiry/:id/estimate
    * Admin/Welder fills the estimation items
    */

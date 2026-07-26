@@ -312,13 +312,19 @@ class _InquiryDetailsScreenState extends State<InquiryDetailsScreen> {
               width: double.infinity,
               height: 48,
               child: ElevatedButton.icon(
-                onPressed: () {
-                  Navigator.push(
-                    context,
+                onPressed: () async {
+                  final auth = Provider.of<AuthProvider>(context, listen: false);
+                  final provider = Provider.of<InquiryProvider>(context, listen: false);
+                  final nav = Navigator.of(context);
+                  final res = await nav.push(
                     MaterialPageRoute(
                       builder: (context) => CreateInquiryScreen(inquiryToEdit: inquiry),
                     ),
                   );
+                  if (res == true && mounted) {
+                    await provider.loadMyInquiries(auth.token);
+                    if (mounted) nav.pop();
+                  }
                 },
                 icon: const Icon(Icons.edit_note, color: AppColors.white),
                 label: const Text(

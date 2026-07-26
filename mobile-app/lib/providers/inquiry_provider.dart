@@ -236,27 +236,7 @@ class InquiryProvider with ChangeNotifier {
       );
 
       if (_hasBlueprint && _selectedFiles.isNotEmpty) {
-        Inquiry? lastInquiry = inquiry;
-        for (var file in _selectedFiles) {
-          List<int> bytesToUpload = file.bytes;
-          if (bytesToUpload.isEmpty && file.path != null && file.path!.isNotEmpty && !kIsWeb) {
-            try {
-              final f = io.File(file.path!);
-              if (await f.exists()) {
-                bytesToUpload = await f.readAsBytes();
-              }
-            } catch (e) {
-              debugPrint('Error reading bytes for upload: $e');
-            }
-          }
-
-          lastInquiry = await _apiService.uploadBlueprint(
-            token: token,
-            inquiryId: inquiry.id,
-            fileBytes: bytesToUpload,
-            filename: file.name,
-          );
-        }
+        final lastInquiry = await _processBlueprintFiles(token, inquiry);
         
         await loadMyInquiries(token);
         _isLoading = false;
@@ -313,15 +293,7 @@ class InquiryProvider with ChangeNotifier {
       );
 
       if (_hasBlueprint && _selectedFiles.isNotEmpty) {
-        Inquiry? lastInquiry = inquiry;
-        for (var file in _selectedFiles) {
-          lastInquiry = await _apiService.uploadBlueprint(
-            token: token,
-            inquiryId: inquiry.id,
-            fileBytes: file.bytes,
-            filename: file.name,
-          );
-        }
+        final lastInquiry = await _processBlueprintFiles(token, inquiry);
         
         await loadMyInquiries(token);
         _isLoading = false;
@@ -342,6 +314,41 @@ class InquiryProvider with ChangeNotifier {
       notifyListeners();
       return null;
     }
+  }
+
+  Future<Inquiry?> _processBlueprintFiles(String token, Inquiry inquiry) async {
+    Inquiry? lastInquiry = inquiry;
+    for (var file in _selectedFiles) {
+      if (file.bytes.isEmpty && file.path != null && (file.path!.startsWith('/uploads') || file.path!.startsWith('http'))) {
+        lastInquiry = await _apiService.linkExistingBlueprint(
+          token: token,
+          inquiryId: inquiry.id,
+          fileUrl: file.path!,
+        );
+      } else {
+        List<int> bytesToUpload = file.bytes;
+        if (bytesToUpload.isEmpty && file.path != null && file.path!.isNotEmpty && !kIsWeb) {
+          try {
+            final f = io.File(file.path!);
+            if (await f.exists()) {
+              bytesToUpload = await f.readAsBytes();
+            }
+          } catch (e) {
+            debugPrint('Error reading bytes for upload: $e');
+          }
+        }
+
+        if (bytesToUpload.isNotEmpty) {
+          lastInquiry = await _apiService.uploadBlueprint(
+            token: token,
+            inquiryId: inquiry.id,
+            fileBytes: bytesToUpload,
+            filename: file.name,
+          );
+        }
+      }
+    }
+    return lastInquiry;
   }
 
   Future<bool> confirmInquiry({

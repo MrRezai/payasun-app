@@ -337,8 +337,11 @@ class _CreateInquiryScreenState extends State<CreateInquiryScreen> {
       );
 
       if (mounted) {
-        // Go back to the inquiries list screen
-        Navigator.pop(context, true);
+        final auth = Provider.of<AuthProvider>(context, listen: false);
+        await provider.loadMyInquiries(auth.token);
+        if (mounted) {
+          Navigator.pop(context, true);
+        }
       }
     } else if (provider.errorMessage != null && mounted) {
       showDialog(
