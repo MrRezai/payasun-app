@@ -59,6 +59,7 @@ export interface Inquiry {
   description: string;
   province: string;
   city: string;
+  address?: string | null;
   has_blueprint: boolean;
   blueprint_url: string | null;
   estimation_type?: string | null;

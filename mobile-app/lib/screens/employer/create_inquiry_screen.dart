@@ -19,6 +19,7 @@ class _CreateInquiryScreenState extends State<CreateInquiryScreen> {
   final _formKey = GlobalKey<FormState>();
   final _titleController = TextEditingController();
   final _descController = TextEditingController();
+  final _addressController = TextEditingController();
   final _areaController = TextEditingController();
   final _floorsController = TextEditingController();
 
@@ -150,6 +151,7 @@ class _CreateInquiryScreenState extends State<CreateInquiryScreen> {
   void dispose() {
     _titleController.dispose();
     _descController.dispose();
+    _addressController.dispose();
     _areaController.dispose();
     _floorsController.dispose();
     _itemTitleController.dispose();
@@ -185,9 +187,11 @@ class _CreateInquiryScreenState extends State<CreateInquiryScreen> {
     }
 
     String finalDescription = _descController.text.trim();
+    final addressText = _addressController.text.trim();
     final areaText = _areaController.text.trim();
     final floorsText = _floorsController.text.trim();
     List<String> extraDetails = [];
+    if (addressText.isNotEmpty) extraDetails.add('محل اجرای دقیق: $addressText');
     if (areaText.isNotEmpty) extraDetails.add('متراژ زیربنا: ${Formatters.toPersianNumbers(areaText)} مترمربع');
     if (floorsText.isNotEmpty) extraDetails.add('تعداد طبقات: ${Formatters.toPersianNumbers(floorsText)} طبقه');
     if (extraDetails.isNotEmpty) {
@@ -212,6 +216,7 @@ class _CreateInquiryScreenState extends State<CreateInquiryScreen> {
             description: finalDescription,
             city: _selectedCityName!,
             province: _selectedProvinceName!,
+            address: addressText,
             estimationType: _estimationType,
           );
 
@@ -227,6 +232,7 @@ class _CreateInquiryScreenState extends State<CreateInquiryScreen> {
       );
       _titleController.clear();
       _descController.clear();
+      _addressController.clear();
       _areaController.clear();
       _floorsController.clear();
       setState(() {
@@ -723,6 +729,16 @@ class _CreateInquiryScreenState extends State<CreateInquiryScreen> {
               ),
               const SizedBox(height: 12),
 
+              // Exact Address & Execution Location Field
+              _buildTextField(
+                controller: _addressController,
+                label: 'محل اجرای دقیق پروژه (آدرس / محدوده)',
+                hint: 'مثال: خیابان شریعتی، کوچه ۱۴، پلاک ۲۵ (یا محدوده دقیق کارگاه)',
+                maxLines: 2,
+                validator: (value) => value == null || value.trim().isEmpty ? 'لطفاً محل اجرای دقیق پروژه را وارد کنید' : null,
+              ),
+              const SizedBox(height: 12),
+
               // Area & Floor Count Row (Optional for blueprint project, Mandatory for manual inquiry)
               Row(
                 children: [
@@ -931,30 +947,44 @@ class _CreateInquiryScreenState extends State<CreateInquiryScreen> {
   }
 
   Widget _buildToggleCard(InquiryProvider provider) {
-    return Card(
-      elevation: 0,
-      color: AppColors.white,
-      shape: RoundedRectangleBorder(
+    return Container(
+      decoration: BoxDecoration(
+        color: AppColors.white,
         borderRadius: BorderRadius.circular(16),
-        side: const BorderSide(color: AppColors.borderGrey),
+        border: Border.all(
+          color: provider.hasBlueprint
+              ? AppColors.royalBlue.withValues(alpha: 0.5)
+              : AppColors.borderGrey,
+          width: provider.hasBlueprint ? 1.5 : 1,
+        ),
       ),
       child: ClipRRect(
         borderRadius: BorderRadius.circular(16),
-        child: SwitchListTile(
-          title: const Text(
-            'من لیست اقلام ندارم، مایل به آپلود پلان ساختمان هستم',
-            style: TextStyle(
-              fontWeight: FontWeight.bold,
-              fontSize: 13,
-              fontFamily: 'Vazirmatn',
+        child: Material(
+          color: Colors.transparent,
+          borderRadius: BorderRadius.circular(16),
+          clipBehavior: Clip.antiAlias,
+          child: SwitchListTile(
+            contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(16),
             ),
+            title: const Text(
+              'من لیست اقلام ندارم، مایل به آپلود پلان ساختمان هستم',
+              style: TextStyle(
+                fontWeight: FontWeight.bold,
+                fontSize: 13,
+                fontFamily: 'Vazirmatn',
+                color: AppColors.textDark,
+              ),
+            ),
+            value: provider.hasBlueprint,
+            onChanged: (val) {
+              provider.setHasBlueprint(val);
+            },
+            activeThumbColor: AppColors.royalBlue,
+            activeTrackColor: AppColors.royalBlue.withValues(alpha: 0.3),
           ),
-          value: provider.hasBlueprint,
-          onChanged: (val) {
-            provider.setHasBlueprint(val);
-          },
-          activeThumbColor: AppColors.royalBlue,
-          activeTrackColor: AppColors.royalBlue.withValues(alpha: 0.3),
         ),
       ),
     );
@@ -1522,9 +1552,15 @@ class _CreateInquiryScreenState extends State<CreateInquiryScreen> {
                           ),
                           const Divider(height: 20, color: AppColors.borderGrey),
                           _buildPreviewItem(
-                            label: 'محل پروژه:',
+                            label: 'شهر و استان پروژه:',
                             value: '$_selectedProvinceName - $_selectedCityName',
                             icon: Icons.location_on_outlined,
+                          ),
+                          const Divider(height: 20, color: AppColors.borderGrey),
+                          _buildPreviewItem(
+                            label: 'محل اجرای دقیق پروژه (آدرس):',
+                            value: _addressController.text.trim().isNotEmpty ? _addressController.text.trim() : 'ثبت نشده',
+                            icon: Icons.map_outlined,
                           ),
                           const Divider(height: 20, color: AppColors.borderGrey),
                           _buildPreviewItem(

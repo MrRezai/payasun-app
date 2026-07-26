@@ -41,6 +41,7 @@ export class InquiryService {
       description: dto.description,
       city: dto.city,
       province: dto.province ?? null,
+      address: dto.address ?? null,
       status: initialStatus,
       has_blueprint: hasBlueprint,
       estimation_type: dto.estimation_type ?? (hasBlueprint ? 'ROUGH' : null),

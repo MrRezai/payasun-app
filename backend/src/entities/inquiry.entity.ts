@@ -39,6 +39,9 @@ export class Inquiry {
   @Column({ type: 'varchar', length: 100, nullable: true })
   province: string | null;
 
+  @Column({ type: 'text', nullable: true })
+  address: string | null;
+
   @Column({ type: 'enum', enum: InquiryStatus, default: InquiryStatus.DRAFT })
   status: InquiryStatus;
 

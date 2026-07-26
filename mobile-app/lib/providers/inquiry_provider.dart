@@ -145,6 +145,7 @@ class InquiryProvider with ChangeNotifier {
     required String description,
     required String city,
     required String province,
+    String? address,
     String? estimationType,
   }) async {
     _isLoading = true;
@@ -172,6 +173,7 @@ class InquiryProvider with ChangeNotifier {
         description: description,
         city: city,
         province: province,
+        address: address,
         hasBlueprint: _hasBlueprint,
         estimationType: estimationType,
         items: _hasBlueprint ? [] : _manualItems,

@@ -40,6 +40,11 @@ export class CreateInquiryDto {
   @IsString()
   province?: string;
 
+  @ApiPropertyOptional({ description: 'آدرس و محل اجرای دقیق پروژه', example: 'خیابان شریعتی، کوچه ۱۴، پلاک ۲۵' })
+  @IsOptional()
+  @IsString()
+  address?: string;
+
   @ApiPropertyOptional({ description: 'آیا استعلام دارای فایل پلان/نقشه است؟', default: false, example: false })
   @IsOptional()
   @IsBoolean()

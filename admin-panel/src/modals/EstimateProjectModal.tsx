@@ -203,6 +203,12 @@ export default function EstimateProjectModal({
                   <Text type="secondary">موقعیت: </Text>
                   <Text strong>{inquiry.province}، {inquiry.city}</Text>
                 </Paragraph>
+                {inquiry.address && (
+                  <Paragraph style={{ margin: '0 0 8px 0', fontSize: '12px' }}>
+                    <Text type="secondary">محل اجرای دقیق: </Text>
+                    <Text strong>{inquiry.address}</Text>
+                  </Paragraph>
+                )}
                 <div style={{ backgroundColor: '#fafafa', padding: '8px 12px', borderRadius: '8px', border: '1px solid #f0f0f0', maxHeight: '100px', overflowY: 'auto' }}>
                   <Text type="secondary" style={{ fontSize: '12px' }}>توضیحات: </Text>
                   <Text style={{ fontSize: '12px' }}>{inquiry.description}</Text>

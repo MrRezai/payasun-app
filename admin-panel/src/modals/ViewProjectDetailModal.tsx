@@ -172,6 +172,12 @@ export default function ViewProjectDetailModal({
                 <Text type="secondary">موقعیت جغرافیایی: </Text>
                 <Text strong>{inquiry.province || 'نامشخص'}، {inquiry.city || 'نامشخص'}</Text>
               </Paragraph>
+              {inquiry.address && (
+                <Paragraph style={{ margin: '0 0 6px 0', fontSize: '13px' }}>
+                  <Text type="secondary">محل اجرای دقیق: </Text>
+                  <Text strong>{inquiry.address}</Text>
+                </Paragraph>
+              )}
               <Paragraph style={{ margin: '0 0 8px 0', fontSize: '13px' }}>
                 <Text type="secondary">وضعیت فعلی: </Text>
                 {getStatusTag(inquiry.status)}
