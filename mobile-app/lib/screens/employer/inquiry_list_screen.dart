@@ -179,250 +179,13 @@ class _InquiryListScreenState extends State<InquiryListScreen> with SingleTicker
       itemCount: projects.length,
       itemBuilder: (context, index) {
         final project = projects[index];
-        return _buildProjectAccordionCard(project);
+        return ProjectCardWidget(
+          project: project,
+          onRefresh: _fetchData,
+          onDeleteConfirm: _confirmDeleteProject,
+          inquiryCardBuilder: _buildInquiryCard,
+        );
       },
-    );
-  }
-
-  Widget _buildProjectAccordionCard(Project project) {
-    final dateStr = Formatters.toPersianDate(project.createdAt);
-    final inquiries = project.inquiries;
-
-    return Card(
-      elevation: 0,
-      margin: const EdgeInsets.only(bottom: 16),
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(18),
-        side: const BorderSide(color: AppColors.borderGrey),
-      ),
-      color: AppColors.white,
-      child: Theme(
-        data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
-        child: ExpansionTile(
-          key: PageStorageKey(project.id),
-          tilePadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-          childrenPadding: const EdgeInsets.only(left: 16, right: 16, bottom: 16),
-          title: Row(
-            children: [
-              Container(
-                padding: const EdgeInsets.all(8),
-                decoration: BoxDecoration(
-                  color: AppColors.royalBlue.withValues(alpha: 0.1),
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: const Icon(Icons.apartment, color: AppColors.royalBlue, size: 22),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      project.title,
-                      style: const TextStyle(
-                        fontSize: 15,
-                        fontWeight: FontWeight.bold,
-                        color: AppColors.textDark,
-                        fontFamily: 'Vazirmatn',
-                      ),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                    const SizedBox(height: 4),
-                    Row(
-                      children: [
-                        const Icon(Icons.location_on_outlined, size: 13, color: AppColors.textMuted),
-                        const SizedBox(width: 4),
-                        Text(
-                          project.province != null && project.province!.isNotEmpty
-                              ? '${project.province}، ${project.city}'
-                              : project.city,
-                          style: const TextStyle(color: AppColors.textMuted, fontSize: 11, fontFamily: 'Vazirmatn'),
-                        ),
-                        const SizedBox(width: 12),
-                        const Icon(Icons.calendar_month_outlined, size: 13, color: AppColors.textMuted),
-                        const SizedBox(width: 4),
-                        Text(
-                          dateStr,
-                          style: const TextStyle(color: AppColors.textMuted, fontSize: 11, fontFamily: 'Vazirmatn'),
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-          subtitle: Padding(
-            padding: const EdgeInsets.only(top: 10),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                if (project.description.isNotEmpty)
-                  Text(
-                    project.description,
-                    style: const TextStyle(color: AppColors.textMuted, fontSize: 12, height: 1.5, fontFamily: 'Vazirmatn'),
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-
-                // Photos gallery preview if available
-                if (project.imageUrls.isNotEmpty) ...[
-                  const SizedBox(height: 10),
-                  SizedBox(
-                    height: 54,
-                    child: ListView.builder(
-                      scrollDirection: Axis.horizontal,
-                      itemCount: project.imageUrls.length,
-                      itemBuilder: (context, idx) {
-                        final url = project.imageUrls[idx];
-                        final fullUrl = url.startsWith('http') ? url : '${ApiService().baseUrl}$url';
-                        return Container(
-                          margin: const EdgeInsets.only(left: 8),
-                          width: 54,
-                          height: 54,
-                          decoration: BoxDecoration(
-                            borderRadius: BorderRadius.circular(10),
-                            border: Border.all(color: AppColors.borderGrey),
-                          ),
-                          child: ClipRRect(
-                            borderRadius: BorderRadius.circular(10),
-                            child: Image.network(fullUrl, fit: BoxFit.cover),
-                          ),
-                        );
-                      },
-                    ),
-                  ),
-                ],
-
-                const SizedBox(height: 12),
-
-                // Card toolbar (Actions: Edit, Delete, New Inquiry)
-                Row(
-                  children: [
-                    // Edit Project
-                    OutlinedButton.icon(
-                      onPressed: () async {
-                        final res = await Navigator.push<bool>(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) => CreateProjectScreen(projectToEdit: project),
-                          ),
-                        );
-                        if (res == true && mounted) {
-                          _fetchData();
-                        }
-                      },
-                      style: OutlinedButton.styleFrom(
-                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                        minimumSize: Size.zero,
-                        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                        side: const BorderSide(color: AppColors.borderGrey),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                      ),
-                      icon: const Icon(Icons.edit_outlined, size: 14, color: AppColors.textMuted),
-                      label: const Text('ویرایش', style: TextStyle(fontSize: 11, color: AppColors.textDark, fontFamily: 'Vazirmatn')),
-                    ),
-                    const SizedBox(width: 8),
-
-                    // Delete Project
-                    OutlinedButton.icon(
-                      onPressed: () => _confirmDeleteProject(project),
-                      style: OutlinedButton.styleFrom(
-                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                        minimumSize: Size.zero,
-                        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                        side: const BorderSide(color: Colors.redAccent),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                      ),
-                      icon: const Icon(Icons.delete_outline, size: 14, color: Colors.red),
-                      label: const Text('حذف', style: TextStyle(fontSize: 11, color: Colors.red, fontFamily: 'Vazirmatn')),
-                    ),
-                    const Spacer(),
-
-                    // New Inquiry for this Project
-                    ElevatedButton.icon(
-                      onPressed: () async {
-                        final result = await Navigator.push<bool>(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) => CreateInquiryScreen(parentProject: project),
-                          ),
-                        );
-                        if (result == true && mounted) {
-                          _fetchData();
-                        }
-                      },
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: AppColors.amberOrange,
-                        foregroundColor: AppColors.white,
-                        elevation: 0,
-                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                        minimumSize: Size.zero,
-                        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                      ),
-                      icon: const Icon(Icons.add_task, size: 15),
-                      label: const Text(
-                        'استعلام جدید',
-                        style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, fontFamily: 'Vazirmatn'),
-                      ),
-                    ),
-                  ],
-                ),
-              ],
-            ),
-          ),
-          children: [
-            const Divider(color: AppColors.borderGrey, height: 20),
-            Row(
-              children: [
-                const Icon(Icons.assignment_outlined, size: 16, color: AppColors.royalBlue),
-                const SizedBox(width: 6),
-                Text(
-                  'استعلام‌های این پروژه (${inquiries.length}):',
-                  style: const TextStyle(
-                    fontWeight: FontWeight.bold,
-                    fontSize: 13,
-                    color: AppColors.royalBlue,
-                    fontFamily: 'Vazirmatn',
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 10),
-
-            if (inquiries.isEmpty)
-              Container(
-                width: double.infinity,
-                padding: const EdgeInsets.symmetric(vertical: 18, horizontal: 14),
-                decoration: BoxDecoration(
-                  color: AppColors.lightGrey,
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: const Column(
-                  children: [
-                    Icon(Icons.inbox_outlined, color: AppColors.textMuted, size: 28),
-                    SizedBox(height: 6),
-                    Text(
-                      'هنوز استعلامی برای این پروژه ثبت نشده است.',
-                      style: TextStyle(color: AppColors.textMuted, fontSize: 11, fontFamily: 'Vazirmatn'),
-                    ),
-                    SizedBox(height: 2),
-                    Text(
-                      'جهت دریافت قیمت و برآورد فنی، روی دکمه «استعلام جدید» کلیک کنید.',
-                      style: TextStyle(color: AppColors.textMuted, fontSize: 10, fontFamily: 'Vazirmatn'),
-                    ),
-                  ],
-                ),
-              )
-            else
-              Column(
-                children: inquiries.map((inquiry) => _buildInquiryCard(inquiry)).toList(),
-              ),
-          ],
-        ),
-      ),
     );
   }
 
@@ -510,7 +273,7 @@ class _InquiryListScreenState extends State<InquiryListScreen> with SingleTicker
 
     return Card(
       elevation: 0,
-      margin: const EdgeInsets.only(bottom: 12),
+      margin: const EdgeInsets.only(bottom: 10),
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(14),
         side: const BorderSide(color: AppColors.borderGrey),
@@ -529,7 +292,7 @@ class _InquiryListScreenState extends State<InquiryListScreen> with SingleTicker
             );
           },
           child: Padding(
-            padding: const EdgeInsets.all(14.0),
+            padding: const EdgeInsets.all(12.0),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -541,7 +304,7 @@ class _InquiryListScreenState extends State<InquiryListScreen> with SingleTicker
                       child: Text(
                         inquiry.title,
                         style: const TextStyle(
-                          fontSize: 14,
+                          fontSize: 13,
                           fontWeight: FontWeight.bold,
                           color: AppColors.textDark,
                           fontFamily: 'Vazirmatn',
@@ -554,7 +317,7 @@ class _InquiryListScreenState extends State<InquiryListScreen> with SingleTicker
                     _buildStatusBadge(inquiry.status),
                   ],
                 ),
-                const SizedBox(height: 8),
+                const SizedBox(height: 6),
 
                 // Description summary
                 Text(
@@ -562,13 +325,13 @@ class _InquiryListScreenState extends State<InquiryListScreen> with SingleTicker
                   style: const TextStyle(
                     color: AppColors.textMuted,
                     fontSize: 11,
-                    height: 1.5,
+                    height: 1.4,
                     fontFamily: 'Vazirmatn',
                   ),
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
                 ),
-                const SizedBox(height: 10),
+                const SizedBox(height: 8),
 
                 // Card Footer
                 Container(
@@ -580,7 +343,7 @@ class _InquiryListScreenState extends State<InquiryListScreen> with SingleTicker
                   ),
                   child: Row(
                     children: [
-                      Icon(Icons.location_on_outlined, size: 13, color: Colors.grey[400]),
+                      Icon(Icons.location_on_outlined, size: 12, color: Colors.grey[400]),
                       const SizedBox(width: 4),
                       Text(
                         inquiry.province != null && inquiry.province!.isNotEmpty
@@ -588,8 +351,8 @@ class _InquiryListScreenState extends State<InquiryListScreen> with SingleTicker
                             : inquiry.city,
                         style: const TextStyle(color: AppColors.textMuted, fontSize: 10, fontFamily: 'Vazirmatn'),
                       ),
-                      const SizedBox(width: 14),
-                      Icon(Icons.calendar_month_outlined, size: 13, color: Colors.grey[400]),
+                      const SizedBox(width: 12),
+                      Icon(Icons.calendar_month_outlined, size: 12, color: Colors.grey[400]),
                       const SizedBox(width: 4),
                       Text(
                         dateStr,
@@ -597,7 +360,7 @@ class _InquiryListScreenState extends State<InquiryListScreen> with SingleTicker
                       ),
                       if (inquiry.status == 'BROADCASTED') ...[
                         const Spacer(),
-                        const Icon(Icons.people_outline, size: 13, color: Colors.green),
+                        const Icon(Icons.people_outline, size: 12, color: Colors.green),
                         const SizedBox(width: 4),
                         Text(
                           '${inquiry.offers?.length ?? 0} پیشنهاد',
@@ -660,10 +423,10 @@ class _InquiryListScreenState extends State<InquiryListScreen> with SingleTicker
     }
 
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
       decoration: BoxDecoration(
         color: bg,
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(14),
       ),
       child: Text(
         label,
@@ -973,6 +736,463 @@ class _InquiryListScreenState extends State<InquiryListScreen> with SingleTicker
           },
         );
       },
+    );
+  }
+}
+
+class ProjectCardWidget extends StatefulWidget {
+  final Project project;
+  final VoidCallback onRefresh;
+  final Function(Project) onDeleteConfirm;
+  final Widget Function(Inquiry) inquiryCardBuilder;
+
+  const ProjectCardWidget({
+    super.key,
+    required this.project,
+    required this.onRefresh,
+    required this.onDeleteConfirm,
+    required this.inquiryCardBuilder,
+  });
+
+  @override
+  State<ProjectCardWidget> createState() => _ProjectCardWidgetState();
+}
+
+class _ProjectCardWidgetState extends State<ProjectCardWidget> {
+  bool _isExpanded = false;
+
+  void _showPhotosGallery(BuildContext context, List<String> imageUrls) {
+    showDialog(
+      context: context,
+      builder: (context) {
+        int currentIndex = 0;
+        final PageController pageController = PageController();
+
+        return StatefulBuilder(
+          builder: (context, setModalState) {
+            final persianCounter = Formatters.toPersianNumbers('${currentIndex + 1} از ${imageUrls.length}');
+
+            return Directionality(
+              textDirection: TextDirection.rtl,
+              child: Dialog(
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+                backgroundColor: AppColors.white,
+                clipBehavior: Clip.antiAlias,
+                child: SizedBox(
+                  width: double.infinity,
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      // Header with counter chip & close X
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Row(
+                              children: [
+                                const Icon(Icons.photo_library_outlined, color: AppColors.amberOrange, size: 20),
+                                const SizedBox(width: 8),
+                                const Text(
+                                  'آلبوم تصاویر پروژه',
+                                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: AppColors.royalBlue, fontFamily: 'Vazirmatn'),
+                                ),
+                                const SizedBox(width: 8),
+                                Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                                  decoration: BoxDecoration(
+                                    color: AppColors.royalBlue.withValues(alpha: 0.1),
+                                    borderRadius: BorderRadius.circular(10),
+                                  ),
+                                  child: Text(
+                                    persianCounter,
+                                    style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: AppColors.royalBlue, fontFamily: 'Vazirmatn'),
+                                  ),
+                                ),
+                              ],
+                            ),
+                            IconButton(
+                              icon: const Icon(Icons.close, color: AppColors.textMuted, size: 20),
+                              onPressed: () => Navigator.pop(context),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const Divider(height: 1, color: AppColors.borderGrey),
+
+                      // Image Slider Container with Side Arrows
+                      SizedBox(
+                        height: 300,
+                        child: Stack(
+                          children: [
+                            PageView.builder(
+                              controller: pageController,
+                              itemCount: imageUrls.length,
+                              onPageChanged: (index) {
+                                setModalState(() {
+                                  currentIndex = index;
+                                });
+                              },
+                              itemBuilder: (context, idx) {
+                                final url = imageUrls[idx];
+                                final fullUrl = url.startsWith('http') ? url : '${ApiService().baseUrl}$url';
+                                return Padding(
+                                  padding: const EdgeInsets.all(12.0),
+                                  child: ClipRRect(
+                                    borderRadius: BorderRadius.circular(16),
+                                    child: Image.network(
+                                      fullUrl,
+                                      fit: BoxFit.contain,
+                                      loadingBuilder: (context, child, loadingProgress) {
+                                        if (loadingProgress == null) return child;
+                                        return const Center(child: CircularProgressIndicator(color: AppColors.royalBlue));
+                                      },
+                                    ),
+                                  ),
+                                );
+                              },
+                            ),
+
+                            // Prev Arrow Button
+                            if (currentIndex > 0)
+                              Positioned(
+                                right: 8,
+                                top: 0,
+                                bottom: 0,
+                                child: Center(
+                                  child: InkWell(
+                                    onTap: () {
+                                      pageController.previousPage(
+                                        duration: const Duration(milliseconds: 300),
+                                        curve: Curves.easeInOut,
+                                      );
+                                    },
+                                    child: Container(
+                                      padding: const EdgeInsets.all(8),
+                                      decoration: BoxDecoration(
+                                        color: Colors.black.withValues(alpha: 0.4),
+                                        shape: BoxShape.circle,
+                                      ),
+                                      child: const Icon(Icons.arrow_forward_ios, color: Colors.white, size: 16),
+                                    ),
+                                  ),
+                                ),
+                              ),
+
+                            // Next Arrow Button
+                            if (currentIndex < imageUrls.length - 1)
+                              Positioned(
+                                left: 8,
+                                top: 0,
+                                bottom: 0,
+                                child: Center(
+                                  child: InkWell(
+                                    onTap: () {
+                                      pageController.nextPage(
+                                        duration: const Duration(milliseconds: 300),
+                                        curve: Curves.easeInOut,
+                                      );
+                                    },
+                                    child: Container(
+                                      padding: const EdgeInsets.all(8),
+                                      decoration: BoxDecoration(
+                                        color: Colors.black.withValues(alpha: 0.4),
+                                        shape: BoxShape.circle,
+                                      ),
+                                      child: const Icon(Icons.arrow_back_ios_new, color: Colors.white, size: 16),
+                                    ),
+                                  ),
+                                ),
+                              ),
+                          ],
+                        ),
+                      ),
+
+                      // Dot Indicators at Bottom
+                      if (imageUrls.length > 1)
+                        Padding(
+                          padding: const EdgeInsets.only(bottom: 14, top: 4),
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: List.generate(imageUrls.length, (idx) {
+                              final isActive = idx == currentIndex;
+                              return AnimatedContainer(
+                                duration: const Duration(milliseconds: 250),
+                                margin: const EdgeInsets.symmetric(horizontal: 3),
+                                width: isActive ? 18 : 6,
+                                height: 6,
+                                decoration: BoxDecoration(
+                                  color: isActive ? AppColors.royalBlue : AppColors.borderGrey,
+                                  borderRadius: BorderRadius.circular(3),
+                                ),
+                              );
+                            }),
+                          ),
+                        ),
+                    ],
+                  ),
+                ),
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final project = widget.project;
+    final inquiries = project.inquiries;
+    final dateStr = Formatters.toPersianDate(project.createdAt);
+
+    return Card(
+      elevation: 0,
+      margin: const EdgeInsets.only(bottom: 12),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(16),
+        side: const BorderSide(color: AppColors.borderGrey),
+      ),
+      color: AppColors.white,
+      child: Column(
+        children: [
+          Padding(
+            padding: const EdgeInsets.all(14.0),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Header: Title, Icon, and Photo Badge Stack
+                Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: AppColors.royalBlue.withValues(alpha: 0.1),
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      child: const Icon(Icons.apartment, color: AppColors.royalBlue, size: 20),
+                    ),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            project.title,
+                            style: const TextStyle(
+                              fontSize: 14,
+                              fontWeight: FontWeight.bold,
+                              color: AppColors.textDark,
+                              fontFamily: 'Vazirmatn',
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                          const SizedBox(height: 2),
+                          Row(
+                            children: [
+                              const Icon(Icons.location_on_outlined, size: 12, color: AppColors.textMuted),
+                              const SizedBox(width: 3),
+                              Text(
+                                project.province != null && project.province!.isNotEmpty
+                                    ? '${project.province}، ${project.city}'
+                                    : project.city,
+                                style: const TextStyle(color: AppColors.textMuted, fontSize: 11, fontFamily: 'Vazirmatn'),
+                              ),
+                              const SizedBox(width: 10),
+                              const Icon(Icons.calendar_month_outlined, size: 12, color: AppColors.textMuted),
+                              const SizedBox(width: 3),
+                              Text(
+                                dateStr,
+                                style: const TextStyle(color: AppColors.textMuted, fontSize: 11, fontFamily: 'Vazirmatn'),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
+                    ),
+
+                    // Ultra-compact Micro Photo Badge (Clickable Lightbox Trigger)
+                    if (project.imageUrls.isNotEmpty)
+                      InkWell(
+                        onTap: () => _showPhotosGallery(context, project.imageUrls),
+                        borderRadius: BorderRadius.circular(12),
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                          decoration: BoxDecoration(
+                            color: AppColors.amberOrange.withValues(alpha: 0.1),
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(color: AppColors.amberOrange.withValues(alpha: 0.3)),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              const Icon(Icons.photo_library_outlined, size: 14, color: AppColors.amberOrange),
+                              const SizedBox(width: 4),
+                              Text(
+                                Formatters.toPersianNumbers('${project.imageUrls.length} عکس'),
+                                style: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: AppColors.amberOrange, fontFamily: 'Vazirmatn'),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                  ],
+                ),
+
+                if (project.description.isNotEmpty) ...[
+                  const SizedBox(height: 8),
+                  Text(
+                    project.description,
+                    style: const TextStyle(color: AppColors.textMuted, fontSize: 11, height: 1.4, fontFamily: 'Vazirmatn'),
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ],
+
+                const SizedBox(height: 12),
+
+                // Actions Toolbar
+                Row(
+                  children: [
+                    OutlinedButton.icon(
+                      onPressed: () async {
+                        final res = await Navigator.push<bool>(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => CreateProjectScreen(projectToEdit: project),
+                          ),
+                        );
+                        if (res == true && mounted) {
+                          widget.onRefresh();
+                        }
+                      },
+                      style: OutlinedButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                        side: const BorderSide(color: AppColors.borderGrey),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                      ),
+                      icon: const Icon(Icons.edit_outlined, size: 16, color: AppColors.textDark),
+                      label: const Text('ویرایش', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.textDark, fontFamily: 'Vazirmatn')),
+                    ),
+                    const SizedBox(width: 8),
+                    OutlinedButton.icon(
+                      onPressed: () => widget.onDeleteConfirm(project),
+                      style: OutlinedButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                        side: const BorderSide(color: Colors.redAccent),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                      ),
+                      icon: const Icon(Icons.delete_outline, size: 16, color: Colors.red),
+                      label: const Text('حذف', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: Colors.red, fontFamily: 'Vazirmatn')),
+                    ),
+                    const Spacer(),
+                    ElevatedButton.icon(
+                      onPressed: () async {
+                        final result = await Navigator.push<bool>(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => CreateInquiryScreen(parentProject: project),
+                          ),
+                        );
+                        if (result == true && mounted) {
+                          widget.onRefresh();
+                        }
+                      },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppColors.amberOrange,
+                        foregroundColor: AppColors.white,
+                        elevation: 1,
+                        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                      ),
+                      icon: const Icon(Icons.add_task, size: 17),
+                      label: const Text(
+                        'استعلام جدید',
+                        style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, fontFamily: 'Vazirmatn'),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+
+          // Custom Expand/Collapse Toggle Button
+          InkWell(
+            onTap: () {
+              setState(() {
+                _isExpanded = !_isExpanded;
+              });
+            },
+            borderRadius: const BorderRadius.vertical(bottom: Radius.circular(16)),
+            child: Container(
+              width: double.infinity,
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 9),
+              decoration: const BoxDecoration(
+                color: AppColors.lightGrey,
+                borderRadius: BorderRadius.vertical(bottom: Radius.circular(16)),
+                border: Border(top: BorderSide(color: AppColors.borderGrey, width: 0.5)),
+              ),
+              child: Row(
+                children: [
+                  const Icon(Icons.assignment_outlined, size: 15, color: AppColors.royalBlue),
+                  const SizedBox(width: 6),
+                  Text(
+                    'استعلام‌های این پروژه (${Formatters.toPersianNumbers(inquiries.length.toString())})',
+                    style: const TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 12,
+                      color: AppColors.royalBlue,
+                      fontFamily: 'Vazirmatn',
+                    ),
+                  ),
+                  const Spacer(),
+                  Icon(
+                    _isExpanded ? Icons.keyboard_arrow_up : Icons.keyboard_arrow_down,
+                    color: AppColors.royalBlue,
+                    size: 20,
+                  ),
+                ],
+              ),
+            ),
+          ),
+
+          // Expanded Content (Smooth Custom Container)
+          AnimatedCrossFade(
+            firstChild: const SizedBox(width: double.infinity),
+            secondChild: Container(
+              padding: const EdgeInsets.all(12),
+              color: AppColors.lightGrey.withValues(alpha: 0.5),
+              child: inquiries.isEmpty
+                  ? Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 12),
+                      decoration: BoxDecoration(
+                        color: AppColors.white,
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: AppColors.borderGrey),
+                      ),
+                      child: const Column(
+                        children: [
+                          Icon(Icons.inbox_outlined, color: AppColors.textMuted, size: 26),
+                          SizedBox(height: 4),
+                          Text(
+                            'هنوز استعلامی برای این پروژه ثبت نشده است.',
+                            style: TextStyle(color: AppColors.textMuted, fontSize: 11, fontFamily: 'Vazirmatn'),
+                          ),
+                        ],
+                      ),
+                    )
+                  : Column(
+                      children: inquiries.map((inquiry) => widget.inquiryCardBuilder(inquiry)).toList(),
+                    ),
+            ),
+            crossFadeState: _isExpanded ? CrossFadeState.showSecond : CrossFadeState.showFirst,
+            duration: const Duration(milliseconds: 250),
+          ),
+        ],
+      ),
     );
   }
 }

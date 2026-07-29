@@ -182,21 +182,37 @@ export default function Settings({
       },
     },
     {
-      title: 'واحد سنجش',
+      title: 'واحد(های) سنجش',
       dataIndex: 'unit',
       key: 'unit',
-      width: 140,
+      width: 180,
       render: (text: string, record: SupplyItem) => {
         if (editingItemId === record.id) {
           return (
             <Input
               value={editingItemUnit}
               onChange={(e) => setEditingItemUnit(e.target.value)}
-              placeholder="واحد (مثل متر، کپسول)"
+              placeholder="واحدها با کاما (عدد، متر، کیلوگرم)"
             />
           );
         }
-        return <Badge count={text} style={{ backgroundColor: '#4169E1' }} />;
+        const units = text ? text.split(/[,،]/).map(u => u.trim()).filter(Boolean) : [];
+        const colors = ['#4169E1', '#10B981', '#F59E0B', '#8B5CF6', '#EC4899'];
+        return (
+          <Space wrap size={[4, 4]}>
+            {units.length > 0 ? (
+              units.map((u, idx) => (
+                <Badge
+                  key={idx}
+                  count={u}
+                  style={{ backgroundColor: colors[idx % colors.length] }}
+                />
+              ))
+            ) : (
+              <Text type="secondary">-</Text>
+            )}
+          </Space>
+        );
       },
     },
     {
@@ -337,7 +353,7 @@ export default function Settings({
                   <Card title={<Title level={5} style={{ margin: 0 }}>افزودن قلم کالا / خدمات جدید</Title>}>
                     <Alert
                       message="راهنمای تعریف اقلام"
-                      description="اقلام پایه همراه با واحد سنجش دقیق (مثلاً آرگون - کپسول یا ورق - متر) تعریف می‌شوند تا کارفرما در ثبت استعلام بتواند آن‌ها را انتخاب کند."
+                      description="اقلام پایه به همراه واحد(های) سنجش تعریف می‌شوند. می‌توانید چند واحد را با کاما جدا کنید (مثال: عدد، متر، کیلوگرم) تا کارفرما بتواند واحد دلخواه را هنگام ثبت انتخاب کند."
                       type="info"
                       showIcon
                       closable
@@ -349,14 +365,14 @@ export default function Settings({
                         name="title"
                         rules={[{ required: true, message: 'لطفاً عنوان قلم را وارد کنید.' }]}
                       >
-                        <Input placeholder="مثال: کپسول گاز آرگون، ورق سیاه ۲ میل" />
+                        <Input placeholder="مثال: کپسول گاز آرگون، تیرآهن، ورق سیاه" />
                       </Form.Item>
                       <Form.Item
-                        label="واحد سنجش"
+                        label="واحد(های) سنجش (با کاما جدا کنید)"
                         name="unit"
                         rules={[{ required: true, message: 'لطفاً واحد سنجش را وارد کنید.' }]}
                       >
-                        <Input placeholder="مثال: کپسول، متر، کیلوگرم، عدد، شاخه" />
+                        <Input placeholder="مثال: عدد، متر، کیلوگرم، کپسول، شاخه" />
                       </Form.Item>
                       <Form.Item style={{ marginBottom: 0 }}>
                         <Button

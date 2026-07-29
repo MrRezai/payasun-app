@@ -406,7 +406,7 @@ function AppContent() {
         />
       )}
 
-      <main className="main-wrapper">
+      <main className={`main-wrapper ${!isAuthenticated ? 'full-width' : ''}`}>
         {isAuthenticated && (
           <Topbar 
             isOnline={isOnline} 

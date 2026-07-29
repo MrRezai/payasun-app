@@ -208,6 +208,11 @@ body {
   overflow-x: hidden;
 }
 
+.main-wrapper.full-width {
+  margin-right: 0 !important;
+  padding: 0 !important;
+}
+
 /* Topbar */
 .topbar {
   display: flex;

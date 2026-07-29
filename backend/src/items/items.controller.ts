@@ -10,7 +10,7 @@ import {
   ParseIntPipe,
 } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
-import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
+import { AdminGuard } from '../admin/guards/admin.guard';
 import { ItemsService } from './items.service';
 import { SupplyItem } from '../entities/item.entity';
 
@@ -27,7 +27,7 @@ export class ItemsController {
 
   @Get('admin/items')
   @ApiBearerAuth('access-token')
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(AdminGuard)
   @ApiOperation({ summary: 'دریافت لیست اقلام برای پنل ادمین' })
   async getAdminItems(): Promise<SupplyItem[]> {
     return this.itemsService.findAll();
@@ -35,7 +35,7 @@ export class ItemsController {
 
   @Post('admin/items')
   @ApiBearerAuth('access-token')
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(AdminGuard)
   @ApiOperation({ summary: 'ایجاد قلم جدید' })
   async create(
     @Body('title') title: string,
@@ -46,7 +46,7 @@ export class ItemsController {
 
   @Put('admin/items/:id')
   @ApiBearerAuth('access-token')
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(AdminGuard)
   @ApiOperation({ summary: 'ویرایش قلم' })
   async update(
     @Param('id', ParseIntPipe) id: number,
@@ -58,7 +58,7 @@ export class ItemsController {
 
   @Delete('admin/items/:id')
   @ApiBearerAuth('access-token')
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(AdminGuard)
   @ApiOperation({ summary: 'حذف قلم' })
   async remove(@Param('id', ParseIntPipe) id: number): Promise<void> {
     return this.itemsService.remove(id);
