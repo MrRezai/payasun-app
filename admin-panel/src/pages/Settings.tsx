@@ -337,7 +337,7 @@ export default function Settings({
                     style={{ marginBottom: '16px', borderRadius: '8px' }}
                   />
                 )}
-                <Row gutter={[24, 24]}>
+                <Row align="top" gutter={[24, 24]}>
                   {/* Employer Tip Card */}
                   <Col xs={24} lg={12}>
                     <Card

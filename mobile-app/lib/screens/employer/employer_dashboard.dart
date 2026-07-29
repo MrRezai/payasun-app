@@ -592,12 +592,19 @@ class _EmployerDashboardState extends State<EmployerDashboard> {
       );
     }
 
-    return SizedBox(
-      height: 94,
-      child: ListView.builder(
-        scrollDirection: Axis.horizontal,
-        physics: const BouncingScrollPhysics(),
-        itemCount: projects.length,
+    final double availableWidth = MediaQuery.of(context).size.width - 40;
+    final double cardWidth = (availableWidth - 20) / 2.3;
+
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(16),
+      child: SizedBox(
+        height: 92,
+        child: ListView.builder(
+          scrollDirection: Axis.horizontal,
+          physics: const BouncingScrollPhysics(),
+          clipBehavior: Clip.hardEdge,
+          padding: EdgeInsets.zero,
+          itemCount: projects.length,
         itemBuilder: (context, index) {
           final project = projects[index];
           final inqCount = project.inquiries.length;
@@ -606,24 +613,24 @@ class _EmployerDashboardState extends State<EmployerDashboard> {
               : project.city;
 
           return Container(
-            width: 220,
-            margin: const EdgeInsets.only(left: 12),
+            width: cardWidth,
+            margin: const EdgeInsets.only(left: 10),
             child: Card(
               elevation: 0,
               margin: EdgeInsets.zero,
               shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(16),
-                side: const BorderSide(color: AppColors.borderGrey),
+                borderRadius: BorderRadius.circular(14),
+                side: BorderSide(color: AppColors.royalBlue.withValues(alpha: 0.15)),
               ),
               color: AppColors.white,
               child: InkWell(
-                borderRadius: BorderRadius.circular(16),
+                borderRadius: BorderRadius.circular(14),
                 onTap: () {
                   provider.setSelectedExpandedProjectId(project.id);
                   auth.setEmployerTabIndex(1);
                 },
                 child: Padding(
-                  padding: const EdgeInsets.all(12.0),
+                  padding: const EdgeInsets.all(10.0),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -631,19 +638,19 @@ class _EmployerDashboardState extends State<EmployerDashboard> {
                       Row(
                         children: [
                           Container(
-                            padding: const EdgeInsets.all(6),
+                            padding: const EdgeInsets.all(5),
                             decoration: BoxDecoration(
-                              color: AppColors.royalBlue.withValues(alpha: 0.1),
-                              borderRadius: BorderRadius.circular(8),
+                              color: AppColors.royalBlue.withValues(alpha: 0.08),
+                              borderRadius: BorderRadius.circular(7),
                             ),
-                            child: const Icon(Icons.business_rounded, color: AppColors.royalBlue, size: 16),
+                            child: const Icon(Icons.business_rounded, color: AppColors.royalBlue, size: 14),
                           ),
-                          const SizedBox(width: 8),
+                          const SizedBox(width: 6),
                           Expanded(
                             child: Text(
                               project.title,
                               style: const TextStyle(
-                                fontSize: 12,
+                                fontSize: 11,
                                 fontWeight: FontWeight.bold,
                                 color: AppColors.textDark,
                                 fontFamily: 'Vazirmatn',
@@ -657,28 +664,35 @@ class _EmployerDashboardState extends State<EmployerDashboard> {
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          Row(
-                            children: [
-                              const Icon(Icons.location_on_outlined, size: 12, color: AppColors.textMuted),
-                              const SizedBox(width: 2),
-                              Text(
-                                locationText,
-                                style: const TextStyle(fontSize: 10, color: AppColors.textMuted, fontFamily: 'Vazirmatn'),
-                              ),
-                            ],
+                          Expanded(
+                            child: Row(
+                              children: [
+                                const Icon(Icons.location_on_outlined, size: 11, color: AppColors.textMuted),
+                                const SizedBox(width: 2),
+                                Expanded(
+                                  child: Text(
+                                    locationText,
+                                    style: const TextStyle(fontSize: 9.5, color: AppColors.textMuted, fontFamily: 'Vazirmatn'),
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                ),
+                              ],
+                            ),
                           ),
+                          const SizedBox(width: 4),
                           Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                            padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
                             decoration: BoxDecoration(
-                              color: AppColors.amberOrange.withValues(alpha: 0.1),
-                              borderRadius: BorderRadius.circular(6),
+                              color: AppColors.royalBlue.withValues(alpha: 0.08),
+                              borderRadius: BorderRadius.circular(5),
                             ),
                             child: Text(
                               '$inqCount استعلام',
                               style: const TextStyle(
-                                fontSize: 9,
+                                fontSize: 8.5,
                                 fontWeight: FontWeight.bold,
-                                color: AppColors.amberOrange,
+                                color: AppColors.royalBlue,
                                 fontFamily: 'Vazirmatn',
                               ),
                             ),
@@ -693,8 +707,9 @@ class _EmployerDashboardState extends State<EmployerDashboard> {
           );
         },
       ),
-    );
-  }
+    ),
+  );
+}
 
   Widget _buildRecentList(List<dynamic> list, InquiryProvider provider) {
     final itemsToShow = list.take(3).toList();

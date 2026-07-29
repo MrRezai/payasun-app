@@ -888,6 +888,7 @@ class _CreateProjectScreenState extends State<CreateProjectScreen> {
 
                 // Optional Area and Floors Row in Project Creation
                 Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Expanded(
                       child: Column(
@@ -927,6 +928,7 @@ class _CreateProjectScreenState extends State<CreateProjectScreen> {
                 // Section 2: Location
                 _buildSectionTitle('موقعیت مکانی پروژه', icon: Icons.location_on_outlined),
                 Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Expanded(
                       child: _buildLocationPickerButton(

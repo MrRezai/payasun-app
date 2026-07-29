@@ -84,25 +84,35 @@ class InquiryProvider with ChangeNotifier {
   }
 
   Future<bool> pickBlueprintFiles() async {
+    final allowedExts = ['dwg', 'dxf', 'dwf', 'rvt', 'skp', 'ifc', 'pln', 'pdf', 'zip', 'rar', '7z', 'jpg', 'jpeg', 'png', 'webp'];
     try {
       FilePickerResult? result;
       try {
         result = await FilePicker.platform.pickFiles(
-          type: FileType.any,
+          type: FileType.custom,
+          allowedExtensions: allowedExts,
           withData: true,
           allowMultiple: true,
         );
       } catch (e) {
-        debugPrint('pickFiles withData fallback: $e');
+        debugPrint('pickFiles custom fallback: $e');
         result = await FilePicker.platform.pickFiles(
-          type: FileType.any,
+          type: FileType.custom,
+          allowedExtensions: allowedExts,
           allowMultiple: true,
         );
       }
 
       if (result != null && result.files.isNotEmpty) {
+        int rejectedCount = 0;
         for (var file in result.files) {
           if (file.name.isEmpty) continue;
+
+          final ext = file.extension?.toLowerCase() ?? (file.name.contains('.') ? file.name.split('.').last.toLowerCase() : '');
+          if (!allowedExts.contains(ext)) {
+            rejectedCount++;
+            continue;
+          }
 
           List<int>? bytes = file.bytes;
           String? filePath;
@@ -132,7 +142,12 @@ class InquiryProvider with ChangeNotifier {
             ));
           }
         }
-        _errorMessage = null;
+
+        if (rejectedCount > 0) {
+          _errorMessage = 'تعداد $rejectedCount فایل با فرمت غیرمجاز نادیده گرفته شد. فقط فایل‌های نقشه و فنی (DWG, DXF, PDF, ZIP, RAR, JPG, PNG) مجاز می‌باشند.';
+        } else {
+          _errorMessage = null;
+        }
         notifyListeners();
         return _selectedFiles.isNotEmpty;
       }

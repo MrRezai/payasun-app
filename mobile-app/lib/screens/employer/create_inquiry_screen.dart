@@ -1,3 +1,4 @@
+import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../constants/app_colors.dart';
@@ -56,6 +57,7 @@ class _CreateInquiryScreenState extends State<CreateInquiryScreen> {
   // Estimation type & dismissible guidance alerts
   String _estimationType = 'ROUGH'; // 'ROUGH' or 'EXACT'
   bool _showRoughAlert = true;
+  bool _showExactAlert = true;
   bool _showCustomItemInput = false;
   final Map<String, String> _selectedUnits = {};
 
@@ -290,9 +292,8 @@ class _CreateInquiryScreenState extends State<CreateInquiryScreen> {
     });
   }
 
-  void _submit() async {
+  void _submit() {
     final provider = Provider.of<InquiryProvider>(context, listen: false);
-    final auth = Provider.of<AuthProvider>(context, listen: false);
 
     if (provider.hasBlueprint) {
       if (provider.selectedFiles.isEmpty) {
@@ -309,6 +310,375 @@ class _CreateInquiryScreenState extends State<CreateInquiryScreen> {
         return;
       }
     }
+
+    _showSummaryConfirmationBottomSheet(provider);
+  }
+
+  void _showSummaryConfirmationBottomSheet(InquiryProvider provider) {
+    final bool hasBlueprint = provider.hasBlueprint;
+
+    String estimationLabel = '';
+    Color estimationBadgeBg = AppColors.royalBlue.withValues(alpha: 0.1);
+    Color estimationBadgeTextColor = AppColors.royalBlue;
+
+    if (!hasBlueprint) {
+      estimationLabel = 'برآورد دقیق (اقلام دستی)';
+      estimationBadgeBg = AppColors.royalBlue.withValues(alpha: 0.1);
+      estimationBadgeTextColor = AppColors.royalBlue;
+    } else if (_estimationType == 'EXACT') {
+      estimationLabel = 'محاسبه دقیق (پلان + سازه)';
+      estimationBadgeBg = Colors.purple.withValues(alpha: 0.12);
+      estimationBadgeTextColor = Colors.purple;
+    } else {
+      estimationLabel = 'برآورد حدودی (نقشه معماری)';
+      estimationBadgeBg = Colors.amber.withValues(alpha: 0.15);
+      estimationBadgeTextColor = AppColors.amberOrange;
+    }
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: AppColors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (context) {
+        return Directionality(
+          textDirection: TextDirection.rtl,
+          child: Container(
+            constraints: BoxConstraints(
+              maxHeight: MediaQuery.of(context).size.height * 0.85,
+            ),
+            padding: EdgeInsets.only(
+              bottom: MediaQuery.of(context).viewInsets.bottom,
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Top Drag Handle Bar
+                const SizedBox(height: 12),
+                Center(
+                  child: Container(
+                    width: 40,
+                    height: 4,
+                    decoration: BoxDecoration(
+                      color: AppColors.borderGrey,
+                      borderRadius: BorderRadius.circular(2),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 16),
+
+                // Sheet Header
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 20),
+                  child: Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(8),
+                        decoration: BoxDecoration(
+                          color: AppColors.royalBlue.withValues(alpha: 0.1),
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        child: const Icon(Icons.assignment_outlined, color: AppColors.amberOrange, size: 22),
+                      ),
+                      const SizedBox(width: 10),
+                      const Expanded(
+                        child: Text(
+                          'پیش‌نمایش و تأیید نهایی اطلاعات استعلام',
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                            color: AppColors.royalBlue,
+                            fontFamily: 'Vazirmatn',
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 12),
+                const Divider(height: 1, color: AppColors.borderGrey),
+
+                // Scrollable Content
+                Expanded(
+                  child: SingleChildScrollView(
+                    padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        // Title & Badge Box
+                        Container(
+                          width: double.infinity,
+                          padding: const EdgeInsets.all(14),
+                          decoration: BoxDecoration(
+                            color: AppColors.white,
+                            borderRadius: BorderRadius.circular(14),
+                            border: Border.all(color: AppColors.borderGrey),
+                          ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Row(
+                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                children: [
+                                  const Text('عنوان استعلام:', style: TextStyle(fontSize: 11, color: AppColors.textMuted, fontFamily: 'Vazirmatn')),
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                                    decoration: BoxDecoration(
+                                      color: estimationBadgeBg,
+                                      borderRadius: BorderRadius.circular(8),
+                                    ),
+                                    child: Text(
+                                      estimationLabel,
+                                      style: TextStyle(
+                                        fontSize: 11,
+                                        fontWeight: FontWeight.bold,
+                                        color: estimationBadgeTextColor,
+                                        fontFamily: 'Vazirmatn',
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 6),
+                              Text(
+                                _titleController.text.trim(),
+                                style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: AppColors.textDark, fontFamily: 'Vazirmatn'),
+                              ),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(height: 14),
+
+                        // Location & Project Specs Card
+                        Container(
+                          width: double.infinity,
+                          padding: const EdgeInsets.all(14),
+                          decoration: BoxDecoration(
+                            color: AppColors.lightGrey,
+                            borderRadius: BorderRadius.circular(14),
+                          ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Row(
+                                children: [
+                                  const Icon(Icons.location_on_outlined, size: 18, color: AppColors.amberOrange),
+                                  const SizedBox(width: 8),
+                                  Expanded(
+                                    child: Text(
+                                      'استان و شهر: ${_selectedProvinceName ?? ''}، ${_selectedCityName ?? ''}',
+                                      style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: AppColors.textDark, fontFamily: 'Vazirmatn'),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              if (_addressController.text.trim().isNotEmpty) ...[
+                                const SizedBox(height: 8),
+                                Padding(
+                                  padding: const EdgeInsets.only(right: 26),
+                                  child: Text(
+                                    'محل اجرای دقیق: ${_addressController.text.trim()}',
+                                    style: const TextStyle(fontSize: 12, color: AppColors.textDark, fontFamily: 'Vazirmatn'),
+                                  ),
+                                ),
+                              ],
+                              if (_areaController.text.trim().isNotEmpty || _floorsController.text.trim().isNotEmpty) ...[
+                                const SizedBox(height: 10),
+                                const Divider(height: 1, color: AppColors.borderGrey),
+                                const SizedBox(height: 10),
+                                Row(
+                                  children: [
+                                    const Icon(Icons.architecture_outlined, size: 18, color: AppColors.royalBlue),
+                                    const SizedBox(width: 8),
+                                    Text(
+                                      'متراژ زیربنا: ${_areaController.text.trim().isNotEmpty ? '${Formatters.toPersianNumbers(_areaController.text.trim())} مترمربع' : 'نامشخص'}  |  تعداد طبقات: ${_floorsController.text.trim().isNotEmpty ? '${Formatters.toPersianNumbers(_floorsController.text.trim())} طبقه' : 'نامشخص'}',
+                                      style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.textDark, fontFamily: 'Vazirmatn'),
+                                    ),
+                                  ],
+                                ),
+                              ],
+                            ],
+                          ),
+                        ),
+                        const SizedBox(height: 14),
+
+                        // Selected Items or Blueprint Files Detail Box
+                        const Text('اطلاعات اقلام و مدارک آپلود شده:', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: AppColors.textDark, fontFamily: 'Vazirmatn')),
+                        const SizedBox(height: 8),
+                        if (hasBlueprint)
+                          Container(
+                            width: double.infinity,
+                            padding: const EdgeInsets.all(14),
+                            decoration: BoxDecoration(
+                              color: AppColors.royalBlue.withValues(alpha: 0.04),
+                              borderRadius: BorderRadius.circular(14),
+                              border: Border.all(color: AppColors.royalBlue.withValues(alpha: 0.15)),
+                            ),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Row(
+                                  children: [
+                                    const Icon(Icons.cloud_done_outlined, size: 20, color: AppColors.royalBlue),
+                                    const SizedBox(width: 8),
+                                    Text(
+                                      'تعداد ${Formatters.toPersianNumbers(provider.selectedFiles.length.toString())} فایل نقشه پیوست شده است:',
+                                      style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: AppColors.royalBlue, fontFamily: 'Vazirmatn'),
+                                    ),
+                                  ],
+                                ),
+                                const SizedBox(height: 10),
+                                Wrap(
+                                  spacing: 8,
+                                  runSpacing: 8,
+                                  children: provider.selectedFiles.map((file) {
+                                    return _buildFileChip(context, file);
+                                  }).toList(),
+                                ),
+                              ],
+                            ),
+                          )
+                        else
+                          Container(
+                            width: double.infinity,
+                            padding: const EdgeInsets.all(14),
+                            decoration: BoxDecoration(
+                              color: AppColors.royalBlue.withValues(alpha: 0.04),
+                              borderRadius: BorderRadius.circular(14),
+                              border: Border.all(color: AppColors.royalBlue.withValues(alpha: 0.15)),
+                            ),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: provider.manualItems.map((item) {
+                                return Padding(
+                                  padding: const EdgeInsets.only(bottom: 6),
+                                  child: Row(
+                                    children: [
+                                      const Icon(Icons.check_circle_outline, size: 16, color: AppColors.royalBlue),
+                                      const SizedBox(width: 8),
+                                      Expanded(
+                                        child: Text(
+                                          '${item.title}: ${Formatters.toPersianNumbers(item.quantity.toInt().toString())} ${item.unit}',
+                                          style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: AppColors.textDark, fontFamily: 'Vazirmatn'),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                );
+                              }).toList(),
+                            ),
+                          ),
+
+                        if (_descController.text.trim().isNotEmpty) ...[
+                          const SizedBox(height: 14),
+                          const Text('توضیحات تکمیلی پروژه:', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: AppColors.textDark, fontFamily: 'Vazirmatn')),
+                          const SizedBox(height: 6),
+                          Container(
+                            width: double.infinity,
+                            padding: const EdgeInsets.all(12),
+                            decoration: BoxDecoration(
+                              color: AppColors.white,
+                              borderRadius: BorderRadius.circular(12),
+                              border: Border.all(color: AppColors.borderGrey),
+                            ),
+                            child: Text(
+                              _descController.text.trim(),
+                              style: const TextStyle(fontSize: 12, color: AppColors.textDark, height: 1.5, fontFamily: 'Vazirmatn'),
+                            ),
+                          ),
+                        ],
+
+                        const SizedBox(height: 16),
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                          decoration: BoxDecoration(
+                            color: Colors.green.withValues(alpha: 0.06),
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(color: Colors.green.withValues(alpha: 0.2)),
+                          ),
+                          child: const Row(
+                            children: [
+                              Icon(Icons.shield_outlined, size: 18, color: Colors.green),
+                              SizedBox(width: 8),
+                              Expanded(
+                                child: Text(
+                                  'اطلاعات و نشانی دقیق شما با حفظ محرمانگی و فقط جهت برآورد در سیستم استفاده می‌شود.',
+                                  style: TextStyle(fontSize: 11, color: AppColors.textDark, fontFamily: 'Vazirmatn'),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+
+                // Bottom Fixed Action Bar
+                Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: const BoxDecoration(
+                    color: AppColors.white,
+                    border: Border(top: BorderSide(color: AppColors.borderGrey, width: 0.5)),
+                  ),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: SizedBox(
+                          height: 48,
+                          child: OutlinedButton(
+                            onPressed: () => Navigator.pop(context),
+                            style: OutlinedButton.styleFrom(
+                              side: const BorderSide(color: AppColors.borderGrey),
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                            ),
+                            child: const Text(
+                              'ویرایش و بازگشت',
+                              style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: AppColors.textDark, fontFamily: 'Vazirmatn'),
+                            ),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        flex: 2,
+                        child: SizedBox(
+                          height: 48,
+                          child: ElevatedButton(
+                            onPressed: () {
+                              Navigator.pop(context);
+                              _performFinalSubmit();
+                            },
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: AppColors.royalBlue,
+                              foregroundColor: AppColors.white,
+                              elevation: 0,
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                            ),
+                            child: const Text(
+                              'تأیید نهایی و انتشار استعلام',
+                              style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, fontFamily: 'Vazirmatn'),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Future<void> _performFinalSubmit() async {
+    final provider = Provider.of<InquiryProvider>(context, listen: false);
+    final auth = Provider.of<AuthProvider>(context, listen: false);
 
     String finalDescription = _descController.text.trim();
     final addressText = _addressController.text.trim();
@@ -831,6 +1201,183 @@ class _CreateInquiryScreenState extends State<CreateInquiryScreen> {
     );
   }
 
+  IconData _getFileIconData(String filename) {
+    final ext = filename.contains('.') ? filename.split('.').last.toLowerCase() : '';
+    if (['jpg', 'jpeg', 'png', 'webp', 'gif', 'bmp'].contains(ext)) {
+      return Icons.image_outlined;
+    }
+    if (ext == 'pdf') {
+      return Icons.picture_as_pdf_outlined;
+    }
+    if (['dwg', 'dxf', 'dwf', 'rvt', 'skp', 'ifc', 'pln'].contains(ext)) {
+      return Icons.architecture_outlined;
+    }
+    if (['zip', 'rar', '7z'].contains(ext)) {
+      return Icons.folder_zip_outlined;
+    }
+    return Icons.insert_drive_file_outlined;
+  }
+
+  Color _getFileIconColor(String filename) {
+    final ext = filename.contains('.') ? filename.split('.').last.toLowerCase() : '';
+    if (['jpg', 'jpeg', 'png', 'webp', 'gif', 'bmp'].contains(ext)) {
+      return AppColors.burgundy;
+    }
+    if (ext == 'pdf') {
+      return Colors.redAccent;
+    }
+    if (['dwg', 'dxf', 'dwf', 'rvt', 'skp', 'ifc', 'pln'].contains(ext)) {
+      return AppColors.amberOrange;
+    }
+    if (['zip', 'rar', '7z'].contains(ext)) {
+      return Colors.purple;
+    }
+    return AppColors.royalBlue;
+  }
+
+  bool _isImageFile(BlueprintFile file) {
+    final ext = file.name.contains('.') ? file.name.split('.').last.toLowerCase() : '';
+    return ['jpg', 'jpeg', 'png', 'webp', 'gif', 'bmp'].contains(ext) && file.bytes.isNotEmpty;
+  }
+
+  Widget _buildFileChip(BuildContext context, BlueprintFile file) {
+    final bool canPreview = _isImageFile(file);
+    final ext = file.name.contains('.') ? file.name.split('.').last.toUpperCase() : 'FILE';
+
+    IconData fileIcon = Icons.insert_drive_file_outlined;
+    Color iconColor = AppColors.royalBlue;
+
+    if (canPreview) {
+      fileIcon = Icons.image_outlined;
+      iconColor = AppColors.burgundy;
+    } else if (ext == 'PDF') {
+      fileIcon = Icons.picture_as_pdf_outlined;
+      iconColor = Colors.redAccent;
+    } else if (['DWG', 'DXF', 'DWF', 'RVT', 'SKP', 'IFC', 'PLN'].contains(ext)) {
+      fileIcon = Icons.architecture_outlined;
+      iconColor = AppColors.amberOrange;
+    } else if (['ZIP', 'RAR', '7Z'].contains(ext)) {
+      fileIcon = Icons.folder_zip_outlined;
+      iconColor = Colors.purple;
+    }
+
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: canPreview ? () => _showFilePreviewDialog(context, file) : null,
+        borderRadius: BorderRadius.circular(20),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+          decoration: BoxDecoration(
+            color: canPreview ? iconColor.withValues(alpha: 0.1) : AppColors.lightGrey,
+            borderRadius: BorderRadius.circular(20),
+            border: Border.all(
+              color: canPreview ? iconColor.withValues(alpha: 0.4) : AppColors.borderGrey,
+            ),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(fileIcon, size: 16, color: iconColor),
+              const SizedBox(width: 6),
+              ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 150),
+                child: Text(
+                  file.name,
+                  style: const TextStyle(
+                    fontSize: 11,
+                    fontWeight: FontWeight.bold,
+                    color: AppColors.textDark,
+                    fontFamily: 'Vazirmatn',
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+              if (canPreview) ...[
+                const SizedBox(width: 6),
+                Container(
+                  padding: const EdgeInsets.all(2),
+                  decoration: BoxDecoration(
+                    color: iconColor.withValues(alpha: 0.2),
+                    shape: BoxShape.circle,
+                  ),
+                  child: Icon(Icons.remove_red_eye_outlined, size: 12, color: iconColor),
+                ),
+              ],
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  void _showFilePreviewDialog(BuildContext context, BlueprintFile file) {
+    showDialog(
+      context: context,
+      builder: (context) => Directionality(
+        textDirection: TextDirection.rtl,
+        child: Dialog(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+          backgroundColor: AppColors.white,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 14, 16, 10),
+                child: Row(
+                  children: [
+                    const Icon(Icons.image_outlined, color: AppColors.royalBlue, size: 20),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        file.name,
+                        style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: AppColors.textDark, fontFamily: 'Vazirmatn'),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                    IconButton(
+                      icon: const Icon(Icons.close, size: 20, color: AppColors.textMuted),
+                      onPressed: () => Navigator.pop(context),
+                    ),
+                  ],
+                ),
+              ),
+              const Divider(height: 1, color: AppColors.borderGrey),
+
+              Padding(
+                padding: const EdgeInsets.all(12),
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(12),
+                  child: Container(
+                    constraints: const BoxConstraints(maxHeight: 380),
+                    child: Image.memory(
+                      Uint8List.fromList(file.bytes),
+                      fit: BoxFit.contain,
+                      errorBuilder: (ctx, err, stack) => const Padding(
+                        padding: EdgeInsets.all(20),
+                        child: Text('خطا در پیش‌نمایش تصویر', style: TextStyle(fontFamily: 'Vazirmatn')),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+
+              Padding(
+                padding: const EdgeInsets.only(bottom: 14),
+                child: TextButton(
+                  onPressed: () => Navigator.pop(context),
+                  child: const Text('بستن پیش‌نمایش', style: TextStyle(fontWeight: FontWeight.bold, fontFamily: 'Vazirmatn')),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final provider = Provider.of<InquiryProvider>(context);
@@ -915,6 +1462,7 @@ class _CreateInquiryScreenState extends State<CreateInquiryScreen> {
                   ] else ...[
                     // Location Selector Row
                     Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Expanded(
                           child: Material(
@@ -1040,6 +1588,7 @@ class _CreateInquiryScreenState extends State<CreateInquiryScreen> {
 
                   // Area & Floor Count Row (Mandatory in Inquiry stage)
                   Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Expanded(
                         child: _buildTextField(
@@ -1376,15 +1925,94 @@ class _CreateInquiryScreenState extends State<CreateInquiryScreen> {
 
   Widget _buildBlueprintUploadArea(InquiryProvider provider) {
     int totalFilesCount = provider.selectedFiles.length;
-    String countText = Formatters.toPersianNumbers('$totalFilesCount از ۱۰');
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        _buildSectionHeader('بارگذاری نقشه و مدارک پروژه ($countText)'),
+        _buildSectionHeader('بارگذاری نقشه و مدارک پروژه'),
         const SizedBox(height: 12),
 
-        if (_showRoughAlert)
+        // Radio Button Selector Row for ROUGH vs EXACT blueprint calculation
+        Container(
+          margin: const EdgeInsets.only(bottom: 12),
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+          decoration: BoxDecoration(
+            color: AppColors.white,
+            borderRadius: BorderRadius.circular(14),
+            border: Border.all(color: AppColors.borderGrey),
+          ),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              Expanded(
+                child: InkWell(
+                  onTap: () {
+                    setState(() => _estimationType = 'ROUGH');
+                  },
+                  borderRadius: BorderRadius.circular(10),
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 4),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(
+                          _estimationType == 'ROUGH' ? Icons.radio_button_checked : Icons.radio_button_unchecked,
+                          color: _estimationType == 'ROUGH' ? AppColors.royalBlue : AppColors.textMuted,
+                          size: 18,
+                        ),
+                        const SizedBox(width: 6),
+                        const Text(
+                          'برآورد حدودی',
+                          style: TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.bold,
+                            color: AppColors.textDark,
+                            fontFamily: 'Vazirmatn',
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+              Container(width: 1, height: 24, color: AppColors.borderGrey),
+              Expanded(
+                child: InkWell(
+                  onTap: () {
+                    setState(() => _estimationType = 'EXACT');
+                  },
+                  borderRadius: BorderRadius.circular(10),
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 4),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(
+                          _estimationType == 'EXACT' ? Icons.radio_button_checked : Icons.radio_button_unchecked,
+                          color: _estimationType == 'EXACT' ? AppColors.royalBlue : AppColors.textMuted,
+                          size: 18,
+                        ),
+                        const SizedBox(width: 6),
+                        const Text(
+                          'محاسبه دقیق',
+                          style: TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.bold,
+                            color: AppColors.textDark,
+                            fontFamily: 'Vazirmatn',
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+
+        // Dismissible Alert Banner based on active selection
+        if (_estimationType == 'ROUGH' && _showRoughAlert)
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
             margin: const EdgeInsets.only(bottom: 12),
@@ -1400,12 +2028,44 @@ class _CreateInquiryScreenState extends State<CreateInquiryScreen> {
                 const SizedBox(width: 10),
                 const Expanded(
                   child: Text(
-                    'لطفاً فایل‌های نقشه معماری و اجرایی پروژه شامل پلان طبقه‌ها، نماها و مقاطع را آپلود کنید تا لیست اقلام دقیقاً توسط کارشناسان استخراج و برآورد شوند.',
+                    'لطفاً صرفاً نقشه معماری شامل پلانها، نماها و مقاطع آپلود فرمایید. نیاز به نقشههای اجرایی و سازه نمیباشد.',
                     style: TextStyle(color: AppColors.textDark, fontSize: 12, height: 1.5, fontFamily: 'Vazirmatn'),
                   ),
                 ),
                 InkWell(
                   onTap: () => setState(() => _showRoughAlert = false),
+                  borderRadius: BorderRadius.circular(20),
+                  child: const Padding(
+                    padding: EdgeInsets.all(2.0),
+                    child: Icon(Icons.close, size: 18, color: AppColors.textMuted),
+                  ),
+                ),
+              ],
+            ),
+          ),
+
+        if (_estimationType == 'EXACT' && _showExactAlert)
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+            margin: const EdgeInsets.only(bottom: 12),
+            decoration: BoxDecoration(
+              color: AppColors.amberOrange.withValues(alpha: 0.08),
+              borderRadius: BorderRadius.circular(14),
+              border: Border.all(color: AppColors.amberOrange.withValues(alpha: 0.3)),
+            ),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Icon(Icons.info_outline, color: AppColors.royalBlue, size: 20),
+                const SizedBox(width: 10),
+                const Expanded(
+                  child: Text(
+                    'لطفاً برای محاسبه دقیق، نقشه معماری شامل پلانها، نماها و مقاطع به همراه دفترچه محاسبات و نقشههای اجرایی را آپلود فرمایید.',
+                    style: TextStyle(color: AppColors.textDark, fontSize: 12, height: 1.5, fontFamily: 'Vazirmatn'),
+                  ),
+                ),
+                InkWell(
+                  onTap: () => setState(() => _showExactAlert = false),
                   borderRadius: BorderRadius.circular(20),
                   child: const Padding(
                     padding: EdgeInsets.all(2.0),
@@ -1456,7 +2116,7 @@ class _CreateInquiryScreenState extends State<CreateInquiryScreen> {
                   ),
                   const SizedBox(height: 4),
                   Text(
-                    'فرمت‌های مجاز: PDF, JPG, PNG (حداکثر ${Formatters.toPersianNumbers('10')} فایل نقشه برای هر استعلام)',
+                    'فرمت‌های مجاز: DWG, DXF, DWF, PDF, ZIP, RAR, JPG, PNG (حداکثر ${Formatters.toPersianNumbers('10')} فایل برای هر استعلام)',
                     style: const TextStyle(color: AppColors.textMuted, fontSize: 11, fontFamily: 'Vazirmatn'),
                     textAlign: TextAlign.center,
                   ),
@@ -1484,7 +2144,11 @@ class _CreateInquiryScreenState extends State<CreateInquiryScreen> {
                 ),
                 child: Row(
                   children: [
-                    const Icon(Icons.insert_drive_file_outlined, color: AppColors.amberOrange, size: 20),
+                    Icon(
+                      _getFileIconData(file.name),
+                      color: _getFileIconColor(file.name),
+                      size: 20,
+                    ),
                     const SizedBox(width: 8),
                     Expanded(
                       child: Text(
@@ -1731,6 +2395,7 @@ class _CreateInquiryScreenState extends State<CreateInquiryScreen> {
                 ),
                 const SizedBox(height: 12),
                 Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Expanded(
                       flex: 2,

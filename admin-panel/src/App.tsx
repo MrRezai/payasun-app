@@ -511,6 +511,7 @@ function AppContent() {
       {selectedInquiry && (
         <EstimateProjectModal 
           inquiry={selectedInquiry}
+          supplyItems={supplyItems}
           onClose={() => setSelectedInquiry(null)}
           onSubmitEstimation={handleSubmitEstimation}
           onRejectInquiry={handleRejectInquiry}

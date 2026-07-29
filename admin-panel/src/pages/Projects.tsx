@@ -131,6 +131,19 @@ export default function Projects({ inquiries, onEstimateClick, onViewDetailClick
       ),
     },
     {
+      title: 'نوع برآورد',
+      key: 'estimation_type',
+      render: (_: any, inq: Inquiry) => {
+        if (inq.estimation_type === 'EXACT') {
+          return <Tag color="purple">محاسبه دقیق (پلان + سازه)</Tag>;
+        }
+        if (inq.has_blueprint || inq.estimation_type === 'ROUGH') {
+          return <Tag color="orange">برآورد حدودی (معماری)</Tag>;
+        }
+        return <Tag color="blue">برآورد دستی</Tag>;
+      },
+    },
+    {
       title: 'وضعیت فنی',
       key: 'status',
       render: (_: any, inq: Inquiry) => {

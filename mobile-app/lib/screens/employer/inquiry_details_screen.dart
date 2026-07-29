@@ -452,6 +452,42 @@ class _InquiryDetailsScreenState extends State<InquiryDetailsScreen> {
     );
   }
 
+  IconData _getBlueprintFileIcon(String filename) {
+    final cleanName = filename.split('?')[0].toLowerCase();
+    final ext = cleanName.contains('.') ? cleanName.split('.').last : '';
+    if (['jpg', 'jpeg', 'png', 'webp', 'gif', 'bmp'].contains(ext)) {
+      return Icons.image_outlined;
+    }
+    if (ext == 'pdf') {
+      return Icons.picture_as_pdf_outlined;
+    }
+    if (['dwg', 'dxf', 'dwf', 'rvt', 'skp', 'ifc', 'pln'].contains(ext)) {
+      return Icons.architecture_outlined;
+    }
+    if (['zip', 'rar', '7z'].contains(ext)) {
+      return Icons.folder_zip_outlined;
+    }
+    return Icons.insert_drive_file_outlined;
+  }
+
+  Color _getBlueprintFileColor(String filename) {
+    final cleanName = filename.split('?')[0].toLowerCase();
+    final ext = cleanName.contains('.') ? cleanName.split('.').last : '';
+    if (['jpg', 'jpeg', 'png', 'webp', 'gif', 'bmp'].contains(ext)) {
+      return AppColors.burgundy;
+    }
+    if (ext == 'pdf') {
+      return Colors.redAccent;
+    }
+    if (['dwg', 'dxf', 'dwf', 'rvt', 'skp', 'ifc', 'pln'].contains(ext)) {
+      return AppColors.amberOrange;
+    }
+    if (['zip', 'rar', '7z'].contains(ext)) {
+      return Colors.purple;
+    }
+    return AppColors.royalBlue;
+  }
+
   Widget _buildBlueprintSection(BuildContext context) {
     final urls = inquiry.blueprintUrl != null && inquiry.blueprintUrl!.isNotEmpty
         ? inquiry.blueprintUrl!.split(',').where((u) => u.trim().isNotEmpty).toList()
@@ -470,7 +506,7 @@ class _InquiryDetailsScreenState extends State<InquiryDetailsScreen> {
         children: [
           Row(
             children: [
-              const Icon(Icons.map_outlined, color: AppColors.royalBlue, size: 20),
+              const Icon(Icons.folder_open_outlined, color: AppColors.royalBlue, size: 20),
               const SizedBox(width: 8),
               Text(
                 'فایل‌های پلان فنی ساختمان (${urls.length} فایل)',
@@ -497,6 +533,9 @@ class _InquiryDetailsScreenState extends State<InquiryDetailsScreen> {
               itemBuilder: (context, index) {
                 final url = urls[index];
                 final fileName = url.split('/').last;
+                final fileIcon = _getBlueprintFileIcon(fileName);
+                final fileColor = _getBlueprintFileColor(fileName);
+
                 return Container(
                   margin: const EdgeInsets.symmetric(vertical: 4),
                   padding: const EdgeInsets.all(12),
@@ -507,7 +546,7 @@ class _InquiryDetailsScreenState extends State<InquiryDetailsScreen> {
                   ),
                   child: Row(
                     children: [
-                      const Icon(Icons.picture_as_pdf_outlined, color: Colors.red, size: 28),
+                      Icon(fileIcon, color: fileColor, size: 28),
                       const SizedBox(width: 12),
                       Expanded(
                         child: Column(
@@ -986,6 +1025,14 @@ class _InquiryDetailsScreenState extends State<InquiryDetailsScreen> {
   }
 
   Widget _buildBidItem(BuildContext context, dynamic bid) {
+    final String? rawAvatarUrl = (bid['profile_picture_url'] ?? bid['avatar_url'] ?? bid['welder_avatar']) as String?;
+    final bool hasAvatar = rawAvatarUrl != null && rawAvatarUrl.trim().isNotEmpty;
+    final String? fullAvatarUrl = hasAvatar
+        ? (rawAvatarUrl.startsWith('http')
+            ? rawAvatarUrl
+            : 'https://api.joftojoor.com${rawAvatarUrl.startsWith('/') ? '' : '/'}$rawAvatarUrl')
+        : null;
+
     return Container(
       decoration: BoxDecoration(
         color: AppColors.white,
@@ -1001,17 +1048,40 @@ class _InquiryDetailsScreenState extends State<InquiryDetailsScreen> {
               Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  CircleAvatar(
-                    radius: 22,
-                    backgroundColor: AppColors.royalBlue.withValues(alpha: 0.1),
-                    child: Text(
-                      bid['initials'] as String,
-                      style: const TextStyle(
-                        color: AppColors.royalBlue,
-                        fontWeight: FontWeight.bold,
-                        fontSize: 13,
-                        fontFamily: 'Vazirmatn',
-                      ),
+                  GestureDetector(
+                    onTap: fullAvatarUrl != null
+                        ? () {
+                            showDialog(
+                              context: context,
+                              builder: (ctx) => Dialog(
+                                backgroundColor: Colors.transparent,
+                                child: ClipRRect(
+                                  borderRadius: BorderRadius.circular(16),
+                                  child: Image.network(
+                                    fullAvatarUrl,
+                                    fit: BoxFit.contain,
+                                    errorBuilder: (c, e, s) => const Icon(Icons.person, size: 80, color: Colors.white),
+                                  ),
+                                ),
+                              ),
+                            );
+                          }
+                        : null,
+                    child: CircleAvatar(
+                      radius: 22,
+                      backgroundColor: AppColors.royalBlue.withValues(alpha: 0.1),
+                      backgroundImage: fullAvatarUrl != null ? NetworkImage(fullAvatarUrl) : null,
+                      child: fullAvatarUrl == null
+                          ? Text(
+                              (bid['initials'] ?? 'ج') as String,
+                              style: const TextStyle(
+                                color: AppColors.royalBlue,
+                                fontWeight: FontWeight.bold,
+                                fontSize: 13,
+                                fontFamily: 'Vazirmatn',
+                              ),
+                            )
+                          : null,
                     ),
                   ),
                   const SizedBox(width: 12),
@@ -1221,176 +1291,317 @@ class _InquiryDetailsScreenState extends State<InquiryDetailsScreen> {
   }
 
   void _showProfilePreviewDialog(BuildContext context, Map<String, dynamic> bid) {
-    showDialog(
+    final String? rawAvatarUrl = (bid['profile_picture_url'] ?? bid['avatar_url'] ?? bid['welder_avatar']) as String?;
+    final bool hasAvatar = rawAvatarUrl != null && rawAvatarUrl.trim().isNotEmpty;
+    final String? fullAvatarUrl = hasAvatar
+        ? (rawAvatarUrl.startsWith('http')
+            ? rawAvatarUrl
+            : 'https://api.joftojoor.com${rawAvatarUrl.startsWith('/') ? '' : '/'}$rawAvatarUrl')
+        : null;
+
+    final String bioText = (bid['bio'] as String?)?.trim().isNotEmpty == true
+        ? (bid['bio'] as String).trim()
+        : 'جوشکار تاییدشده و باسابقه پلتفرم تخصصی جفت‌وجور.';
+
+    final String homeLocation = [
+      bid['home_province'] as String?,
+      bid['home_city'] as String?
+    ].where((s) => s != null && s.trim().isNotEmpty).join('، ');
+
+    final List<dynamic> activeCities = (bid['active_cities'] as List<dynamic>?) ?? [];
+    final List<dynamic> skillsList = (bid['skills'] as List<dynamic>?) ?? [];
+
+    showModalBottomSheet(
       context: context,
-      builder: (context) {
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) {
         return Directionality(
           textDirection: TextDirection.rtl,
-          child: AlertDialog(
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
-            contentPadding: const EdgeInsets.all(24),
-            content: SingleChildScrollView(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  CircleAvatar(
-                    radius: 30,
-                    backgroundColor: AppColors.royalBlue.withValues(alpha: 0.1),
-                    child: Text(
-                      bid['initials'] as String,
-                      style: const TextStyle(
-                        color: AppColors.royalBlue,
-                        fontWeight: FontWeight.bold,
-                        fontSize: 18,
-                        fontFamily: 'Vazirmatn',
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 14),
-                  Text(
-                    bid['name'] as String,
-                    style: const TextStyle(
-                      fontWeight: FontWeight.bold,
-                      fontSize: 16,
-                      color: AppColors.textDark,
-                      fontFamily: 'Vazirmatn',
-                    ),
-                  ),
-                  const SizedBox(height: 4),
-                  const Text(
-                    'متخصص جوشکاری اسکلت و لوله‌کشی گاز',
-                    style: TextStyle(
-                      fontSize: 11,
-                      color: AppColors.textMuted,
-                      fontFamily: 'Vazirmatn',
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      const Icon(Icons.star, color: Colors.amber, size: 16),
-                      const SizedBox(width: 4),
-                      Text(
-                        '${bid['rating']} از ۵',
-                        style: const TextStyle(
-                          fontWeight: FontWeight.bold,
-                          fontSize: 12,
-                          fontFamily: 'Vazirmatn',
-                        ),
-                      ),
-                      const SizedBox(width: 16),
-                      const Icon(Icons.check_circle_outline, color: Colors.green, size: 16),
-                      const SizedBox(width: 4),
-                      Text(
-                        '${bid['projects']} پروژه انجام‌شده',
-                        style: const TextStyle(
-                          fontWeight: FontWeight.bold,
-                          fontSize: 12,
-                          fontFamily: 'Vazirmatn',
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 20),
-                  const Divider(color: AppColors.borderGrey, height: 1),
-                  const SizedBox(height: 12),
-                  const Align(
-                    alignment: Alignment.centerRight,
-                    child: Text(
-                      'جزئیات قیمت پیشنهادی برای هر قلم:',
-                      style: TextStyle(
-                        fontWeight: FontWeight.bold,
-                        fontSize: 12,
-                        color: AppColors.royalBlue,
-                        fontFamily: 'Vazirmatn',
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  Container(
-                    padding: const EdgeInsets.all(12),
-                    width: double.infinity,
+          child: Container(
+            constraints: BoxConstraints(
+              maxHeight: MediaQuery.of(context).size.height * 0.85,
+            ),
+            decoration: const BoxDecoration(
+              color: AppColors.white,
+              borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const SizedBox(height: 12),
+                // Drag Handle
+                Center(
+                  child: Container(
+                    width: 40,
+                    height: 4,
                     decoration: BoxDecoration(
-                      color: AppColors.lightGrey,
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border.all(color: AppColors.borderGrey),
+                      color: Colors.grey[300],
+                      borderRadius: BorderRadius.circular(2),
                     ),
+                  ),
+                ),
+                const SizedBox(height: 16),
+
+                // Scrollable Profile Content Body
+                Flexible(
+                  child: SingleChildScrollView(
+                    padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
                     child: Column(
-                      children: ((bid['items_prices'] as List<dynamic>?) ?? []).asMap().entries.map<Widget>((entry) {
-                        final idx = entry.key;
-                        final item = entry.value;
-                        final unitPrice = int.tryParse(item['price']?.toString() ?? '0') ?? 0;
-                        final inqItem = idx < inquiry.items.length ? inquiry.items[idx] : null;
-                        final qty = inqItem?.quantity ?? 1;
-                        final lineTotal = unitPrice * qty.toInt();
-                        final unitText = inqItem != null ? ' (${qty.toStringAsFixed(0)} ${inqItem.unit} × ${Formatters.formatPrice(unitPrice)})' : '';
-                        return Padding(
-                          padding: const EdgeInsets.symmetric(vertical: 4.0),
-                          child: Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        // Welder Profile Avatar Header
+                        Center(
+                          child: Column(
                             children: [
-                              Expanded(
-                                child: Text(
-                                  '${item['title'] as String? ?? ''}$unitText',
-                                  style: const TextStyle(fontSize: 11, color: AppColors.textDark, fontFamily: 'Vazirmatn'),
+                              Stack(
+                                children: [
+                                  CircleAvatar(
+                                    radius: 42,
+                                    backgroundColor: AppColors.royalBlue.withValues(alpha: 0.1),
+                                    backgroundImage: fullAvatarUrl != null ? NetworkImage(fullAvatarUrl) : null,
+                                    child: fullAvatarUrl == null
+                                        ? Text(
+                                            (bid['initials'] ?? 'ج') as String,
+                                            style: const TextStyle(
+                                              color: AppColors.royalBlue,
+                                              fontWeight: FontWeight.bold,
+                                              fontSize: 24,
+                                              fontFamily: 'Vazirmatn',
+                                            ),
+                                          )
+                                        : null,
+                                  ),
+                                  Positioned(
+                                    bottom: 0,
+                                    right: 0,
+                                    child: Container(
+                                      padding: const EdgeInsets.all(3),
+                                      decoration: const BoxDecoration(
+                                        color: Colors.green,
+                                        shape: BoxShape.circle,
+                                      ),
+                                      child: const Icon(Icons.check, color: Colors.white, size: 14),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 12),
+                              Text(
+                                bid['name'] as String? ?? 'جوشکار پلتفرم',
+                                style: const TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 17,
+                                  color: AppColors.textDark,
+                                  fontFamily: 'Vazirmatn',
                                 ),
                               ),
-                              Text(
-                                '${Formatters.formatPrice(lineTotal)} تومان',
-                                style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: AppColors.royalBlue, fontFamily: 'Vazirmatn'),
+                              const SizedBox(height: 4),
+                              if (homeLocation.isNotEmpty)
+                                Row(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    const Icon(Icons.location_on_outlined, color: AppColors.textMuted, size: 15),
+                                    const SizedBox(width: 4),
+                                    Text(
+                                      'استان / شهر: $homeLocation',
+                                      style: const TextStyle(fontSize: 12, color: AppColors.textMuted, fontFamily: 'Vazirmatn'),
+                                    ),
+                                  ],
+                                ),
+                              const SizedBox(height: 10),
+                              Row(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                                    decoration: BoxDecoration(
+                                      color: Colors.amber.withValues(alpha: 0.15),
+                                      borderRadius: BorderRadius.circular(20),
+                                    ),
+                                    child: Row(
+                                      children: [
+                                        const Icon(Icons.star, color: Colors.amber, size: 15),
+                                        const SizedBox(width: 4),
+                                        Text(
+                                          'امتیاز ${bid['rating'] ?? 0} از ۵',
+                                          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 11, color: Colors.amber, fontFamily: 'Vazirmatn'),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                  const SizedBox(width: 10),
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                                    decoration: BoxDecoration(
+                                      color: Colors.green.withValues(alpha: 0.1),
+                                      borderRadius: BorderRadius.circular(20),
+                                    ),
+                                    child: Row(
+                                      children: [
+                                        const Icon(Icons.verified_outlined, color: Colors.green, size: 15),
+                                        const SizedBox(width: 4),
+                                        Text(
+                                          '${bid['projects'] ?? 0} پروژه انجام‌شده',
+                                          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 11, color: Colors.green, fontFamily: 'Vazirmatn'),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ],
                               ),
                             ],
                           ),
-                        );
-                      }).toList(),
+                        ),
+                        const SizedBox(height: 20),
+
+                        // About / Bio Section
+                        const Text(
+                          'درباره جوشکار و بیوگرافی:',
+                          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: AppColors.textDark, fontFamily: 'Vazirmatn'),
+                        ),
+                        const SizedBox(height: 8),
+                        Container(
+                          width: double.infinity,
+                          padding: const EdgeInsets.all(14),
+                          decoration: BoxDecoration(
+                            color: AppColors.lightGrey,
+                            borderRadius: BorderRadius.circular(14),
+                            border: Border.all(color: AppColors.borderGrey),
+                          ),
+                          child: Text(
+                            bioText,
+                            style: const TextStyle(fontSize: 12, color: AppColors.textDark, height: 1.6, fontFamily: 'Vazirmatn'),
+                          ),
+                        ),
+                        const SizedBox(height: 18),
+
+                        // Covered Active Cities Section
+                        if (activeCities.isNotEmpty) ...[
+                          const Text(
+                            'شهرهای تحت پوشش فعالیت:',
+                            style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: AppColors.royalBlue, fontFamily: 'Vazirmatn'),
+                          ),
+                          const SizedBox(height: 8),
+                          Wrap(
+                            spacing: 6,
+                            runSpacing: 6,
+                            children: activeCities.map((city) {
+                              return Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                                decoration: BoxDecoration(
+                                  color: AppColors.royalBlue.withValues(alpha: 0.08),
+                                  borderRadius: BorderRadius.circular(8),
+                                  border: Border.all(color: AppColors.royalBlue.withValues(alpha: 0.2)),
+                                ),
+                                child: Text(
+                                  city.toString(),
+                                  style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: AppColors.royalBlue, fontFamily: 'Vazirmatn'),
+                                ),
+                              );
+                            }).toList(),
+                          ),
+                          const SizedBox(height: 18),
+                        ],
+
+                        // Skills & Expertise Section
+                        const Text(
+                          'مهارت‌ها و تخصص‌های تاییدشده:',
+                          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: AppColors.burgundy, fontFamily: 'Vazirmatn'),
+                        ),
+                        const SizedBox(height: 8),
+                        skillsList.isNotEmpty
+                            ? Wrap(
+                                spacing: 6,
+                                runSpacing: 6,
+                                children: skillsList.map((skill) {
+                                  final String skillName = skill is String ? skill : (skill['name'] ?? skill.toString());
+                                  return _buildSkillChip(skillName);
+                                }).toList(),
+                              )
+                            : Wrap(
+                                spacing: 6,
+                                runSpacing: 6,
+                                children: [
+                                  _buildSkillChip('جوشکاری اسکلت فلزی'),
+                                  _buildSkillChip('جوشکاری برق و الکترود'),
+                                  _buildSkillChip('تجهیزات ایمنی کار در ارتفاع'),
+                                ],
+                              ),
+                        const SizedBox(height: 20),
+                      ],
                     ),
                   ),
-                  const SizedBox(height: 16),
-                  const Divider(color: AppColors.borderGrey, height: 1),
-                const SizedBox(height: 16),
-                const Text(
-                  'مهارت‌ها و تجهیزات:',
-                  style: TextStyle(
-                    fontWeight: FontWeight.bold,
-                    fontSize: 12,
-                    color: AppColors.burgundy,
-                    fontFamily: 'Vazirmatn',
-                  ),
                 ),
-                const SizedBox(height: 8),
-                Wrap(
-                  spacing: 6,
-                  runSpacing: 6,
-                  children: [
-                    _buildSkillChip('جوشکاری آرگون'),
-                    _buildSkillChip('جوشکاری CO2'),
-                    _buildSkillChip('دارای ژنراتور برق سیار'),
-                    _buildSkillChip('تجهیزات ایمنی کامل'),
-                  ],
-                ),
-                const SizedBox(height: 24),
-                SizedBox(
-                  width: double.infinity,
-                  height: 44,
-                  child: ElevatedButton(
-                    onPressed: () => Navigator.pop(context),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: AppColors.royalBlue,
-                      foregroundColor: AppColors.white,
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                    ),
-                    child: const Text('بستن', style: TextStyle(fontFamily: 'Vazirmatn')),
+
+                // Bottom Action Buttons
+                Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: Column(
+                    children: [
+                      Row(
+                        children: [
+                          Expanded(
+                            child: SizedBox(
+                              height: 48,
+                              child: ElevatedButton.icon(
+                                onPressed: () {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    const SnackBar(
+                                      content: Text(
+                                        'امکان پذیرش مستقیم پیشنهاد جوشکار به زودی فعال خواهد شد.',
+                                        style: TextStyle(fontFamily: 'Vazirmatn'),
+                                      ),
+                                      backgroundColor: AppColors.royalBlue,
+                                      duration: Duration(seconds: 3),
+                                    ),
+                                  );
+                                },
+                                icon: const Icon(Icons.check_circle_outline, size: 18),
+                                label: const Text('انتخاب این پیشنهاد', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12, fontFamily: 'Vazirmatn')),
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: AppColors.royalBlue,
+                                  foregroundColor: AppColors.white,
+                                  elevation: 0,
+                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                                ),
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 10),
+                          Expanded(
+                            child: SizedBox(
+                              height: 48,
+                              child: ElevatedButton.icon(
+                                onPressed: () {
+                                  Navigator.pop(ctx);
+                                  _showCallPreviewDialog(context, bid['name'] as String? ?? 'جوشکار', bid['phone'] as String? ?? '');
+                                },
+                                icon: const Icon(Icons.phone_in_talk, size: 18),
+                                label: const Text('تماس با جوشکار', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12, fontFamily: 'Vazirmatn')),
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: Colors.green,
+                                  foregroundColor: AppColors.white,
+                                  elevation: 0,
+                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                                ),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
                   ),
                 ),
               ],
             ),
           ),
-        ),
-      );
-    },
-  );
-}
+        );
+      },
+    );
+  }
+
+
 
   Widget _buildSkillChip(String label) {
     return Container(

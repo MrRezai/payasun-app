@@ -597,6 +597,7 @@ class _EmployerSetupScreenState extends State<EmployerSetupScreen> {
                             _buildSectionLabel('اطلاعات کاربری', isRequired: false),
                             const SizedBox(height: 12),
                             Row(
+                              crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
                                 Expanded(
                                   child: TextFormField(

@@ -161,6 +161,7 @@ export class InquiryService {
         welder_id: o.welder_id,
         welder_user_id: o.welder?.user_id,
         welder_name: o.welder ? `${o.welder.first_name || ''} ${o.welder.last_name || ''}`.trim() || 'جوشکار پلتفرم' : 'جوشکار پلتفرم',
+        profile_picture_url: o.welder?.profile_picture_url || null,
         total_price: o.total_price,
         items_prices: o.items_prices,
         scaffold_checked: o.scaffold_checked,
@@ -275,6 +276,7 @@ export class InquiryService {
         id: o.id,
         welder_id: o.welder_id,
         welder_user_id: o.welder?.user_id,
+        profile_picture_url: o.welder?.profile_picture_url || null,
         total_price: o.total_price,
         items_prices: o.items_prices,
         scaffold_checked: o.scaffold_checked,
@@ -378,6 +380,13 @@ export class InquiryService {
         power_checked: o.power_checked,
         rod_checked: o.rod_checked,
         delivery_checked: o.delivery_checked,
+        profile_picture_url: w?.profile_picture_url || null,
+        profile_picture_status: w?.profile_picture_status || 'NONE',
+        bio: w?.bio || '',
+        home_city: w?.home_city || '',
+        home_province: w?.home_province || '',
+        active_cities: w?.active_cities || [],
+        skills: w?.skills?.map((s: any) => s.name) || [],
       };
     });
   }

@@ -253,6 +253,7 @@ class _WelderSetupScreenState extends State<WelderSetupScreen> {
                   ),
                   const SizedBox(height: 14),
                   Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Expanded(
                         child: TextFormField(

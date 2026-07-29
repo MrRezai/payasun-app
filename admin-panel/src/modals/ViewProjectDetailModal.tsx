@@ -1,11 +1,30 @@
 import { useState } from 'react';
 import { Modal, Row, Col, Card, Table, Tag, Button, Space, Typography, Input, Alert, Popconfirm, Badge } from 'antd';
-import { FilePdfOutlined, PictureOutlined, DeleteOutlined, StopOutlined, EyeOutlined, EyeInvisibleOutlined, DownloadOutlined, BuildOutlined } from '@ant-design/icons';
+import { FilePdfOutlined, PictureOutlined, DeleteOutlined, StopOutlined, EyeOutlined, EyeInvisibleOutlined, DownloadOutlined, BuildOutlined, FileZipOutlined, FileTextOutlined, FolderOpenOutlined } from '@ant-design/icons';
 import { BASE_URL } from '../api';
 import { Inquiry } from '../types';
 import ViewParentProjectModal from './ViewParentProjectModal';
 
 const { Title, Text, Paragraph } = Typography;
+
+const getFileIcon = (url: string) => {
+  const cleanUrl = url.split('?')[0].toLowerCase();
+  const ext = cleanUrl.includes('.') ? cleanUrl.split('.').pop() || '' : '';
+
+  if (['jpg', 'jpeg', 'png', 'webp', 'gif', 'bmp'].includes(ext)) {
+    return <PictureOutlined style={{ color: '#10b981', fontSize: '20px', flexShrink: 0 }} />;
+  }
+  if (ext === 'pdf') {
+    return <FilePdfOutlined style={{ color: '#ef4444', fontSize: '20px', flexShrink: 0 }} />;
+  }
+  if (['dwg', 'dxf', 'dwf', 'rvt', 'skp', 'ifc', 'pln'].includes(ext)) {
+    return <BuildOutlined style={{ color: '#f59e0b', fontSize: '20px', flexShrink: 0 }} />;
+  }
+  if (['zip', 'rar', '7z'].includes(ext)) {
+    return <FileZipOutlined style={{ color: '#8b5cf6', fontSize: '20px', flexShrink: 0 }} />;
+  }
+  return <FileTextOutlined style={{ color: '#64748b', fontSize: '20px', flexShrink: 0 }} />;
+};
 
 interface ViewProjectDetailModalProps {
   inquiry: Inquiry;
@@ -165,7 +184,7 @@ export default function ViewProjectDetailModal({
                 <div style={{ backgroundColor: '#f8fafc', padding: '12px', borderRadius: '12px', border: '1px solid #e2e8f0' }}>
                   <Row justify="space-between" align="middle" style={{ marginBottom: '10px', paddingBottom: '8px', borderBottom: '1px solid #edf2f7' }}>
                     <Space align="center">
-                      <FilePdfOutlined style={{ color: '#4169E1', fontSize: '16px' }} />
+                      <FolderOpenOutlined style={{ color: '#4169E1', fontSize: '16px' }} />
                       <Text strong style={{ fontSize: '13px', color: '#2d3748' }}>
                         لیست فایل‌های نقشه فنی ({urls.length} فایل)
                       </Text>
@@ -181,7 +200,6 @@ export default function ViewProjectDetailModal({
                     {urls.map((rawUrl: string, idx: number) => {
                       const fileUrl = rawUrl.startsWith('http') ? rawUrl : `${BASE_URL}${rawUrl}`;
                       const fileName = rawUrl.split('/').pop() || `فایل ${idx + 1}`;
-                      const isPdf = rawUrl.toLowerCase().endsWith('.pdf');
                       return (
                         <Col xs={24} sm={12} key={idx}>
                           <div 
@@ -197,13 +215,9 @@ export default function ViewProjectDetailModal({
                               boxShadow: '0 1px 3px rgba(0,0,0,0.03)',
                             }}
                           >
-                            <Space wrap={false} style={{ flex: 1, overflow: 'hidden' }}>
-                              {isPdf ? (
-                                <FilePdfOutlined style={{ color: '#e74c3c', fontSize: '20px', flexShrink: 0 }} />
-                              ) : (
-                                <PictureOutlined style={{ color: '#4169E1', fontSize: '20px', flexShrink: 0 }} />
-                              )}
-                              <div style={{ overflow: 'hidden' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flex: 1, minWidth: 0 }}>
+                              {getFileIcon(rawUrl)}
+                              <div style={{ overflow: 'hidden', flex: 1, minWidth: 0 }}>
                                 <Text strong style={{ fontSize: '12px', display: 'block', color: '#1a202c' }}>
                                   فایل {idx + 1}
                                 </Text>
@@ -211,7 +225,7 @@ export default function ViewProjectDetailModal({
                                   {fileName}
                                 </Text>
                               </div>
-                            </Space>
+                            </div>
 
                             <Button 
                               size="small" 
@@ -308,6 +322,13 @@ export default function ViewProjectDetailModal({
                   <Row justify="space-between" align="middle" style={{ marginBottom: '8px' }}>
                     <Col>
                       <Space>
+                        {off.profile_picture_url ? (
+                          <img
+                            src={off.profile_picture_url.startsWith('http') ? off.profile_picture_url : `${BASE_URL}${off.profile_picture_url}`}
+                            alt={off.welder_name}
+                            style={{ width: 28, height: 28, borderRadius: '50%', objectFit: 'cover', border: '1px solid #e2e8f0' }}
+                          />
+                        ) : null}
                         <Text strong>{off.welder_name}</Text>
                         {off.welder_phone && <Text type="secondary" dir="ltr">({off.welder_phone})</Text>}
                       </Space>
