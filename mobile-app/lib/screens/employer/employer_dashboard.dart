@@ -24,7 +24,9 @@ class _EmployerDashboardState extends State<EmployerDashboard> {
       if (!auth.isProfileLoaded) {
         auth.loadProfile();
       }
-      Provider.of<InquiryProvider>(context, listen: false).loadMyInquiries(auth.token);
+      final inqProvider = Provider.of<InquiryProvider>(context, listen: false);
+      inqProvider.loadMyProjects(auth.token);
+      inqProvider.loadMyInquiries(auth.token);
     });
   }
 
@@ -73,6 +75,7 @@ class _EmployerDashboardState extends State<EmployerDashboard> {
 
     return RefreshIndicator(
       onRefresh: () async {
+        await provider.loadMyProjects(auth.token);
         await provider.loadMyInquiries(auth.token);
       },
       color: AppColors.royalBlue,

@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { BrowserRouter, Routes, Route, Navigate, useNavigate, useLocation } from 'react-router-dom';
 import { ApiClient } from './api';
-import { Skill, Inquiry, InquiryItem } from './types';
+import { Skill, Inquiry, InquiryItem, SupplyItem } from './types';
 
 // Components
 import Sidebar from './components/Sidebar';
@@ -14,7 +14,7 @@ import Overview from './pages/Overview';
 import Users from './pages/Users';
 import Approvals from './pages/Approvals';
 import Projects from './pages/Projects';
-import Skills from './pages/Skills';
+import Settings from './pages/Settings';
 
 // Modals
 import VerifyPictureModal from './modals/VerifyPictureModal';
@@ -35,6 +35,7 @@ function AppContent() {
   const [weldersCount, setWeldersCount] = useState(0);
   const [employersCount, setEmployersCount] = useState(0);
   const [skills, setSkills] = useState<Skill[]>([]);
+  const [supplyItems, setSupplyItems] = useState<SupplyItem[]>([]);
   const [pendingVerifications, setPendingVerifications] = useState<any[]>([]);
   const [inquiries, setInquiries] = useState<Inquiry[]>([]);
   const [usersList, setUsersList] = useState<any[]>([]);
@@ -76,6 +77,10 @@ function AppContent() {
       // Load skills
       const skillsData = await ApiClient.getSkills().catch(() => []);
       setSkills(skillsData);
+
+      // Load supply items
+      const itemsData = await ApiClient.getSupplyItems().catch(() => []);
+      setSupplyItems(itemsData);
     } catch (e: any) {
       if (e.message === 'UNAUTHORIZED') {
         setIsAuthenticated(false);
@@ -331,6 +336,52 @@ function AppContent() {
     }
   };
 
+  const handleAddSupplyItem = async (title: string, unit: string) => {
+    try {
+      await ApiClient.createSupplyItem(title, unit);
+      showToast('قلم جدید با موفقیت به سیستم اضافه شد.', 'success');
+      loadAllData();
+    } catch (e: any) {
+      if (e.message === 'UNAUTHORIZED') {
+        setIsAuthenticated(false);
+        showToast('جلسه کاری شما منقضی شده است. لطفا دوباره وارد شوید.', 'warning');
+      } else {
+        showToast(e.message || 'خطا در ثبت قلم.', 'warning');
+      }
+    }
+  };
+
+  const handleEditSupplyItem = async (id: number, title: string, unit: string) => {
+    try {
+      await ApiClient.updateSupplyItem(id, title, unit);
+      showToast('مشخصات قلم با موفقیت ویرایش شد.', 'success');
+      loadAllData();
+    } catch (e: any) {
+      if (e.message === 'UNAUTHORIZED') {
+        setIsAuthenticated(false);
+        showToast('جلسه کاری شما منقضی شده است. لطفا دوباره وارد شوید.', 'warning');
+      } else {
+        showToast(e.message || 'خطا در ویرایش قلم.', 'warning');
+      }
+    }
+  };
+
+  const handleDeleteSupplyItem = async (id: number) => {
+    if (!window.confirm('آیا از حذف این قلم اطمینان دارید؟')) return;
+    try {
+      await ApiClient.deleteSupplyItem(id);
+      showToast('قلم مربوطه از سیستم حذف گردید.', 'warning');
+      loadAllData();
+    } catch (e: any) {
+      if (e.message === 'UNAUTHORIZED') {
+        setIsAuthenticated(false);
+        showToast('جلسه کاری شما منقضی شده است. لطفا دوباره وارد شوید.', 'warning');
+      } else {
+        showToast(e.message || 'خطا در حذف قلم.', 'warning');
+      }
+    }
+  };
+
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   const pendingEstimationsCount = inquiries.filter(i => i.status === 'PENDING_ESTIMATION').length;
@@ -411,16 +462,22 @@ function AppContent() {
               ) : <Navigate to="/login" replace />
             } />
 
-            <Route path="/skills" element={
+            <Route path="/settings" element={
               isAuthenticated ? (
-                <Skills 
+                <Settings 
                   skills={skills}
+                  supplyItems={supplyItems}
                   onAddSkill={handleAddSkill}
                   onEditSkill={handleEditSkill}
                   onDeleteSkill={handleDeleteSkill}
+                  onAddSupplyItem={handleAddSupplyItem}
+                  onEditSupplyItem={handleEditSupplyItem}
+                  onDeleteSupplyItem={handleDeleteSupplyItem}
                 />
               ) : <Navigate to="/login" replace />
             } />
+
+            <Route path="/skills" element={<Navigate to="/settings" replace />} />
 
             <Route path="*" element={<Navigate to={isAuthenticated ? "/overview" : "/login"} replace />} />
           </Routes>

@@ -1,4 +1,4 @@
-import { Skill, Inquiry, InquiryItem } from './types';
+import { Skill, Inquiry, InquiryItem, SupplyItem } from './types';
 export const BASE_URL = (import.meta as any).env.VITE_API_URL || 'https://api.joftojoor.com';
 
 export class ApiClient {
@@ -169,6 +169,43 @@ export class ApiClient {
       method: 'DELETE',
     });
     if (!res.ok) throw new Error('خطا در حذف تخصص.');
+  }
+
+  /* ─────────────────────────────────────────────────────────────
+     SUPPLY ITEMS ENDPOINTS
+     ───────────────────────────────────────────────────────────── */
+
+  public static async getSupplyItems(): Promise<SupplyItem[]> {
+    const res = await this.request(`${BASE_URL}/admin/items`);
+    if (!res.ok) throw new Error('خطا در دریافت لیست اقلام.');
+    return await res.json();
+  }
+
+  public static async createSupplyItem(title: string, unit: string): Promise<SupplyItem> {
+    const res = await this.request(`${BASE_URL}/admin/items`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ title, unit }),
+    });
+    if (!res.ok) throw new Error('خطا در افزودن قلم جدید.');
+    return await res.json();
+  }
+
+  public static async updateSupplyItem(id: number, title: string, unit: string): Promise<SupplyItem> {
+    const res = await this.request(`${BASE_URL}/admin/items/${id}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ title, unit }),
+    });
+    if (!res.ok) throw new Error('خطا در ویرایش قلم.');
+    return await res.json();
+  }
+
+  public static async deleteSupplyItem(id: number): Promise<void> {
+    const res = await this.request(`${BASE_URL}/admin/items/${id}`, {
+      method: 'DELETE',
+    });
+    if (!res.ok) throw new Error('خطا در حذف قلم.');
   }
 
   /* ─────────────────────────────────────────────────────────────

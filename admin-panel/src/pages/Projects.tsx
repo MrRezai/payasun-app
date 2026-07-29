@@ -1,6 +1,6 @@
 import { useState } from 'react';
-import { Card, Table, Tag, Button, Typography, Segmented, Row, Col, Badge, Space } from 'antd';
-import { EyeOutlined, FormOutlined } from '@ant-design/icons';
+import { Card, Table, Tag, Button, Typography, Segmented, Row, Col, Badge, Space, Input, Select } from 'antd';
+import { EyeOutlined, FormOutlined, SearchOutlined, BuildOutlined } from '@ant-design/icons';
 import { Inquiry } from '../types';
 import ViewUserHistoryModal from '../modals/ViewUserHistoryModal';
 
@@ -15,6 +15,8 @@ interface ProjectsProps {
 export default function Projects({ inquiries, onEstimateClick, onViewDetailClick }: ProjectsProps) {
   const [projectSubTab, setProjectSubTab] = useState<'pending' | 'broadcasted' | 'closed'>('pending');
   const [selectedEmployerId, setSelectedEmployerId] = useState<string | null>(null);
+  const [searchText, setSearchText] = useState('');
+  const [systemFilter, setSystemFilter] = useState<'all' | 'project' | 'legacy'>('all');
 
   const pendingInquiries = inquiries.filter(i => i.status === 'PENDING_ESTIMATION');
   const broadcastedInquiries = inquiries.filter(i => i.status === 'BROADCASTED' || i.status === 'ESTIMATED');
@@ -34,14 +36,48 @@ export default function Projects({ inquiries, onEstimateClick, onViewDetailClick
     }
   };
 
-  const filteredInquiries = getSubTabInquiries();
+  const currentTabList = getSubTabInquiries();
+
+  const filteredInquiries = currentTabList.filter((inq) => {
+    // System Filter (Legacy vs Project-linked)
+    if (systemFilter === 'project' && !inq.project) return false;
+    if (systemFilter === 'legacy' && inq.project) return false;
+
+    // Search query filter
+    if (!searchText.trim()) return true;
+    const query = searchText.trim().toLowerCase();
+
+    const titleMatch = inq.title?.toLowerCase().includes(query);
+    const projectTitleMatch = inq.project?.title?.toLowerCase().includes(query);
+    const employerMatch = inq.employer_name?.toLowerCase().includes(query);
+    const cityMatch = inq.city?.toLowerCase().includes(query);
+    const provinceMatch = inq.province?.toLowerCase().includes(query);
+
+    return titleMatch || projectTitleMatch || employerMatch || cityMatch || provinceMatch;
+  });
 
   const columns = [
     {
-      title: 'عنوان پروژه',
+      title: 'عنوان استعلام',
       dataIndex: 'title',
       key: 'title',
       render: (title: string) => <Text strong>{title}</Text>,
+    },
+    {
+      title: 'پروژه والد / منبع',
+      key: 'project',
+      render: (_: any, inq: Inquiry) => (
+        inq.project ? (
+          <Tag color="geekblue" style={{ borderRadius: '6px', fontWeight: 'bold' }}>
+            <BuildOutlined style={{ marginLeft: 4 }} />
+            {inq.project.title}
+          </Tag>
+        ) : (
+          <Tag color="purple" style={{ borderRadius: '6px' }}>
+            سیستم قدیم (مستقیم)
+          </Tag>
+        )
+      ),
     },
     {
       title: 'کارفرما',
@@ -116,7 +152,7 @@ export default function Projects({ inquiries, onEstimateClick, onViewDetailClick
             icon={<EyeOutlined />}
             onClick={() => onViewDetailClick(inq)}
           >
-            مشاهده اقلام
+            مشاهده جزئیات
           </Button>
         )
       ),
@@ -168,6 +204,31 @@ export default function Projects({ inquiries, onEstimateClick, onViewDetailClick
         </Row>
       }
     >
+      {/* Search and Filter Toolbar */}
+      <Row gutter={[12, 12]} style={{ marginBottom: 16 }}>
+        <Col xs={24} sm={14} md={10}>
+          <Input
+            placeholder="جستجو در عنوان استعلام، عنوان پروژه، نام کارفرما یا شهر..."
+            prefix={<SearchOutlined style={{ color: '#94A3B8' }} />}
+            value={searchText}
+            onChange={(e) => setSearchText(e.target.value)}
+            allowClear
+          />
+        </Col>
+        <Col xs={24} sm={10} md={6}>
+          <Select
+            value={systemFilter}
+            onChange={(val) => setSystemFilter(val)}
+            style={{ width: '100%' }}
+            options={[
+              { label: 'همه استعلام‌ها (جدید + قدیم)', value: 'all' },
+              { label: 'متصل به پروژه (جدید)', value: 'project' },
+              { label: 'ثبت مستقیم (سیستم قدیم)', value: 'legacy' },
+            ]}
+          />
+        </Col>
+      </Row>
+
       <Table
         dataSource={filteredInquiries}
         columns={columns}

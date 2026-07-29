@@ -20,6 +20,11 @@ export class InquiryItemDto {
 }
 
 export class CreateInquiryDto {
+  @ApiPropertyOptional({ description: 'شناسه پروژه والد', example: 'd0e82f5b-1234-4567-89ab-cdef01234567' })
+  @IsOptional()
+  @IsString()
+  projectId?: string;
+
   @ApiProperty({ description: 'عنوان استعلام', example: 'پروژه جوشکاری ساختمان مسکونی ۴ طبقه' })
   @IsString()
   @IsNotEmpty()

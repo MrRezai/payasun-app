@@ -2,6 +2,8 @@ import 'dart:io' as io;
 import 'package:flutter/foundation.dart';
 import 'package:file_picker/file_picker.dart';
 import '../models/inquiry.dart';
+import '../models/project.dart';
+import '../models/supply_item.dart';
 import '../services/api_service.dart';
 
 class BlueprintFile {
@@ -22,6 +24,8 @@ class InquiryProvider with ChangeNotifier {
   final List<InquiryItem> _manualItems = [];
   
   // Lists
+  List<Project> _myProjects = [];
+  List<SupplyItem> _predefinedItems = [];
   List<Inquiry> _myInquiries = [];
   List<Inquiry> _allInquiries = [];
   List<dynamic> _inquiryOffers = [];
@@ -34,6 +38,8 @@ class InquiryProvider with ChangeNotifier {
   String? get errorMessage => _errorMessage;
   bool get hasBlueprint => _hasBlueprint;
   List<InquiryItem> get manualItems => _manualItems;
+  List<Project> get myProjects => _myProjects;
+  List<SupplyItem> get predefinedItems => _predefinedItems;
   List<Inquiry> get myInquiries => _myInquiries;
   List<Inquiry> get allInquiries => _allInquiries;
   List<dynamic> get inquiryOffers => _inquiryOffers;
@@ -160,36 +166,215 @@ class InquiryProvider with ChangeNotifier {
     clearSelectedFiles();
   }
 
-  /// Fetch logged-in employer's inquiries.
-  Future<void> loadMyInquiries(String token) async {
+  /// Load predefined items
+  Future<void> loadPredefinedItems() async {
+    try {
+      _predefinedItems = await _apiService.fetchPredefinedItems();
+      notifyListeners();
+    } catch (_) {}
+  }
+
+  /// Fetch logged-in employer's projects.
+  Future<void> loadMyProjects(String token, {bool silent = false}) async {
+    if (!silent) {
+      _isLoading = true;
+      _errorMessage = null;
+      notifyListeners();
+    }
+
+    try {
+      final list = await _apiService.fetchMyProjects(token);
+      _myProjects = list;
+      _isLoading = false;
+      notifyListeners();
+    } catch (e) {
+      _isLoading = false;
+      if (!silent) {
+        _errorMessage = e.toString().replaceAll('Exception: ', '');
+      }
+      notifyListeners();
+    }
+  }
+
+  /// Create a project
+  Future<Project?> createProject({
+    required String token,
+    required String title,
+    required String description,
+    required String city,
+    required String province,
+    String? address,
+    List<List<int>>? imageBytesList,
+    List<String>? imageFilenames,
+  }) async {
     _isLoading = true;
     _errorMessage = null;
     notifyListeners();
 
     try {
-      _myInquiries = await _apiService.fetchMyInquiries(token);
+      if (title.trim().isEmpty) throw Exception('لطفاً عنوان پروژه را وارد کنید.');
+      if (city.trim().isEmpty) throw Exception('لطفاً شهر محل پروژه را وارد کنید.');
+      if (province.trim().isEmpty) throw Exception('لطفاً استان محل پروژه را وارد کنید.');
+
+      Project project = await _apiService.createProject(
+        token: token,
+        title: title,
+        description: description,
+        city: city,
+        province: province,
+        address: address,
+      );
+
+      if (imageBytesList != null && imageFilenames != null) {
+        for (int i = 0; i < imageBytesList.length && i < 10; i++) {
+          final bytes = imageBytesList[i];
+          final name = imageFilenames[i];
+          if (bytes.isNotEmpty) {
+            project = await _apiService.uploadProjectImage(
+              token: token,
+              projectId: project.id,
+              fileBytes: bytes,
+              filename: name,
+            );
+          }
+        }
+      }
+
+      await loadMyProjects(token);
+      _isLoading = false;
+      notifyListeners();
+      return project;
+    } catch (e) {
+      _isLoading = false;
+      _errorMessage = e.toString().replaceAll('Exception: ', '');
+      notifyListeners();
+      return null;
+    }
+  }
+
+  /// Update a project
+  Future<Project?> updateProject({
+    required String token,
+    required String projectId,
+    required String title,
+    required String description,
+    required String city,
+    required String province,
+    String? address,
+    List<String>? existingImageUrls,
+    List<List<int>>? newImageBytesList,
+    List<String>? newImageFilenames,
+  }) async {
+    _isLoading = true;
+    _errorMessage = null;
+    notifyListeners();
+
+    try {
+      if (title.trim().isEmpty) throw Exception('لطفاً عنوان پروژه را وارد کنید.');
+      if (city.trim().isEmpty) throw Exception('لطفاً شهر محل پروژه را وارد کنید.');
+      if (province.trim().isEmpty) throw Exception('لطفاً استان محل پروژه را وارد کنید.');
+
+      Project project = await _apiService.updateProject(
+        token: token,
+        projectId: projectId,
+        title: title,
+        description: description,
+        city: city,
+        province: province,
+        address: address,
+        imageUrls: existingImageUrls,
+      );
+
+      if (newImageBytesList != null && newImageFilenames != null) {
+        for (int i = 0; i < newImageBytesList.length; i++) {
+          final bytes = newImageBytesList[i];
+          final name = newImageFilenames[i];
+          if (bytes.isNotEmpty) {
+            project = await _apiService.uploadProjectImage(
+              token: token,
+              projectId: project.id,
+              fileBytes: bytes,
+              filename: name,
+            );
+          }
+        }
+      }
+
+      await loadMyProjects(token);
+      _isLoading = false;
+      notifyListeners();
+      return project;
+    } catch (e) {
+      _isLoading = false;
+      _errorMessage = e.toString().replaceAll('Exception: ', '');
+      notifyListeners();
+      return null;
+    }
+  }
+
+  /// Delete a project
+  Future<bool> deleteProject({
+    required String token,
+    required String projectId,
+  }) async {
+    _isLoading = true;
+    _errorMessage = null;
+    notifyListeners();
+
+    try {
+      await _apiService.deleteProject(token: token, projectId: projectId);
+      await loadMyProjects(token);
+      _isLoading = false;
+      notifyListeners();
+      return true;
+    } catch (e) {
+      _isLoading = false;
+      _errorMessage = e.toString().replaceAll('Exception: ', '');
+      notifyListeners();
+      return false;
+    }
+  }
+
+  /// Fetch logged-in employer's inquiries.
+  Future<void> loadMyInquiries(String token, {bool silent = false}) async {
+    if (!silent) {
+      _isLoading = true;
+      _errorMessage = null;
+      notifyListeners();
+    }
+
+    try {
+      final list = await _apiService.fetchMyInquiries(token);
+      _myInquiries = list;
       _isLoading = false;
       notifyListeners();
     } catch (e) {
       _isLoading = false;
-      _errorMessage = e.toString().replaceAll('Exception: ', '');
+      if (!silent) {
+        _errorMessage = e.toString().replaceAll('Exception: ', '');
+      }
       notifyListeners();
     }
   }
 
   /// Fetch all broadcasted inquiries for welder marketplace feed.
-  Future<void> loadAllInquiries(String token) async {
-    _isLoading = true;
-    _errorMessage = null;
-    notifyListeners();
+  Future<void> loadAllInquiries(String token, {bool silent = false}) async {
+    if (!silent) {
+      _isLoading = true;
+      _errorMessage = null;
+      notifyListeners();
+    }
 
     try {
-      _allInquiries = await _apiService.fetchAllInquiries(token);
+      final list = await _apiService.fetchAllInquiries(token);
+      _allInquiries = list;
       _isLoading = false;
       notifyListeners();
     } catch (e) {
       _isLoading = false;
-      _errorMessage = e.toString().replaceAll('Exception: ', '');
+      if (!silent) {
+        _errorMessage = e.toString().replaceAll('Exception: ', '');
+      }
       notifyListeners();
     }
   }
@@ -197,6 +382,7 @@ class InquiryProvider with ChangeNotifier {
   /// Submit inquiry creation form and synchronize with API.
   Future<Inquiry?> submitInquiry({
     required String token,
+    String? projectId,
     required String title,
     required String description,
     required String city,
@@ -225,6 +411,7 @@ class InquiryProvider with ChangeNotifier {
 
       final inquiry = await _apiService.createInquiry(
         token: token,
+        projectId: projectId,
         title: title,
         description: description,
         city: city,

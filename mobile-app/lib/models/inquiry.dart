@@ -28,6 +28,7 @@ class InquiryItem {
 
 class Inquiry {
   final String id;
+  final String? projectId;
   final String employerId;
   final String title;
   final String description;
@@ -46,6 +47,7 @@ class Inquiry {
 
   Inquiry({
     required this.id,
+    this.projectId,
     required this.employerId,
     required this.title,
     required this.description,
@@ -68,6 +70,7 @@ class Inquiry {
 
     return Inquiry(
       id: json['id'] as String? ?? '',
+      projectId: json['projectId'] as String?,
       employerId: json['employerId'] as String? ?? '',
       title: json['title'] as String? ?? '',
       description: json['description'] as String? ?? '',
@@ -88,6 +91,7 @@ class Inquiry {
   Map<String, dynamic> toJson() {
     return {
       'id': id,
+      'projectId': projectId,
       'employerId': employerId,
       'title': title,
       'description': description,

@@ -3,6 +3,8 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:http_parser/http_parser.dart';
 import '../models/inquiry.dart';
+import '../models/project.dart';
+import '../models/supply_item.dart';
 
 class ApiService {
   final String baseUrl;
@@ -99,9 +101,173 @@ class ApiService {
     }
   }
 
-  /// Create an inquiry.
+  /// Fetch predefined items defined by Admin
+  Future<List<SupplyItem>> fetchPredefinedItems() async {
+    final response = await _retry(() => http.get(
+      Uri.parse('$baseUrl/items'),
+      headers: {'Accept': 'application/json'},
+    ));
+
+    if (response.statusCode == 200) {
+      final List<dynamic> data = jsonDecode(response.body);
+      return data.map((item) => SupplyItem.fromJson(item)).toList();
+    } else {
+      return [];
+    }
+  }
+
+  /// Fetch logged in employer's projects with linked inquiries
+  Future<List<Project>> fetchMyProjects(String token) async {
+    final response = await _retry(() => http.get(
+      Uri.parse('$baseUrl/project/my'),
+      headers: _getHeaders(token),
+    ));
+
+    if (response.statusCode == 200) {
+      final List<dynamic> data = jsonDecode(response.body);
+      return data.map((item) => Project.fromJson(item)).toList();
+    } else {
+      final error = jsonDecode(response.body);
+      throw Exception(error['message'] ?? 'خطا در دریافت لیست پروژه‌ها');
+    }
+  }
+
+  /// Create a project
+  Future<Project> createProject({
+    required String token,
+    required String title,
+    required String description,
+    required String city,
+    required String province,
+    String? address,
+    List<String>? imageUrls,
+  }) async {
+    final body = jsonEncode({
+      'title': title,
+      'description': description,
+      'city': city,
+      'province': province,
+      if (address != null) 'address': address,
+      if (imageUrls != null) 'image_urls': imageUrls,
+    });
+
+    final response = await _retry(() => http.post(
+      Uri.parse('$baseUrl/project'),
+      headers: _getHeaders(token),
+      body: body,
+    ));
+
+    if (response.statusCode == 201) {
+      return Project.fromJson(jsonDecode(response.body));
+    } else {
+      final error = jsonDecode(response.body);
+      throw Exception(error['message'] ?? 'خطا در ثبت پروژه');
+    }
+  }
+
+  /// Update a project
+  Future<Project> updateProject({
+    required String token,
+    required String projectId,
+    required String title,
+    required String description,
+    required String city,
+    required String province,
+    String? address,
+    List<String>? imageUrls,
+  }) async {
+    final body = jsonEncode({
+      'title': title,
+      'description': description,
+      'city': city,
+      'province': province,
+      if (address != null) 'address': address,
+      if (imageUrls != null) 'image_urls': imageUrls,
+    });
+
+    final response = await _retry(() => http.patch(
+      Uri.parse('$baseUrl/project/$projectId'),
+      headers: _getHeaders(token),
+      body: body,
+    ));
+
+    if (response.statusCode == 200) {
+      return Project.fromJson(jsonDecode(response.body));
+    } else {
+      final error = jsonDecode(response.body);
+      throw Exception(error['message'] ?? 'خطا در ویرایش پروژه');
+    }
+  }
+
+  /// Delete a project
+  Future<void> deleteProject({
+    required String token,
+    required String projectId,
+  }) async {
+    final response = await _retry(() => http.delete(
+      Uri.parse('$baseUrl/project/$projectId'),
+      headers: _getHeaders(token),
+    ));
+
+    if (response.statusCode != 200) {
+      final error = jsonDecode(response.body);
+      throw Exception(error['message'] ?? 'خطا در حذف پروژه');
+    }
+  }
+
+  /// Upload image for a project
+  Future<Project> uploadProjectImage({
+    required String token,
+    required String projectId,
+    required List<int> fileBytes,
+    required String filename,
+  }) async {
+    final response = await _retry(() async {
+      final uri = Uri.parse('$baseUrl/project/$projectId/images');
+      final request = http.MultipartRequest('POST', uri);
+
+      request.headers.addAll({
+        'Authorization': 'Bearer $token',
+        'Accept': 'application/json',
+      });
+
+      String ext = filename.split('.').last.toLowerCase();
+      MediaType mediaType;
+      if (ext == 'png') {
+        mediaType = MediaType('image', 'png');
+      } else if (ext == 'jpg' || ext == 'jpeg') {
+        mediaType = MediaType('image', 'jpeg');
+      } else if (ext == 'webp') {
+        mediaType = MediaType('image', 'webp');
+      } else {
+        mediaType = MediaType('application', 'octet-stream');
+      }
+
+      final multipartFile = http.MultipartFile.fromBytes(
+        'file',
+        fileBytes,
+        filename: filename,
+        contentType: mediaType,
+      );
+
+      request.files.add(multipartFile);
+
+      final streamedResponse = await request.send();
+      return await http.Response.fromStream(streamedResponse);
+    });
+
+    if (response.statusCode == 200) {
+      return Project.fromJson(jsonDecode(response.body));
+    } else {
+      final error = jsonDecode(response.body);
+      throw Exception(error['message'] ?? 'خطا در آپلود تصویر پروژه');
+    }
+  }
+
+  /// Create an inquiry under a project.
   Future<Inquiry> createInquiry({
     required String token,
+    String? projectId,
     required String title,
     required String description,
     required String city,
@@ -112,6 +278,7 @@ class ApiService {
     required List<InquiryItem> items,
   }) async {
     final body = jsonEncode({
+      if (projectId != null) 'projectId': projectId,
       'title': title,
       'description': description,
       'city': city,

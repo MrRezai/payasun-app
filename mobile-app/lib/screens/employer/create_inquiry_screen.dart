@@ -7,11 +7,20 @@ import '../../providers/auth_provider.dart';
 import '../../providers/inquiry_provider.dart';
 import '../../services/api_service.dart';
 import '../../models/inquiry.dart';
+import '../../models/project.dart';
 import '../../utils/formatters.dart';
 
 class CreateInquiryScreen extends StatefulWidget {
   final Inquiry? inquiryToEdit;
-  const CreateInquiryScreen({super.key, this.inquiryToEdit});
+  final String? projectId;
+  final Project? parentProject;
+
+  const CreateInquiryScreen({
+    super.key,
+    this.inquiryToEdit,
+    this.projectId,
+    this.parentProject,
+  });
 
   @override
   State<CreateInquiryScreen> createState() => _CreateInquiryScreenState();
@@ -50,6 +59,19 @@ class _CreateInquiryScreenState extends State<CreateInquiryScreen> {
   void initState() {
     super.initState();
     _loadProvinces();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      Provider.of<InquiryProvider>(context, listen: false).loadPredefinedItems();
+    });
+
+    if (widget.parentProject != null) {
+      final p = widget.parentProject!;
+      _selectedProvinceName = p.province;
+      _selectedCityName = p.city;
+      if (p.address != null && p.address!.isNotEmpty) {
+        _addressController.text = p.address!;
+      }
+    }
+
     if (widget.inquiryToEdit != null) {
       final inq = widget.inquiryToEdit!;
       _titleController.text = inq.title;
@@ -240,6 +262,8 @@ class _CreateInquiryScreenState extends State<CreateInquiryScreen> {
           : extraStr;
     }
 
+    final targetProjectId = widget.projectId ?? widget.parentProject?.id;
+
     final result = widget.inquiryToEdit != null
         ? await provider.updateInquiry(
             token: auth.token,
@@ -251,6 +275,7 @@ class _CreateInquiryScreenState extends State<CreateInquiryScreen> {
           )
         : await provider.submitInquiry(
             token: auth.token,
+            projectId: targetProjectId,
             title: _titleController.text,
             description: finalDescription,
             city: _selectedCityName!,

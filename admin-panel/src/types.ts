@@ -10,6 +10,14 @@ export interface Skill {
   created_at?: string;
   updated_at?: string;
 }
+
+export interface SupplyItem {
+  id: number;
+  title: string;
+  unit: string;
+  created_at?: string;
+  updated_at?: string;
+}
 export interface User {
   id: string;
   phoneNumber: string;
@@ -53,6 +61,16 @@ export interface InquiryItem {
 }
 export interface Inquiry {
   id: string;
+  projectId?: string | null;
+  project?: {
+    id: string;
+    title: string;
+    description?: string;
+    city?: string;
+    province?: string;
+    address?: string;
+    image_urls?: string[];
+  } | null;
   employer_id: string;
   employerId?: string;
   title: string;

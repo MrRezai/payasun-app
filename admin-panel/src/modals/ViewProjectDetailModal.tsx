@@ -95,6 +95,43 @@ export default function ViewProjectDetailModal({
       bodyStyle={{ maxHeight: '80vh', overflowY: 'auto', padding: '16px 8px' }}
     >
       <Space direction="vertical" style={{ width: '100%' }} size="large">
+        {inquiry.project ? (
+          <Alert
+            type="info"
+            showIcon
+            message={
+              <Space direction="vertical" style={{ width: '100%' }}>
+                <Text strong style={{ fontSize: '14px', color: '#1E3A8A' }}>
+                  پروژه والد: {inquiry.project.title}
+                </Text>
+                {inquiry.project.description && (
+                  <Text style={{ fontSize: '12px', color: '#334155' }}>
+                    توضیحات کلی پروژه: {inquiry.project.description}
+                  </Text>
+                )}
+                {inquiry.project.image_urls && inquiry.project.image_urls.length > 0 && (
+                  <Space wrap size="small" style={{ marginTop: '6px' }}>
+                    <Text type="secondary" style={{ fontSize: '11px' }}>تصاویر پروژه ({inquiry.project.image_urls.length} تصویر):</Text>
+                    {inquiry.project.image_urls.map((img: string, idx: number) => {
+                      const url = img.startsWith('http') ? img : `${BASE_URL}${img}`;
+                      return (
+                        <a key={idx} href={url} target="_blank" rel="noopener noreferrer">
+                          <img src={url} alt={`پروژه ${idx + 1}`} style={{ width: 44, height: 44, borderRadius: 6, objectFit: 'cover', border: '1px solid #cbd5e1' }} />
+                        </a>
+                      );
+                    })}
+                  </Space>
+                )}
+              </Space>
+            }
+            style={{ borderRadius: '12px', border: '1px solid #93C5FD', backgroundColor: '#EFF6FF' }}
+          />
+        ) : (
+          <Tag color="purple" style={{ padding: '4px 10px', borderRadius: '6px', fontSize: '11px' }}>
+            ثبت مستقیم / استعلام سیستم قدیم
+          </Tag>
+        )}
+
         <Row gutter={[16, 16]}>
           {/* Blueprint Viewer */}
           <Col xs={24} md={12}>

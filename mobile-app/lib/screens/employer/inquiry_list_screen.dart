@@ -1,12 +1,16 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../constants/app_colors.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/inquiry_provider.dart';
 import '../../models/inquiry.dart';
+import '../../models/project.dart';
 import '../../utils/formatters.dart';
+import '../../services/api_service.dart';
 import 'inquiry_details_screen.dart';
 import 'create_inquiry_screen.dart';
+import 'create_project_screen.dart';
 
 class InquiryListScreen extends StatefulWidget {
   const InquiryListScreen({super.key});
@@ -17,19 +21,36 @@ class InquiryListScreen extends StatefulWidget {
 
 class _InquiryListScreenState extends State<InquiryListScreen> with SingleTickerProviderStateMixin {
   late TabController _tabController;
+  Timer? _refreshTimer;
 
   @override
   void initState() {
     super.initState();
     _tabController = TabController(length: 2, vsync: this);
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      final token = Provider.of<AuthProvider>(context, listen: false).token;
-      Provider.of<InquiryProvider>(context, listen: false).loadMyInquiries(token);
+      _fetchData();
     });
+
+    // Auto-refresh periodically every 8 seconds silently
+    _refreshTimer = Timer.periodic(const Duration(seconds: 8), (_) {
+      if (mounted) {
+        _fetchData(silent: true);
+      }
+    });
+  }
+
+  void _fetchData({bool silent = false}) {
+    final auth = Provider.of<AuthProvider>(context, listen: false);
+    if (auth.token.isNotEmpty) {
+      final provider = Provider.of<InquiryProvider>(context, listen: false);
+      provider.loadMyProjects(auth.token, silent: silent);
+      provider.loadMyInquiries(auth.token, silent: silent);
+    }
   }
 
   @override
   void dispose() {
+    _refreshTimer?.cancel();
     _tabController.dispose();
     super.dispose();
   }
@@ -37,10 +58,9 @@ class _InquiryListScreenState extends State<InquiryListScreen> with SingleTicker
   @override
   Widget build(BuildContext context) {
     final provider = Provider.of<InquiryProvider>(context);
+    final myProjects = provider.myProjects;
     final myInquiries = provider.myInquiries;
 
-    // Filter lists
-    final activeInquiries = myInquiries.where((e) => e.status != 'BROADCASTED').toList();
     final broadcastedInquiries = myInquiries.where((e) => e.status == 'BROADCASTED').toList();
 
     return Scaffold(
@@ -85,7 +105,7 @@ class _InquiryListScreenState extends State<InquiryListScreen> with SingleTicker
           : TabBarView(
               controller: _tabController,
               children: [
-                _buildInquiryList(activeInquiries, 'هیچ پروژه فعالی یافت نشد.'),
+                _buildProjectList(myProjects),
                 _buildInquiryList(broadcastedInquiries, 'هیچ پروژه منتشر شده‌ای یافت نشد.'),
               ],
             ),
@@ -94,11 +114,11 @@ class _InquiryListScreenState extends State<InquiryListScreen> with SingleTicker
           final result = await Navigator.push<bool>(
             context,
             MaterialPageRoute(
-              builder: (context) => const CreateInquiryScreen(),
+              builder: (context) => const CreateProjectScreen(),
             ),
           );
           if (result == true && mounted) {
-            _tabController.animateTo(0);
+            _fetchData();
           }
         },
         backgroundColor: AppColors.royalBlue,
@@ -113,6 +133,338 @@ class _InquiryListScreenState extends State<InquiryListScreen> with SingleTicker
             fontSize: 14,
             fontFamily: 'Vazirmatn',
           ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildProjectList(List<Project> projects) {
+    if (projects.isEmpty) {
+      return Center(
+        child: Padding(
+          padding: const EdgeInsets.all(20.0),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(Icons.business_center_outlined, size: 56, color: Colors.grey[300]),
+              const SizedBox(height: 12),
+              const Text(
+                'تاکنون پروژه‌ای ثبت نکرده‌اید.',
+                style: TextStyle(
+                  color: AppColors.textDark,
+                  fontSize: 15,
+                  fontWeight: FontWeight.bold,
+                  fontFamily: 'Vazirmatn',
+                ),
+              ),
+              const SizedBox(height: 6),
+              const Text(
+                'ابتدا پروژه خود را تعریف کرده و سپس برای هر پروژه به تعداد دلخواه استعلام بگیرید.',
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  color: AppColors.textMuted,
+                  fontSize: 12,
+                  height: 1.5,
+                  fontFamily: 'Vazirmatn',
+                ),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
+    return ListView.builder(
+      padding: const EdgeInsets.all(16),
+      itemCount: projects.length,
+      itemBuilder: (context, index) {
+        final project = projects[index];
+        return _buildProjectAccordionCard(project);
+      },
+    );
+  }
+
+  Widget _buildProjectAccordionCard(Project project) {
+    final dateStr = Formatters.toPersianDate(project.createdAt);
+    final inquiries = project.inquiries;
+
+    return Card(
+      elevation: 0,
+      margin: const EdgeInsets.only(bottom: 16),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(18),
+        side: const BorderSide(color: AppColors.borderGrey),
+      ),
+      color: AppColors.white,
+      child: Theme(
+        data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
+        child: ExpansionTile(
+          key: PageStorageKey(project.id),
+          tilePadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+          childrenPadding: const EdgeInsets.only(left: 16, right: 16, bottom: 16),
+          title: Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: AppColors.royalBlue.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: const Icon(Icons.apartment, color: AppColors.royalBlue, size: 22),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      project.title,
+                      style: const TextStyle(
+                        fontSize: 15,
+                        fontWeight: FontWeight.bold,
+                        color: AppColors.textDark,
+                        fontFamily: 'Vazirmatn',
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    const SizedBox(height: 4),
+                    Row(
+                      children: [
+                        const Icon(Icons.location_on_outlined, size: 13, color: AppColors.textMuted),
+                        const SizedBox(width: 4),
+                        Text(
+                          project.province != null && project.province!.isNotEmpty
+                              ? '${project.province}، ${project.city}'
+                              : project.city,
+                          style: const TextStyle(color: AppColors.textMuted, fontSize: 11, fontFamily: 'Vazirmatn'),
+                        ),
+                        const SizedBox(width: 12),
+                        const Icon(Icons.calendar_month_outlined, size: 13, color: AppColors.textMuted),
+                        const SizedBox(width: 4),
+                        Text(
+                          dateStr,
+                          style: const TextStyle(color: AppColors.textMuted, fontSize: 11, fontFamily: 'Vazirmatn'),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          subtitle: Padding(
+            padding: const EdgeInsets.only(top: 10),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                if (project.description.isNotEmpty)
+                  Text(
+                    project.description,
+                    style: const TextStyle(color: AppColors.textMuted, fontSize: 12, height: 1.5, fontFamily: 'Vazirmatn'),
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+
+                // Photos gallery preview if available
+                if (project.imageUrls.isNotEmpty) ...[
+                  const SizedBox(height: 10),
+                  SizedBox(
+                    height: 54,
+                    child: ListView.builder(
+                      scrollDirection: Axis.horizontal,
+                      itemCount: project.imageUrls.length,
+                      itemBuilder: (context, idx) {
+                        final url = project.imageUrls[idx];
+                        final fullUrl = url.startsWith('http') ? url : '${ApiService().baseUrl}$url';
+                        return Container(
+                          margin: const EdgeInsets.only(left: 8),
+                          width: 54,
+                          height: 54,
+                          decoration: BoxDecoration(
+                            borderRadius: BorderRadius.circular(10),
+                            border: Border.all(color: AppColors.borderGrey),
+                          ),
+                          child: ClipRRect(
+                            borderRadius: BorderRadius.circular(10),
+                            child: Image.network(fullUrl, fit: BoxFit.cover),
+                          ),
+                        );
+                      },
+                    ),
+                  ),
+                ],
+
+                const SizedBox(height: 12),
+
+                // Card toolbar (Actions: Edit, Delete, New Inquiry)
+                Row(
+                  children: [
+                    // Edit Project
+                    OutlinedButton.icon(
+                      onPressed: () async {
+                        final res = await Navigator.push<bool>(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => CreateProjectScreen(projectToEdit: project),
+                          ),
+                        );
+                        if (res == true && mounted) {
+                          _fetchData();
+                        }
+                      },
+                      style: OutlinedButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                        minimumSize: Size.zero,
+                        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                        side: const BorderSide(color: AppColors.borderGrey),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                      ),
+                      icon: const Icon(Icons.edit_outlined, size: 14, color: AppColors.textMuted),
+                      label: const Text('ویرایش', style: TextStyle(fontSize: 11, color: AppColors.textDark, fontFamily: 'Vazirmatn')),
+                    ),
+                    const SizedBox(width: 8),
+
+                    // Delete Project
+                    OutlinedButton.icon(
+                      onPressed: () => _confirmDeleteProject(project),
+                      style: OutlinedButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                        minimumSize: Size.zero,
+                        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                        side: const BorderSide(color: Colors.redAccent),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                      ),
+                      icon: const Icon(Icons.delete_outline, size: 14, color: Colors.red),
+                      label: const Text('حذف', style: TextStyle(fontSize: 11, color: Colors.red, fontFamily: 'Vazirmatn')),
+                    ),
+                    const Spacer(),
+
+                    // New Inquiry for this Project
+                    ElevatedButton.icon(
+                      onPressed: () async {
+                        final result = await Navigator.push<bool>(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => CreateInquiryScreen(parentProject: project),
+                          ),
+                        );
+                        if (result == true && mounted) {
+                          _fetchData();
+                        }
+                      },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppColors.amberOrange,
+                        foregroundColor: AppColors.white,
+                        elevation: 0,
+                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                        minimumSize: Size.zero,
+                        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                      ),
+                      icon: const Icon(Icons.add_task, size: 15),
+                      label: const Text(
+                        'استعلام جدید',
+                        style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, fontFamily: 'Vazirmatn'),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+          children: [
+            const Divider(color: AppColors.borderGrey, height: 20),
+            Row(
+              children: [
+                const Icon(Icons.assignment_outlined, size: 16, color: AppColors.royalBlue),
+                const SizedBox(width: 6),
+                Text(
+                  'استعلام‌های این پروژه (${inquiries.length}):',
+                  style: const TextStyle(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 13,
+                    color: AppColors.royalBlue,
+                    fontFamily: 'Vazirmatn',
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 10),
+
+            if (inquiries.isEmpty)
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.symmetric(vertical: 18, horizontal: 14),
+                decoration: BoxDecoration(
+                  color: AppColors.lightGrey,
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: const Column(
+                  children: [
+                    Icon(Icons.inbox_outlined, color: AppColors.textMuted, size: 28),
+                    SizedBox(height: 6),
+                    Text(
+                      'هنوز استعلامی برای این پروژه ثبت نشده است.',
+                      style: TextStyle(color: AppColors.textMuted, fontSize: 11, fontFamily: 'Vazirmatn'),
+                    ),
+                    SizedBox(height: 2),
+                    Text(
+                      'جهت دریافت قیمت و برآورد فنی، روی دکمه «استعلام جدید» کلیک کنید.',
+                      style: TextStyle(color: AppColors.textMuted, fontSize: 10, fontFamily: 'Vazirmatn'),
+                    ),
+                  ],
+                ),
+              )
+            else
+              Column(
+                children: inquiries.map((inquiry) => _buildInquiryCard(inquiry)).toList(),
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _confirmDeleteProject(Project project) {
+    showDialog(
+      context: context,
+      builder: (context) => Directionality(
+        textDirection: TextDirection.rtl,
+        child: AlertDialog(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          title: const Text('حذف پروژه', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16, fontFamily: 'Vazirmatn')),
+          content: Text(
+            'آیا از حذف پروژه «${project.title}» اطمینان دارید؟ با حذف این پروژه، تمامی استعلام‌های وابسته به آن نیز حذف خواهند شد.',
+            style: const TextStyle(fontSize: 12, height: 1.5, fontFamily: 'Vazirmatn'),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('انصراف', style: TextStyle(color: AppColors.textMuted, fontFamily: 'Vazirmatn')),
+            ),
+            ElevatedButton(
+              onPressed: () async {
+                final auth = Provider.of<AuthProvider>(context, listen: false);
+                final provider = Provider.of<InquiryProvider>(context, listen: false);
+                final messenger = ScaffoldMessenger.of(context);
+                Navigator.pop(context);
+
+                final ok = await provider.deleteProject(token: auth.token, projectId: project.id);
+                if (ok) {
+                  messenger.showSnackBar(
+                    const SnackBar(content: Text('پروژه با موفقیت حذف شد.'), backgroundColor: Colors.green),
+                  );
+                } else {
+                  messenger.showSnackBar(
+                    SnackBar(content: Text(provider.errorMessage ?? 'خطا در حذف پروژه'), backgroundColor: Colors.red),
+                  );
+                }
+              },
+              style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+              child: const Text('بله، حذف کن', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontFamily: 'Vazirmatn')),
+            ),
+          ],
         ),
       ),
     );
@@ -134,6 +486,7 @@ class _InquiryListScreenState extends State<InquiryListScreen> with SingleTicker
                   color: AppColors.textMuted,
                   fontSize: 14,
                   fontWeight: FontWeight.bold,
+                  fontFamily: 'Vazirmatn',
                 ),
               ),
             ],
@@ -159,14 +512,14 @@ class _InquiryListScreenState extends State<InquiryListScreen> with SingleTicker
       elevation: 0,
       margin: const EdgeInsets.only(bottom: 12),
       shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(14),
         side: const BorderSide(color: AppColors.borderGrey),
       ),
       color: AppColors.white,
       child: ClipRRect(
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(14),
         child: InkWell(
-          borderRadius: BorderRadius.circular(16),
+          borderRadius: BorderRadius.circular(14),
           onTap: () {
             Navigator.push(
               context,
@@ -176,101 +529,103 @@ class _InquiryListScreenState extends State<InquiryListScreen> with SingleTicker
             );
           },
           child: Padding(
-            padding: const EdgeInsets.all(16.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Card Title and Status Badge
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            padding: const EdgeInsets.all(14.0),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Expanded(
-                  child: Text(
-                    inquiry.title,
-                    style: const TextStyle(
-                      fontSize: 15,
-                      fontWeight: FontWeight.bold,
-                      color: AppColors.textDark,
+                // Card Title and Status Badge
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Expanded(
+                      child: Text(
+                        inquiry.title,
+                        style: const TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.bold,
+                          color: AppColors.textDark,
+                          fontFamily: 'Vazirmatn',
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
                     ),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
+                    const SizedBox(width: 8),
+                    _buildStatusBadge(inquiry.status),
+                  ],
+                ),
+                const SizedBox(height: 8),
+
+                // Description summary
+                Text(
+                  inquiry.description,
+                  style: const TextStyle(
+                    color: AppColors.textMuted,
+                    fontSize: 11,
+                    height: 1.5,
+                    fontFamily: 'Vazirmatn',
+                  ),
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                const SizedBox(height: 10),
+
+                // Card Footer
+                Container(
+                  padding: const EdgeInsets.only(top: 8),
+                  decoration: const BoxDecoration(
+                    border: Border(
+                      top: BorderSide(color: AppColors.borderGrey, width: 0.5),
+                    ),
+                  ),
+                  child: Row(
+                    children: [
+                      Icon(Icons.location_on_outlined, size: 13, color: Colors.grey[400]),
+                      const SizedBox(width: 4),
+                      Text(
+                        inquiry.province != null && inquiry.province!.isNotEmpty
+                            ? '${inquiry.province}، ${inquiry.city}'
+                            : inquiry.city,
+                        style: const TextStyle(color: AppColors.textMuted, fontSize: 10, fontFamily: 'Vazirmatn'),
+                      ),
+                      const SizedBox(width: 14),
+                      Icon(Icons.calendar_month_outlined, size: 13, color: Colors.grey[400]),
+                      const SizedBox(width: 4),
+                      Text(
+                        dateStr,
+                        style: const TextStyle(color: AppColors.textMuted, fontSize: 10, fontFamily: 'Vazirmatn'),
+                      ),
+                      if (inquiry.status == 'BROADCASTED') ...[
+                        const Spacer(),
+                        const Icon(Icons.people_outline, size: 13, color: Colors.green),
+                        const SizedBox(width: 4),
+                        Text(
+                          '${inquiry.offers?.length ?? 0} پیشنهاد',
+                          style: const TextStyle(color: Colors.green, fontSize: 10, fontWeight: FontWeight.bold, fontFamily: 'Vazirmatn'),
+                        ),
+                      ],
+                    ],
                   ),
                 ),
-                const SizedBox(width: 8),
-                _buildStatusBadge(inquiry.status),
+
+                // If estimated or has items, show item preview
+                if (inquiry.items.isNotEmpty) ...[
+                  const SizedBox(height: 8),
+                  _buildItemsPreview(inquiry.items),
+                ],
+
+                // Action triggers for Estimations
+                if (inquiry.status == 'ESTIMATED') ...[
+                  const SizedBox(height: 10),
+                  _buildConfirmButton(inquiry),
+                ],
               ],
             ),
-            const SizedBox(height: 12),
-
-            // Description summary
-            Text(
-              inquiry.description,
-              style: const TextStyle(
-                color: AppColors.textMuted,
-                fontSize: 12,
-                height: 1.5,
-              ),
-              maxLines: 2,
-              overflow: TextOverflow.ellipsis,
-            ),
-            const SizedBox(height: 12),
-
-            // Card Footer
-            Container(
-              padding: const EdgeInsets.only(top: 12),
-              decoration: const BoxDecoration(
-                border: Border(
-                  top: BorderSide(color: AppColors.borderGrey, width: 0.5),
-                ),
-              ),
-              child: Row(
-                children: [
-                  Icon(Icons.location_on_outlined, size: 14, color: Colors.grey[400]),
-                  const SizedBox(width: 4),
-                  Text(
-                    inquiry.province != null && inquiry.province!.isNotEmpty
-                        ? '${inquiry.province}، ${inquiry.city}'
-                        : inquiry.city,
-                    style: const TextStyle(color: AppColors.textMuted, fontSize: 11, fontFamily: 'Vazirmatn'),
-                  ),
-                  const SizedBox(width: 16),
-                  Icon(Icons.calendar_month_outlined, size: 14, color: Colors.grey[400]),
-                  const SizedBox(width: 4),
-                  Text(
-                    dateStr,
-                    style: const TextStyle(color: AppColors.textMuted, fontSize: 11, fontFamily: 'Vazirmatn'),
-                  ),
-                  if (inquiry.status == 'BROADCASTED') ...[
-                    const Spacer(),
-                    const Icon(Icons.people_outline, size: 14, color: Colors.green),
-                    const SizedBox(width: 4),
-                    Text(
-                      '${inquiry.offers?.length ?? 0} پیشنهاد',
-                      style: const TextStyle(color: Colors.green, fontSize: 11, fontWeight: FontWeight.bold, fontFamily: 'Vazirmatn'),
-                    ),
-                  ],
-                ],
-              ),
-            ),
-
-            // If estimated or has items, show item preview
-            if (inquiry.items.isNotEmpty) ...[
-              const SizedBox(height: 10),
-              _buildItemsPreview(inquiry.items),
-            ],
-
-            // Action triggers for Estimations
-            if (inquiry.status == 'ESTIMATED') ...[
-              const SizedBox(height: 12),
-              _buildConfirmButton(inquiry),
-            ],
-          ],
+          ),
         ),
       ),
-    ),
-  ),
-);
-}
+    );
+  }
 
   Widget _buildStatusBadge(String status) {
     Color bg;
@@ -305,10 +660,10 @@ class _InquiryListScreenState extends State<InquiryListScreen> with SingleTicker
     }
 
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
       decoration: BoxDecoration(
         color: bg,
-        borderRadius: BorderRadius.circular(20),
+        borderRadius: BorderRadius.circular(16),
       ),
       child: Text(
         label,
@@ -316,6 +671,7 @@ class _InquiryListScreenState extends State<InquiryListScreen> with SingleTicker
           color: fg,
           fontWeight: FontWeight.bold,
           fontSize: 10,
+          fontFamily: 'Vazirmatn',
         ),
       ),
     );
@@ -324,7 +680,7 @@ class _InquiryListScreenState extends State<InquiryListScreen> with SingleTicker
   Widget _buildItemsPreview(List<InquiryItem> items) {
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.all(10),
+      padding: const EdgeInsets.all(8),
       decoration: BoxDecoration(
         color: AppColors.lightGrey,
         borderRadius: BorderRadius.circular(8),
@@ -334,12 +690,12 @@ class _InquiryListScreenState extends State<InquiryListScreen> with SingleTicker
         children: [
           const Text(
             'اقلام استعلام:',
-            style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: AppColors.burgundy),
+            style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: AppColors.burgundy, fontFamily: 'Vazirmatn'),
           ),
-          const SizedBox(height: 4),
+          const SizedBox(height: 2),
           Text(
             items.map((i) => '${i.title} (${i.quantity} ${i.unit})').join(' ، '),
-            style: const TextStyle(fontSize: 11, color: AppColors.textDark),
+            style: const TextStyle(fontSize: 10, color: AppColors.textDark, fontFamily: 'Vazirmatn'),
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
           ),
@@ -351,10 +707,9 @@ class _InquiryListScreenState extends State<InquiryListScreen> with SingleTicker
   Widget _buildConfirmButton(Inquiry inquiry) {
     return SizedBox(
       width: double.infinity,
-      height: 38,
+      height: 36,
       child: ElevatedButton(
         onPressed: () {
-          // Open Employer-side confirmation flow or send patch request
           _confirmInquiry(inquiry);
         },
         style: ElevatedButton.styleFrom(
@@ -365,7 +720,7 @@ class _InquiryListScreenState extends State<InquiryListScreen> with SingleTicker
         ),
         child: const Text(
           'مشاهده و تایید نهایی برآورد جهت انتشار',
-          style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold),
+          style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, fontFamily: 'Vazirmatn'),
         ),
       ),
     );
@@ -375,7 +730,6 @@ class _InquiryListScreenState extends State<InquiryListScreen> with SingleTicker
     final provider = Provider.of<InquiryProvider>(context, listen: false);
     final auth = Provider.of<AuthProvider>(context, listen: false);
 
-    // Editable copy of items for employer to customize before publishing
     List<InquiryItem> editableItems = inquiry.items.map((e) => InquiryItem(
       title: e.title,
       unit: e.unit,
@@ -432,7 +786,6 @@ class _InquiryListScreenState extends State<InquiryListScreen> with SingleTicker
                       ),
                       const SizedBox(height: 14),
 
-                      // Editable List of items
                       Expanded(
                         child: Container(
                           decoration: BoxDecoration(
@@ -472,7 +825,6 @@ class _InquiryListScreenState extends State<InquiryListScreen> with SingleTicker
                                           ),
                                         ),
                                         const SizedBox(width: 8),
-                                        // Quantity Controls
                                         Container(
                                           height: 32,
                                           decoration: BoxDecoration(

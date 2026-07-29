@@ -1,4 +1,5 @@
-import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn } from 'typeorm';
+import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn, ManyToOne, JoinColumn } from 'typeorm';
+import { Project } from './project.entity';
 
 export enum InquiryStatus {
   DRAFT = 'DRAFT',
@@ -15,14 +16,19 @@ export interface InquiryItem {
 }
 
 /**
- * Inquiry entity representing a project or job request created by an Employer.
- * It can either contain a manual list of items or a uploaded architectural blueprint plan
- * which will be estimated by the service (admin/welder).
+ * Inquiry entity representing a job request created by an Employer under a parent Project.
  */
 @Entity('inquiries')
 export class Inquiry {
   @PrimaryGeneratedColumn('uuid')
   id: string;
+
+  @Column({ type: 'uuid', nullable: true })
+  projectId: string | null;
+
+  @ManyToOne(() => Project, (project) => project.inquiries, { onDelete: 'CASCADE', nullable: true })
+  @JoinColumn({ name: 'projectId' })
+  project: Project | null;
 
   @Column({ type: 'uuid' })
   employerId: string;

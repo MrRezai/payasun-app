@@ -37,6 +37,7 @@ export class InquiryService {
 
     const inquiry = this.inquiryRepository.create({
       employerId,
+      projectId: dto.projectId ?? null,
       title: dto.title,
       description: dto.description,
       city: dto.city,
@@ -132,7 +133,10 @@ export class InquiryService {
    * Retrieves all inquiries (useful for Admin and Welders) mapping real Employer names.
    */
   async findAll(): Promise<any[]> {
-    const inquiries = await this.inquiryRepository.find({ order: { created_at: 'DESC' } });
+    const inquiries = await this.inquiryRepository.find({
+      relations: ['project'],
+      order: { created_at: 'DESC' },
+    });
     
     // Fetch all employer profiles to map names
     const profiles = await this.inquiryRepository.manager.getRepository(EmployerProfile).find();
