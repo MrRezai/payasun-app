@@ -1,7 +1,8 @@
-import { useState } from 'react';
-import { Tabs, Row, Col, Card, Form, Input, Button, Table, Space, Typography, Popconfirm, Badge, Alert } from 'antd';
-import { PlusOutlined, EditOutlined, DeleteOutlined, CheckOutlined, CloseOutlined, SettingOutlined, AppstoreOutlined, BuildOutlined } from '@ant-design/icons';
+import { useEffect, useState } from 'react';
+import { Tabs, Row, Col, Card, Form, Input, Button, Table, Space, Typography, Popconfirm, Badge, Alert, Switch } from 'antd';
+import { PlusOutlined, EditOutlined, DeleteOutlined, CheckOutlined, CloseOutlined, SettingOutlined, AppstoreOutlined, BuildOutlined, BulbOutlined, SaveOutlined } from '@ant-design/icons';
 import { Skill, SupplyItem } from '../types';
+import { ApiClient } from '../api';
 
 const { Title, Text } = Typography;
 
@@ -26,6 +27,53 @@ export default function Settings({
   onEditSupplyItem,
   onDeleteSupplyItem,
 }: SettingsProps) {
+  const [activeTab, setActiveTab] = useState('tips');
+
+  // Tip states
+  const [employerTipEnabled, setEmployerTipEnabled] = useState(true);
+  const [employerTipTitle, setEmployerTipTitle] = useState('راهنمای برآورد دقیق جوشکاری');
+  const [employerTipText, setEmployerTipText] = useState('با بارگذاری نقشه‌های باکیفیت و تعیین طول دقیق شاسی، مقادیر مصرفی الکترود و آهن‌آلات را دقیق‌تر دریافت کنید.');
+  
+  const [welderTipEnabled, setWelderTipEnabled] = useState(true);
+  const [welderTipTitle, setWelderTipTitle] = useState('راهنمای دریافت بیشتر پروژه');
+  const [welderTipText, setWelderTipText] = useState('با تکمیل دقیق تخصص‌ها، سوابق کاری و پروژه‌ها، پیشنهادهای قیمت شما شانس بیشتری برای انتخاب توسط کارفرمایان دارند.');
+  const [tipAlert, setTipAlert] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
+  const [tipSaving, setTipSaving] = useState(false);
+
+  useEffect(() => {
+    ApiClient.getTips().then((data) => {
+      if (data) {
+        if (data.employer_enabled !== undefined) setEmployerTipEnabled(!!data.employer_enabled);
+        if (data.employer_title) setEmployerTipTitle(data.employer_title);
+        if (data.employer_text) setEmployerTipText(data.employer_text);
+        if (data.welder_enabled !== undefined) setWelderTipEnabled(!!data.welder_enabled);
+        if (data.welder_title) setWelderTipTitle(data.welder_title);
+        if (data.welder_text) setWelderTipText(data.welder_text);
+      }
+    }).catch(() => {});
+  }, []);
+
+  const handleSaveTips = async () => {
+    setTipSaving(true);
+    const payload = {
+      employer_enabled: employerTipEnabled,
+      employer_title: employerTipTitle,
+      employer_text: employerTipText,
+      welder_enabled: welderTipEnabled,
+      welder_title: welderTipTitle,
+      welder_text: welderTipText,
+    };
+    try {
+      await ApiClient.updateTips(payload);
+      setTipAlert({ type: 'success', message: 'تنظیمات راهنماها در دیتابیس با موفقیت ذخیره و به‌روزرسانی شدند.' });
+    } catch (e: any) {
+      setTipAlert({ type: 'error', message: e.message || 'خطا در ثبت تنظیمات در دیتابیس.' });
+    } finally {
+      setTipSaving(false);
+    }
+    setTimeout(() => setTipAlert(null), 4000);
+  };
+
   // Skill states
   const [skillForm] = Form.useForm();
   const [skillLoading, setSkillLoading] = useState(false);
@@ -268,9 +316,139 @@ export default function Settings({
       </div>
 
       <Tabs
-        defaultActiveKey="skills"
+        activeKey={activeTab}
+        onChange={setActiveTab}
         type="card"
         items={[
+          {
+            key: 'tips',
+            label: (
+              <span>
+                <BulbOutlined /> تنظیم تیپ‌ها و راهنماها
+              </span>
+            ),
+            children: (
+              <div style={{ marginTop: '12px' }}>
+                {tipAlert && (
+                  <Alert
+                    message={tipAlert.message}
+                    type={tipAlert.type}
+                    showIcon
+                    style={{ marginBottom: '16px', borderRadius: '8px' }}
+                  />
+                )}
+                <Row gutter={[24, 24]}>
+                  {/* Employer Tip Card */}
+                  <Col xs={24} lg={12}>
+                    <Card
+                      title={
+                        <Row justify="space-between" align="middle">
+                          <Space>
+                            <BulbOutlined style={{ color: '#F59E0B' }} />
+                            <Title level={5} style={{ margin: 0 }}>
+                              راهنمای پنل کارفرما
+                            </Title>
+                          </Space>
+                          <Space>
+                            <Text type="secondary" style={{ fontSize: '12px' }}>وضعیت کارت:</Text>
+                            <Switch
+                              checked={employerTipEnabled}
+                              onChange={setEmployerTipEnabled}
+                              checkedChildren="فعال"
+                              unCheckedChildren="غیرفعال"
+                            />
+                          </Space>
+                        </Row>
+                      }
+                      style={{ borderRadius: '12px' }}
+                    >
+                      <Form layout="vertical">
+                        <Form.Item label="عنوان کارت راهنما (داشبورد کارفرما)">
+                          <Input
+                            value={employerTipTitle}
+                            onChange={(e) => setEmployerTipTitle(e.target.value)}
+                            placeholder="مثال: راهنمای برآورد دقیق جوشکاری"
+                          />
+                        </Form.Item>
+                        <Form.Item label="متن کامل راهنما (داشبورد کارفرما)">
+                          <Input.TextArea
+                            rows={4}
+                            value={employerTipText}
+                            onChange={(e) => setEmployerTipText(e.target.value)}
+                            placeholder="متن کامل راهنما برای کارفرمایان..."
+                          />
+                        </Form.Item>
+                        <Button
+                          type="primary"
+                          icon={<SaveOutlined />}
+                          loading={tipSaving}
+                          onClick={handleSaveTips}
+                          style={{ backgroundColor: '#4169E1', fontWeight: 'bold' }}
+                          block
+                        >
+                          ذخیره تغییرات در دیتابیس
+                        </Button>
+                      </Form>
+                    </Card>
+                  </Col>
+
+                  {/* Welder Tip Card */}
+                  <Col xs={24} lg={12}>
+                    <Card
+                      title={
+                        <Row justify="space-between" align="middle">
+                          <Space>
+                            <BulbOutlined style={{ color: '#10B981' }} />
+                            <Title level={5} style={{ margin: 0 }}>
+                              راهنمای پنل جوشکار
+                            </Title>
+                          </Space>
+                          <Space>
+                            <Text type="secondary" style={{ fontSize: '12px' }}>وضعیت کارت:</Text>
+                            <Switch
+                              checked={welderTipEnabled}
+                              onChange={setWelderTipEnabled}
+                              checkedChildren="فعال"
+                              unCheckedChildren="غیرفعال"
+                            />
+                          </Space>
+                        </Row>
+                      }
+                      style={{ borderRadius: '12px' }}
+                    >
+                      <Form layout="vertical">
+                        <Form.Item label="عنوان کارت راهنما (داشبورد جوشکار)">
+                          <Input
+                            value={welderTipTitle}
+                            onChange={(e) => setWelderTipTitle(e.target.value)}
+                            placeholder="مثال: راهنمای افزایش دریافت پروژه"
+                          />
+                        </Form.Item>
+                        <Form.Item label="متن کامل راهنما (داشبورد جوشکار)">
+                          <Input.TextArea
+                            rows={4}
+                            value={welderTipText}
+                            onChange={(e) => setWelderTipText(e.target.value)}
+                            placeholder="متن کامل راهنما برای جوشکاران..."
+                          />
+                        </Form.Item>
+                        <Button
+                          type="primary"
+                          icon={<SaveOutlined />}
+                          loading={tipSaving}
+                          onClick={handleSaveTips}
+                          style={{ backgroundColor: '#10B981', borderColor: '#10B981', fontWeight: 'bold' }}
+                          block
+                        >
+                          ذخیره تغییرات در دیتابیس
+                        </Button>
+                      </Form>
+                    </Card>
+                  </Col>
+                </Row>
+              </div>
+            ),
+          },
           {
             key: 'skills',
             label: (

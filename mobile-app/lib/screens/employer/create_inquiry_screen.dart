@@ -381,7 +381,7 @@ class _CreateInquiryScreenState extends State<CreateInquiryScreen> {
                 child: ElevatedButton(
                   onPressed: () {
                     Navigator.pop(context);
-                    Navigator.pop(context, true);
+                    Navigator.pop(context, result.projectId ?? targetProjectId ?? true);
                   },
                   style: ElevatedButton.styleFrom(
                     backgroundColor: AppColors.royalBlue,
@@ -881,8 +881,9 @@ class _CreateInquiryScreenState extends State<CreateInquiryScreen> {
                   // Title Field
                   _buildTextField(
                     controller: _titleController,
-                    label: 'عنوان استعلام',
+                    label: 'عنوان استعلام *',
                     hint: 'مثال: جوشکاری اسکلت فلزی ساختمان مسکونی ۴ طبقه',
+                    prefixIcon: Icons.edit_note,
                     validator: (value) => value == null || value.trim().isEmpty ? 'لطفاً عنوان را وارد کنید' : null,
                   ),
                   const SizedBox(height: 12),
@@ -934,15 +935,37 @@ class _CreateInquiryScreenState extends State<CreateInquiryScreen> {
                                 child: Row(
                                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                                   children: [
-                                    Text(
-                                      _selectedProvinceName ?? 'استان پروژه',
-                                      style: TextStyle(
-                                        color: _selectedProvinceName != null ? AppColors.textDark : AppColors.textMuted,
-                                        fontSize: 13,
-                                        fontWeight: _selectedProvinceName != null ? FontWeight.bold : FontWeight.normal,
-                                        fontFamily: 'Vazirmatn',
-                                      ),
-                                    ),
+                                    _selectedProvinceName != null
+                                        ? Text(
+                                            _selectedProvinceName!,
+                                            style: const TextStyle(
+                                              color: AppColors.textDark,
+                                              fontSize: 13,
+                                              fontWeight: FontWeight.bold,
+                                              fontFamily: 'Vazirmatn',
+                                            ),
+                                          )
+                                        : RichText(
+                                            text: const TextSpan(
+                                              style: TextStyle(
+                                                color: AppColors.textMuted,
+                                                fontSize: 13,
+                                                fontWeight: FontWeight.normal,
+                                                fontFamily: 'Vazirmatn',
+                                              ),
+                                              children: [
+                                                TextSpan(text: 'استان پروژه'),
+                                                TextSpan(
+                                                  text: ' *',
+                                                  style: TextStyle(
+                                                    color: AppColors.burgundy,
+                                                    fontWeight: FontWeight.bold,
+                                                    fontFamily: 'Vazirmatn',
+                                                  ),
+                                                ),
+                                              ],
+                                            ),
+                                          ),
                                     const Icon(Icons.arrow_drop_down, color: AppColors.amberOrange),
                                   ],
                                 ),
@@ -993,10 +1016,24 @@ class _CreateInquiryScreenState extends State<CreateInquiryScreen> {
                     // Exact Address & Execution Location Field
                     _buildTextField(
                       controller: _addressController,
-                      label: 'محل اجرای دقیق پروژه (آدرس / محدوده)',
+                      label: 'محل اجرای دقیق پروژه (آدرس / محدوده) *',
                       hint: 'مثال: خیابان شریعتی، کوچه ۱۴، پلاک ۲۵ (یا محدوده دقیق کارگاه)',
+                      prefixIcon: Icons.place_outlined,
                       maxLines: 2,
                       validator: (value) => value == null || value.trim().isEmpty ? 'لطفاً محل اجرای دقیق پروژه را وارد کنید' : null,
+                    ),
+                    const SizedBox(height: 4),
+                    const Row(
+                      children: [
+                        Icon(Icons.lock_outline, size: 12, color: AppColors.textMuted),
+                        SizedBox(width: 4),
+                        Expanded(
+                          child: Text(
+                            'نشانی که شما وارد می‌کنید در اختیار هیچ فردی قرار داده نمی‌شود.',
+                            style: TextStyle(fontSize: 11, color: AppColors.textMuted, fontFamily: 'Vazirmatn'),
+                          ),
+                        ),
+                      ],
                     ),
                     const SizedBox(height: 12),
                   ],
@@ -1007,7 +1044,7 @@ class _CreateInquiryScreenState extends State<CreateInquiryScreen> {
                       Expanded(
                         child: _buildTextField(
                           controller: _areaController,
-                          label: 'متراژ زیربنا (اجباری)',
+                          label: 'متراژ زیربنا *',
                           hint: 'مثال: ۲۰۰',
                           validator: (value) {
                             if (value == null || value.trim().isEmpty) {
@@ -1021,7 +1058,7 @@ class _CreateInquiryScreenState extends State<CreateInquiryScreen> {
                       Expanded(
                         child: _buildTextField(
                           controller: _floorsController,
-                          label: 'تعداد طبقات (اجباری)',
+                          label: 'تعداد طبقات *',
                           hint: 'مثال: ۵',
                           validator: (value) {
                             if (value == null || value.trim().isEmpty) {
@@ -1040,6 +1077,7 @@ class _CreateInquiryScreenState extends State<CreateInquiryScreen> {
                     controller: _descController,
                     label: 'توضیحات تکمیلی پروژه (اختیاری)',
                     hint: 'توضیحات درباره زمان شروع، جزئیات جوشکاری و شرایط کارگاه...',
+                    prefixIcon: Icons.description_outlined,
                     maxLines: 3,
                     validator: null,
                   ),
@@ -1163,59 +1201,93 @@ class _CreateInquiryScreenState extends State<CreateInquiryScreen> {
     required TextEditingController controller,
     required String label,
     required String hint,
+    IconData? prefixIcon,
     int maxLines = 1,
     String? Function(String?)? validator,
   }) {
-    return TextFormField(
-      controller: controller,
-      maxLines: maxLines,
-      validator: validator,
-      inputFormatters: [PersianDigitsFormatter(keepText: true)],
-      style: const TextStyle(
-        fontSize: 13,
-        fontWeight: FontWeight.bold,
-        color: AppColors.textDark,
-        fontFamily: 'Vazirmatn',
-      ),
-      decoration: InputDecoration(
-        labelText: label,
-        hintText: hint,
-        hintStyle: const TextStyle(
-          color: Color(0xFFBDBDBD),
-          fontWeight: FontWeight.w300,
-          fontSize: 12,
-          fontFamily: 'Vazirmatn',
+    final bool hasStar = label.contains('*');
+    final String cleanLabel = label.replaceAll('*', '').trim();
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        RichText(
+          text: TextSpan(
+            style: const TextStyle(
+              fontWeight: FontWeight.bold,
+              fontSize: 13,
+              color: AppColors.textDark,
+              fontFamily: 'Vazirmatn',
+            ),
+            children: [
+              TextSpan(text: cleanLabel),
+              if (hasStar)
+                const TextSpan(
+                  text: ' *',
+                  style: TextStyle(
+                    color: AppColors.burgundy,
+                    fontWeight: FontWeight.bold,
+                    fontFamily: 'Vazirmatn',
+                  ),
+                ),
+            ],
+          ),
         ),
-        labelStyle: const TextStyle(
-          color: AppColors.textDark,
-          fontSize: 13,
-          fontWeight: FontWeight.w500,
-          fontFamily: 'Vazirmatn',
+        const SizedBox(height: 6),
+        ValueListenableBuilder<TextEditingValue>(
+          valueListenable: controller,
+          builder: (context, value, child) {
+            final bool hasContent = value.text.trim().isNotEmpty;
+            return TextFormField(
+              controller: controller,
+              maxLines: maxLines,
+              validator: validator,
+              inputFormatters: [PersianDigitsFormatter(keepText: true)],
+              style: const TextStyle(
+                fontSize: 13,
+                fontWeight: FontWeight.bold,
+                color: AppColors.textDark,
+                fontFamily: 'Vazirmatn',
+              ),
+              decoration: InputDecoration(
+                hintText: hint,
+                hintStyle: const TextStyle(
+                  color: Color(0xFFBDBDBD),
+                  fontWeight: FontWeight.w300,
+                  fontSize: 12,
+                  fontFamily: 'Vazirmatn',
+                ),
+                prefixIcon: prefixIcon != null ? Icon(prefixIcon, color: AppColors.amberOrange, size: 20) : null,
+                filled: true,
+                fillColor: AppColors.white,
+                contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(14),
+                  borderSide: const BorderSide(color: AppColors.borderGrey),
+                ),
+                enabledBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(14),
+                  borderSide: BorderSide(
+                    color: hasContent ? AppColors.royalBlue.withValues(alpha: 0.5) : AppColors.borderGrey,
+                  ),
+                ),
+                focusedBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(14),
+                  borderSide: const BorderSide(color: AppColors.royalBlue, width: 1.5),
+                ),
+                errorBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(14),
+                  borderSide: const BorderSide(color: Colors.red),
+                ),
+                focusedErrorBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(14),
+                  borderSide: const BorderSide(color: Colors.red, width: 1.5),
+                ),
+              ),
+            );
+          },
         ),
-        filled: true,
-        fillColor: AppColors.white,
-        border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(14),
-          borderSide: const BorderSide(color: AppColors.borderGrey),
-        ),
-        enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(14),
-          borderSide: const BorderSide(color: AppColors.borderGrey),
-        ),
-        focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(14),
-          borderSide: const BorderSide(color: AppColors.royalBlue, width: 1.5),
-        ),
-        errorBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(14),
-          borderSide: const BorderSide(color: Colors.red),
-        ),
-        focusedErrorBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(14),
-          borderSide: const BorderSide(color: Colors.red, width: 1.5),
-        ),
-        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-      ),
+      ],
     );
   }
 
@@ -1303,10 +1375,13 @@ class _CreateInquiryScreenState extends State<CreateInquiryScreen> {
   }
 
   Widget _buildBlueprintUploadArea(InquiryProvider provider) {
+    int totalFilesCount = provider.selectedFiles.length;
+    String countText = Formatters.toPersianNumbers('$totalFilesCount از ۱۰');
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        _buildSectionHeader('بارگذاری نقشه و مدارک پروژه'),
+        _buildSectionHeader('بارگذاری نقشه و مدارک پروژه ($countText)'),
         const SizedBox(height: 12),
 
         if (_showRoughAlert)
@@ -1325,7 +1400,7 @@ class _CreateInquiryScreenState extends State<CreateInquiryScreen> {
                 const SizedBox(width: 10),
                 const Expanded(
                   child: Text(
-                    'لطفاً فایل نقشه معماری شامل پلان، نما و مقطع را بارگذاری کنید.',
+                    'لطفاً فایل‌های نقشه معماری و اجرایی پروژه شامل پلان طبقه‌ها، نماها و مقاطع را آپلود کنید تا لیست اقلام دقیقاً توسط کارشناسان استخراج و برآورد شوند.',
                     style: TextStyle(color: AppColors.textDark, fontSize: 12, height: 1.5, fontFamily: 'Vazirmatn'),
                   ),
                 ),
@@ -1355,19 +1430,34 @@ class _CreateInquiryScreenState extends State<CreateInquiryScreen> {
             borderRadius: BorderRadius.circular(16),
             child: Ink(
               width: double.infinity,
-              padding: const EdgeInsets.symmetric(vertical: 28, horizontal: 20),
+              padding: const EdgeInsets.symmetric(vertical: 24, horizontal: 20),
               decoration: BoxDecoration(
                 color: AppColors.white,
                 borderRadius: BorderRadius.circular(16),
                 border: Border.all(color: AppColors.royalBlue.withValues(alpha: 0.3)),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.01),
+                    spreadRadius: 1,
+                    blurRadius: 10,
+                  ),
+                ],
               ),
               child: Column(
                 children: [
                   const Icon(Icons.cloud_upload_outlined, size: 44, color: AppColors.amberOrange),
                   const SizedBox(height: 10),
                   Text(
-                    provider.selectedFiles.isEmpty ? 'انتخاب و آپلود نقشه‌ها (PDF, PNG, JPG)' : 'افزودن فایل‌های بیشتر...',
+                    totalFilesCount == 0
+                        ? 'انتخاب و آپلود فایل‌های نقشه و پلان (امکان انتخاب همزمان چند فایل)'
+                        : 'افزودن فایل‌های نقشه بیشتر...',
                     style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13, fontFamily: 'Vazirmatn'),
+                    textAlign: TextAlign.center,
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    'فرمت‌های مجاز: PDF, JPG, PNG (حداکثر ${Formatters.toPersianNumbers('10')} فایل نقشه برای هر استعلام)',
+                    style: const TextStyle(color: AppColors.textMuted, fontSize: 11, fontFamily: 'Vazirmatn'),
                     textAlign: TextAlign.center,
                   ),
                 ],
@@ -1465,8 +1555,11 @@ class _CreateInquiryScreenState extends State<CreateInquiryScreen> {
             itemCount: filteredItems.length,
             itemBuilder: (context, idx) {
               final item = filteredItems[idx];
-              final unitsList = item.unit.split(RegExp(r'[,،]')).map((u) => u.trim()).where((u) => u.isNotEmpty).toList();
-              final currentUnit = _selectedUnits[item.title] ?? (unitsList.isNotEmpty ? unitsList[0] : 'عدد');
+              final String itemTitle = item.title;
+              final String itemUnit = item.unit;
+              final List<String> unitsList = itemUnit.split(RegExp(r'[,،]')).map((u) => u.trim()).where((u) => u.isNotEmpty).toList();
+              final String defaultUnit = unitsList.isNotEmpty ? unitsList.first : 'عدد';
+              final String currentUnit = _selectedUnits[itemTitle] ?? defaultUnit;
 
               final existingItem = provider.manualItems.firstWhere(
                 (i) => i.title == item.title,
@@ -1634,6 +1727,7 @@ class _CreateInquiryScreenState extends State<CreateInquiryScreen> {
                   controller: _itemTitleController,
                   label: 'عنوان کالا یا خدمات اختصاصی',
                   hint: 'مثال: جوشکاری نرده حفاظ',
+                  prefixIcon: Icons.handyman_outlined,
                 ),
                 const SizedBox(height: 12),
                 Row(

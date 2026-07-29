@@ -79,6 +79,10 @@ export default function VerifyPictureModal({ user, onClose, onVerify }: VerifyPi
               <Text strong>{user.name}</Text>
               <Text type="secondary"> ({user.role === 'WELDER' ? 'جوشکار' : 'کارفرما'})</Text>
             </Paragraph>
+            <Paragraph style={{ margin: '0 0 6px 0', fontSize: '13px' }}>
+              <Text type="secondary">تاریخ ارسال تصویر: </Text>
+              <Text strong>{user.created_at || user.updated_at ? new Date(user.created_at || user.updated_at).toLocaleDateString('fa-IR') : 'نامشخص'}</Text>
+            </Paragraph>
             <Paragraph style={{ margin: 0, fontSize: '13px' }}>
               <Text type="secondary">بیوگرافی / توضیحات: </Text>
               <Text italic>{user.bio || 'توضیحاتی وارد نشده است.'}</Text>

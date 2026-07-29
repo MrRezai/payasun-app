@@ -3,6 +3,7 @@ import { Card, Table, Tag, Button, Typography, Segmented, Row, Col, Badge, Space
 import { EyeOutlined, FormOutlined, SearchOutlined, BuildOutlined } from '@ant-design/icons';
 import { Inquiry } from '../types';
 import ViewUserHistoryModal from '../modals/ViewUserHistoryModal';
+import ViewParentProjectModal, { ProjectData } from '../modals/ViewParentProjectModal';
 
 const { Title, Text } = Typography;
 
@@ -15,6 +16,7 @@ interface ProjectsProps {
 export default function Projects({ inquiries, onEstimateClick, onViewDetailClick }: ProjectsProps) {
   const [projectSubTab, setProjectSubTab] = useState<'pending' | 'broadcasted' | 'closed'>('pending');
   const [selectedEmployerId, setSelectedEmployerId] = useState<string | null>(null);
+  const [selectedProject, setSelectedProject] = useState<ProjectData | null>(null);
   const [searchText, setSearchText] = useState('');
   const [systemFilter, setSystemFilter] = useState<'all' | 'project' | 'legacy'>('all');
 
@@ -68,7 +70,15 @@ export default function Projects({ inquiries, onEstimateClick, onViewDetailClick
       key: 'project',
       render: (_: any, inq: Inquiry) => (
         inq.project ? (
-          <Tag color="geekblue" style={{ borderRadius: '6px', fontWeight: 'bold' }}>
+          <Tag 
+            color="geekblue" 
+            style={{ borderRadius: '6px', fontWeight: 'bold', cursor: 'pointer', padding: '4px 10px' }}
+            onClick={() => setSelectedProject(inq.project ? {
+              ...inq.project,
+              employerId: inq.employerId || inq.employer_id,
+              employer_name: inq.employer_name,
+            } : null)}
+          >
             <BuildOutlined style={{ marginLeft: 4 }} />
             {inq.project.title}
           </Tag>
@@ -129,6 +139,16 @@ export default function Projects({ inquiries, onEstimateClick, onViewDetailClick
         if (inq.status === 'BROADCASTED') return <Tag color="success">انتشار یافته</Tag>;
         if (inq.status === 'REJECTED') return <Tag color="error">رد شده</Tag>;
         return <Tag>خاتمه‌یافته</Tag>;
+      },
+    },
+    {
+      title: 'تاریخ ثبت',
+      key: 'created_at',
+      render: (_: any, inq: Inquiry) => {
+        const dateStr = inq.created_at
+          ? new Date(inq.created_at).toLocaleDateString('fa-IR')
+          : 'نامشخص';
+        return <Text type="secondary" style={{ fontSize: '12px' }}>{dateStr}</Text>;
       },
     },
     {
@@ -242,6 +262,18 @@ export default function Projects({ inquiries, onEstimateClick, onViewDetailClick
         <ViewUserHistoryModal 
           userId={selectedEmployerId} 
           onClose={() => setSelectedEmployerId(null)} 
+        />
+      )}
+
+      {selectedProject && (
+        <ViewParentProjectModal
+          project={selectedProject}
+          allInquiries={inquiries}
+          onClose={() => setSelectedProject(null)}
+          onViewInquiryDetail={(inq) => {
+            setSelectedProject(null);
+            onViewDetailClick(inq);
+          }}
         />
       )}
     </Card>

@@ -12,9 +12,14 @@ class WelderDashboard extends StatefulWidget {
 }
 
 class _WelderDashboardState extends State<WelderDashboard> {
+  bool _tipEnabled = true;
+  String _tipTitle = 'راهنمای دریافت بیشتر پروژه';
+  String _tipText = 'با دقیق کردن قیمت پیشنهادی و بررسی پلان استعلام‌ها، کارفرماهای بیشتری را جذب کنید.';
+
   @override
   void initState() {
     super.initState();
+    _loadTips();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
       final auth = Provider.of<AuthProvider>(context, listen: false);
@@ -22,6 +27,21 @@ class _WelderDashboardState extends State<WelderDashboard> {
         auth.loadProfile();
       }
     });
+  }
+
+  void _loadTips() async {
+    final data = await ApiService().fetchAppTips();
+    if (data != null && mounted) {
+      setState(() {
+        _tipEnabled = data['welder_enabled'] ?? true;
+        if (data['welder_title'] != null && (data['welder_title'] as String).isNotEmpty) {
+          _tipTitle = data['welder_title'];
+        }
+        if (data['welder_text'] != null && (data['welder_text'] as String).isNotEmpty) {
+          _tipText = data['welder_text'];
+        }
+      });
+    }
   }
 
   @override
@@ -96,8 +116,10 @@ class _WelderDashboardState extends State<WelderDashboard> {
 
 
             // Tips
-            _buildTipsCard(),
-            const SizedBox(height: 28),
+            if (_tipEnabled) ...[
+              _buildTipsCard(),
+              const SizedBox(height: 28),
+            ],
 
             // Current projects
             _buildSectionHeader('پروژه‌های جاری'),
@@ -596,25 +618,27 @@ class _WelderDashboardState extends State<WelderDashboard> {
             ),
           ),
           const SizedBox(width: 14),
-          const Expanded(
+          Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'راهنمای افزایش درآمد',
-                  style: TextStyle(
+                  _tipTitle,
+                  style: const TextStyle(
                     fontSize: 13,
                     fontWeight: FontWeight.bold,
                     color: AppColors.textDark,
+                    fontFamily: 'Vazirmatn',
                   ),
                 ),
-                SizedBox(height: 4),
+                const SizedBox(height: 4),
                 Text(
-                  'با دقیق کردن قیمت پیشنهادی و بررسی پلان استعلام‌ها، کارفرماهای بیشتری را جذب کنید.',
-                  style: TextStyle(
+                  _tipText,
+                  style: const TextStyle(
                     fontSize: 11,
                     color: AppColors.textMuted,
                     height: 1.5,
+                    fontFamily: 'Vazirmatn',
                   ),
                 ),
               ],

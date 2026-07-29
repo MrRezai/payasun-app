@@ -13,7 +13,14 @@ import 'create_inquiry_screen.dart';
 import 'create_project_screen.dart';
 
 class InquiryListScreen extends StatefulWidget {
-  const InquiryListScreen({super.key});
+  final int initialTabIndex;
+  final String? expandedProjectId;
+
+  const InquiryListScreen({
+    super.key,
+    this.initialTabIndex = 0,
+    this.expandedProjectId,
+  });
 
   @override
   State<InquiryListScreen> createState() => _InquiryListScreenState();
@@ -21,12 +28,13 @@ class InquiryListScreen extends StatefulWidget {
 
 class _InquiryListScreenState extends State<InquiryListScreen> with SingleTickerProviderStateMixin {
   late TabController _tabController;
+  final ScrollController _projectsScrollController = ScrollController();
   Timer? _refreshTimer;
 
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 2, vsync: this);
+    _tabController = TabController(length: 2, vsync: this, initialIndex: widget.initialTabIndex);
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _fetchData();
     });
@@ -52,6 +60,7 @@ class _InquiryListScreenState extends State<InquiryListScreen> with SingleTicker
   void dispose() {
     _refreshTimer?.cancel();
     _tabController.dispose();
+    _projectsScrollController.dispose();
     super.dispose();
   }
 
@@ -174,13 +183,43 @@ class _InquiryListScreenState extends State<InquiryListScreen> with SingleTicker
       );
     }
 
+    final provider = Provider.of<InquiryProvider>(context);
+    final String? targetProjectId = widget.expandedProjectId ?? provider.selectedExpandedProjectId;
+
+    if (provider.selectedExpandedProjectId != null && _tabController.index != 0) {
+      _tabController.animateTo(0);
+    }
+
+    if (targetProjectId != null && projects.isNotEmpty) {
+      final int targetIndex = projects.indexWhere((p) => p.id == targetProjectId);
+      if (targetIndex > 0) {
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (_projectsScrollController.hasClients) {
+            final double offset = (targetIndex * 150.0).clamp(
+              0.0,
+              _projectsScrollController.position.maxScrollExtent,
+            );
+            _projectsScrollController.animateTo(
+              offset,
+              duration: const Duration(milliseconds: 450),
+              curve: Curves.easeOutCubic,
+            );
+          }
+        });
+      }
+    }
+
     return ListView.builder(
+      controller: _projectsScrollController,
       padding: const EdgeInsets.all(16),
       itemCount: projects.length,
       itemBuilder: (context, index) {
         final project = projects[index];
+        final bool shouldExpand = targetProjectId != null && targetProjectId == project.id;
         return ProjectCardWidget(
+          key: ValueKey('${project.id}_${project.inquiries.length}'),
           project: project,
+          initiallyExpanded: shouldExpand,
           onRefresh: _fetchData,
           onDeleteConfirm: _confirmDeleteProject,
           inquiryCardBuilder: _buildInquiryCard,
@@ -283,13 +322,16 @@ class _InquiryListScreenState extends State<InquiryListScreen> with SingleTicker
         borderRadius: BorderRadius.circular(14),
         child: InkWell(
           borderRadius: BorderRadius.circular(14),
-          onTap: () {
-            Navigator.push(
+          onTap: () async {
+            final res = await Navigator.push<bool>(
               context,
               MaterialPageRoute(
                 builder: (context) => InquiryDetailsScreen(inquiry: inquiry),
               ),
             );
+            if (res == true && mounted) {
+              _fetchData();
+            }
           },
           child: Padding(
             padding: const EdgeInsets.all(12.0),
@@ -696,7 +738,8 @@ class _InquiryListScreenState extends State<InquiryListScreen> with SingleTicker
                                           items: editableItems,
                                         );
                                         if (success && context.mounted) {
-                                          Navigator.pop(context);
+                                          Navigator.pop(context, true);
+                                          _fetchData();
                                           ScaffoldMessenger.of(context).showSnackBar(
                                             const SnackBar(
                                               content: Text('برآورد اقلام تایید شد و استعلام برای جوشکاران منتشر گردید!'),
@@ -745,6 +788,7 @@ class ProjectCardWidget extends StatefulWidget {
   final VoidCallback onRefresh;
   final Function(Project) onDeleteConfirm;
   final Widget Function(Inquiry) inquiryCardBuilder;
+  final bool initiallyExpanded;
 
   const ProjectCardWidget({
     super.key,
@@ -752,6 +796,7 @@ class ProjectCardWidget extends StatefulWidget {
     required this.onRefresh,
     required this.onDeleteConfirm,
     required this.inquiryCardBuilder,
+    this.initiallyExpanded = false,
   });
 
   @override
@@ -759,7 +804,21 @@ class ProjectCardWidget extends StatefulWidget {
 }
 
 class _ProjectCardWidgetState extends State<ProjectCardWidget> {
-  bool _isExpanded = false;
+  late bool _isExpanded;
+
+  @override
+  void initState() {
+    super.initState();
+    _isExpanded = widget.initiallyExpanded;
+  }
+
+  @override
+  void didUpdateWidget(covariant ProjectCardWidget oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.initiallyExpanded && !oldWidget.initiallyExpanded) {
+      _isExpanded = true;
+    }
+  }
 
   void _showPhotosGallery(BuildContext context, List<String> imageUrls) {
     showDialog(
@@ -1089,13 +1148,16 @@ class _ProjectCardWidgetState extends State<ProjectCardWidget> {
                     const Spacer(),
                     ElevatedButton.icon(
                       onPressed: () async {
-                        final result = await Navigator.push<bool>(
+                        final result = await Navigator.push<dynamic>(
                           context,
                           MaterialPageRoute(
                             builder: (context) => CreateInquiryScreen(parentProject: project),
                           ),
                         );
-                        if (result == true && mounted) {
+                        if (result != null && result != false && mounted) {
+                          setState(() {
+                            _isExpanded = true;
+                          });
                           widget.onRefresh();
                         }
                       },

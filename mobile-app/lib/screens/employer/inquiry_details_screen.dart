@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../constants/app_colors.dart';
 import '../../models/inquiry.dart';
+import '../../models/project.dart';
 import '../../utils/formatters.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/inquiry_provider.dart';
@@ -37,6 +38,16 @@ class _InquiryDetailsScreenState extends State<InquiryDetailsScreen> {
   @override
   Widget build(BuildContext context) {
     final dateStr = Formatters.toPersianDate(inquiry.createdAt);
+    final provider = Provider.of<InquiryProvider>(context);
+
+    Project? parentProject;
+    if (inquiry.projectId != null && inquiry.projectId!.isNotEmpty) {
+      final match = provider.myProjects.cast<Project?>().firstWhere(
+        (p) => p?.id == inquiry.projectId,
+        orElse: () => null,
+      );
+      if (match != null) parentProject = match;
+    }
 
     return Directionality(
       textDirection: TextDirection.rtl,
@@ -109,6 +120,11 @@ class _InquiryDetailsScreenState extends State<InquiryDetailsScreen> {
                   const SizedBox(height: 16),
                 ],
 
+                // Parent Project Card if available
+                if (parentProject != null) ...[
+                  _buildParentProjectCard(context, parentProject),
+                ],
+
                 // Overview Card
                 _buildOverviewCard(context, dateStr),
                 const SizedBox(height: 16),
@@ -179,6 +195,96 @@ class _InquiryDetailsScreenState extends State<InquiryDetailsScreen> {
                 ),
               )
             : null,
+      ),
+    );
+  }
+
+  Widget _buildParentProjectCard(BuildContext context, Project project) {
+    final auth = Provider.of<AuthProvider>(context, listen: false);
+    final provider = Provider.of<InquiryProvider>(context, listen: false);
+
+    return Container(
+      width: double.infinity,
+      margin: const EdgeInsets.only(bottom: 16),
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: AppColors.white,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: AppColors.royalBlue.withValues(alpha: 0.3)),
+        boxShadow: [
+          BoxShadow(
+            color: AppColors.royalBlue.withValues(alpha: 0.04),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Row(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(10),
+            decoration: BoxDecoration(
+              color: AppColors.royalBlue.withValues(alpha: 0.08),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: const Icon(Icons.business_rounded, color: AppColors.royalBlue, size: 20),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'پروژه مربوطه (پروژه والد)',
+                  style: TextStyle(
+                    fontSize: 10,
+                    fontWeight: FontWeight.bold,
+                    color: AppColors.textMuted,
+                    fontFamily: 'Vazirmatn',
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  project.title,
+                  style: const TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.bold,
+                    color: AppColors.textDark,
+                    fontFamily: 'Vazirmatn',
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(width: 8),
+          ElevatedButton(
+            onPressed: () {
+              provider.setSelectedExpandedProjectId(project.id);
+              auth.setEmployerTabIndex(1);
+              Navigator.pop(context);
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.royalBlue,
+              foregroundColor: Colors.white,
+              elevation: 0,
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+            ),
+            child: const Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  'مشاهده پروژه',
+                  style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, fontFamily: 'Vazirmatn'),
+                ),
+                SizedBox(width: 4),
+                Icon(Icons.arrow_back, size: 14),
+              ],
+            ),
+          ),
+        ],
       ),
     );
   }

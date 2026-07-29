@@ -33,6 +33,9 @@ class InquiryProvider with ChangeNotifier {
   // Selected files state
   final List<BlueprintFile> _selectedFiles = [];
 
+  // Selected expanded project ID for navigation from dashboard
+  String? _selectedExpandedProjectId;
+
   // Getters
   bool get isLoading => _isLoading;
   String? get errorMessage => _errorMessage;
@@ -46,6 +49,17 @@ class InquiryProvider with ChangeNotifier {
   List<BlueprintFile> get selectedFiles => _selectedFiles;
   String? get selectedFileName => _selectedFiles.isNotEmpty ? _selectedFiles.first.name : null;
   List<int>? get selectedFileBytes => _selectedFiles.isNotEmpty ? _selectedFiles.first.bytes : null;
+  String? get selectedExpandedProjectId => _selectedExpandedProjectId;
+
+  void setSelectedExpandedProjectId(String? id) {
+    _selectedExpandedProjectId = id;
+    notifyListeners();
+  }
+
+  void clearSelectedExpandedProjectId() {
+    _selectedExpandedProjectId = null;
+    notifyListeners();
+  }
 
   void setHasBlueprint(bool value) {
     _hasBlueprint = value;
@@ -425,7 +439,8 @@ class InquiryProvider with ChangeNotifier {
       if (_hasBlueprint && _selectedFiles.isNotEmpty) {
         final lastInquiry = await _processBlueprintFiles(token, inquiry);
         
-        await loadMyInquiries(token);
+        await loadMyInquiries(token, silent: true);
+        await loadMyProjects(token, silent: true);
         _isLoading = false;
         clearSelectedFiles();
         clearManualItems();
@@ -433,7 +448,8 @@ class InquiryProvider with ChangeNotifier {
         return lastInquiry;
       }
 
-      await loadMyInquiries(token);
+      await loadMyInquiries(token, silent: true);
+      await loadMyProjects(token, silent: true);
       _isLoading = false;
       clearManualItems();
       notifyListeners();
@@ -482,7 +498,8 @@ class InquiryProvider with ChangeNotifier {
       if (_hasBlueprint && _selectedFiles.isNotEmpty) {
         final lastInquiry = await _processBlueprintFiles(token, inquiry);
         
-        await loadMyInquiries(token);
+        await loadMyInquiries(token, silent: true);
+        await loadMyProjects(token, silent: true);
         _isLoading = false;
         clearSelectedFiles();
         clearManualItems();
@@ -490,7 +507,8 @@ class InquiryProvider with ChangeNotifier {
         return lastInquiry;
       }
 
-      await loadMyInquiries(token);
+      await loadMyInquiries(token, silent: true);
+      await loadMyProjects(token, silent: true);
       _isLoading = false;
       clearManualItems();
       notifyListeners();
@@ -549,7 +567,8 @@ class InquiryProvider with ChangeNotifier {
 
     try {
       await _apiService.confirmInquiry(token, inquiryId, items);
-      await loadMyInquiries(token);
+      await loadMyInquiries(token, silent: true);
+      await loadMyProjects(token, silent: true);
       _isLoading = false;
       notifyListeners();
       return true;

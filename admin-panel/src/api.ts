@@ -307,4 +307,20 @@ export class ApiClient {
     if (!res.ok) throw new Error('خطا در حذف کامل کاربر.');
     return await res.json();
   }
+
+  public static async getTips(): Promise<any> {
+    const res = await this.request(`${BASE_URL}/tips`);
+    if (!res.ok) throw new Error('خطا در دریافت تنظیمات راهنماها.');
+    return await res.json();
+  }
+
+  public static async updateTips(tips: any): Promise<any> {
+    const res = await this.request(`${BASE_URL}/admin/tips`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(tips),
+    });
+    if (!res.ok) throw new Error('خطا در ثبت تنظیمات راهنماها.');
+    return await res.json();
+  }
 }

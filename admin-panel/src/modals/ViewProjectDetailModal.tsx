@@ -1,8 +1,9 @@
 import { useState } from 'react';
 import { Modal, Row, Col, Card, Table, Tag, Button, Space, Typography, Input, Alert, Popconfirm, Badge } from 'antd';
-import { FilePdfOutlined, PictureOutlined, DeleteOutlined, StopOutlined, EyeOutlined, EyeInvisibleOutlined, DownloadOutlined } from '@ant-design/icons';
+import { FilePdfOutlined, PictureOutlined, DeleteOutlined, StopOutlined, EyeOutlined, EyeInvisibleOutlined, DownloadOutlined, BuildOutlined } from '@ant-design/icons';
 import { BASE_URL } from '../api';
 import { Inquiry } from '../types';
+import ViewParentProjectModal from './ViewParentProjectModal';
 
 const { Title, Text, Paragraph } = Typography;
 
@@ -24,6 +25,7 @@ export default function ViewProjectDetailModal({
   const [showRejectionForm, setShowRejectionForm] = useState(false);
   const [rejectionReason, setRejectionReason] = useState('');
   const [isActionLoading, setIsActionLoading] = useState(false);
+  const [showParentProjectModal, setShowParentProjectModal] = useState(false);
 
   const handleReject = async () => {
     if (!rejectionReason.trim()) return;
@@ -101,9 +103,20 @@ export default function ViewProjectDetailModal({
             showIcon
             message={
               <Space direction="vertical" style={{ width: '100%' }}>
-                <Text strong style={{ fontSize: '14px', color: '#1E3A8A' }}>
-                  پروژه والد: {inquiry.project.title}
-                </Text>
+                <Row justify="space-between" align="middle" style={{ width: '100%' }}>
+                  <Text strong style={{ fontSize: '14px', color: '#1E3A8A' }}>
+                    پروژه والد: {inquiry.project.title}
+                  </Text>
+                  <Button
+                    size="small"
+                    type="primary"
+                    icon={<BuildOutlined />}
+                    onClick={() => setShowParentProjectModal(true)}
+                    style={{ borderRadius: '6px', fontWeight: 'bold' }}
+                  >
+                    مشاهده تمام اطلاعات پروژه والد
+                  </Button>
+                </Row>
                 {inquiry.project.description && (
                   <Text style={{ fontSize: '12px', color: '#334155' }}>
                     توضیحات کلی پروژه: {inquiry.project.description}
@@ -427,6 +440,17 @@ export default function ViewProjectDetailModal({
           </Row>
         )}
       </Space>
+      {showParentProjectModal && inquiry.project && (
+        <ViewParentProjectModal
+          project={{
+            ...inquiry.project,
+            employerId: inquiry.employerId || inquiry.employer_id,
+            employer_name: inquiry.employer_name,
+          }}
+          allInquiries={[inquiry]}
+          onClose={() => setShowParentProjectModal(false)}
+        />
+      )}
     </Modal>
   );
 }

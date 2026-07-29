@@ -25,6 +25,20 @@ export class ItemsController {
     return this.itemsService.findAll();
   }
 
+  @Get('tips')
+  @ApiOperation({ summary: 'دریافت تنظیمات تیپ‌ها و راهنماهای فعال سامانه' })
+  async getTips(): Promise<any> {
+    return this.itemsService.getPublicTips();
+  }
+
+  @Put('admin/tips')
+  @ApiBearerAuth('access-token')
+  @UseGuards(AdminGuard)
+  @ApiOperation({ summary: 'به‌روزرسانی و فعال/غیرفعالسازی تیپ‌های راهنما' })
+  async updateTips(@Body() body: any): Promise<any> {
+    return this.itemsService.updateTips(body);
+  }
+
   @Get('admin/items')
   @ApiBearerAuth('access-token')
   @UseGuards(AdminGuard)

@@ -20,6 +20,7 @@ import { Skill } from './entities/skill.entity';
 import { Offer } from './entities/offer.entity';
 import { SupplyItem } from './entities/item.entity';
 import { Project } from './entities/project.entity';
+import { AppSetting } from './entities/app-setting.entity';
 
 /**
  * Root application module that bootstraps:
@@ -47,7 +48,7 @@ import { Project } from './entities/project.entity';
         username: configService.get<string>('DB_USERNAME', 'postgres'),
         password: configService.get<string>('DB_PASSWORD', 'postgres'),
         database: configService.get<string>('DB_NAME', 'joftojoor_db'),
-        entities: [User, EmployerProfile, WelderProfile, Inquiry, Skill, Offer, SupplyItem, Project],
+        entities: [User, EmployerProfile, WelderProfile, Inquiry, Skill, Offer, SupplyItem, Project, AppSetting],
         synchronize: true, // Auto-create tables in dev — disable in production!
         logging: ['error', 'warn'],
       }),

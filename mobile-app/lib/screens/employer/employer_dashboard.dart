@@ -5,7 +5,9 @@ import '../../providers/auth_provider.dart';
 import '../../providers/inquiry_provider.dart';
 import '../../utils/formatters.dart';
 import '../../services/api_service.dart';
+import '../../models/project.dart';
 import 'inquiry_details_screen.dart';
+import 'create_project_screen.dart';
 
 class EmployerDashboard extends StatefulWidget {
   const EmployerDashboard({super.key});
@@ -15,9 +17,14 @@ class EmployerDashboard extends StatefulWidget {
 }
 
 class _EmployerDashboardState extends State<EmployerDashboard> {
+  bool _tipEnabled = true;
+  String _tipTitle = 'راهنمای برآورد دقیق جوشکاری';
+  String _tipText = 'با بارگذاری نقشه‌های باکیفیت و تعیین طول دقیق شاسی، مقادیر مصرفی الکترود و آهن‌آلات را دقیق‌تر دریافت کنید.';
+
   @override
   void initState() {
     super.initState();
+    _loadTips();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
       final auth = Provider.of<AuthProvider>(context, listen: false);
@@ -28,6 +35,21 @@ class _EmployerDashboardState extends State<EmployerDashboard> {
       inqProvider.loadMyProjects(auth.token);
       inqProvider.loadMyInquiries(auth.token);
     });
+  }
+
+  void _loadTips() async {
+    final data = await ApiService().fetchAppTips();
+    if (data != null && mounted) {
+      setState(() {
+        _tipEnabled = data['employer_enabled'] ?? true;
+        if (data['employer_title'] != null && (data['employer_title'] as String).isNotEmpty) {
+          _tipTitle = data['employer_title'];
+        }
+        if (data['employer_text'] != null && (data['employer_text'] as String).isNotEmpty) {
+          _tipText = data['employer_text'];
+        }
+      });
+    }
   }
 
   @override
@@ -101,11 +123,19 @@ class _EmployerDashboardState extends State<EmployerDashboard> {
             const SizedBox(height: 28),
 
             // Tips / Info Banner
-            _buildTipsCard(),
+            if (_tipEnabled) ...[
+              _buildTipsCard(),
+              const SizedBox(height: 28),
+            ],
+
+            // Projects Horizontal Slider Section
+            _buildSectionHeader('پروژه‌های من (${provider.myProjects.length})'),
+            const SizedBox(height: 14),
+            _buildProjectsHorizontalSlider(provider.myProjects, provider, auth),
             const SizedBox(height: 28),
 
-            // Recent activity list
-            _buildSectionHeader('آخرین فعالیت‌ها'),
+            // Recent Inquiries List Section
+            _buildSectionHeader('استعلام‌های اخیر'),
             const SizedBox(height: 14),
             if (provider.isLoading)
               const Center(
@@ -117,7 +147,7 @@ class _EmployerDashboardState extends State<EmployerDashboard> {
             else if (myInquiries.isEmpty)
               _buildEmptyState()
             else
-              _buildRecentList(myInquiries),
+              _buildRecentList(myInquiries, provider),
           ],
         ),
       ),
@@ -437,25 +467,27 @@ class _EmployerDashboardState extends State<EmployerDashboard> {
             ),
           ),
           const SizedBox(width: 14),
-          const Expanded(
+          Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'راهنمای برآورد دقیق جوشکاری',
-                  style: TextStyle(
+                  _tipTitle,
+                  style: const TextStyle(
                     fontSize: 13,
                     fontWeight: FontWeight.bold,
                     color: AppColors.textDark,
+                    fontFamily: 'Vazirmatn',
                   ),
                 ),
-                SizedBox(height: 4),
+                const SizedBox(height: 4),
                 Text(
-                  'با بارگذاری نقشه‌های باکیفیت و تعیین طول دقیق شاسی، مقادیر مصرفی الکترود و آهن‌آلات را دقیق‌تر دریافت کنید.',
-                  style: TextStyle(
+                  _tipText,
+                  style: const TextStyle(
                     fontSize: 11,
                     color: AppColors.textMuted,
                     height: 1.5,
+                    fontFamily: 'Vazirmatn',
                   ),
                 ),
               ],
@@ -512,12 +544,173 @@ class _EmployerDashboardState extends State<EmployerDashboard> {
     );
   }
 
-  Widget _buildRecentList(List<dynamic> list) {
+  Widget _buildProjectsHorizontalSlider(List<Project> projects, InquiryProvider provider, AuthProvider auth) {
+    if (projects.isEmpty) {
+      return Container(
+        width: double.infinity,
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: AppColors.white,
+          borderRadius: BorderRadius.circular(18),
+          border: Border.all(color: AppColors.borderGrey),
+        ),
+        child: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(10),
+              decoration: BoxDecoration(
+                color: AppColors.royalBlue.withValues(alpha: 0.08),
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(Icons.domain_add_rounded, color: AppColors.royalBlue, size: 20),
+            ),
+            const SizedBox(width: 12),
+            const Expanded(
+              child: Text(
+                'هنوز هیچ پروژه‌ای ثبت نکرده‌اید.',
+                style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: AppColors.textDark, fontFamily: 'Vazirmatn'),
+              ),
+            ),
+            ElevatedButton(
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (context) => const CreateProjectScreen()),
+                );
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.royalBlue,
+                foregroundColor: Colors.white,
+                elevation: 0,
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+              ),
+              child: const Text('پروژه جدید', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, fontFamily: 'Vazirmatn')),
+            ),
+          ],
+        ),
+      );
+    }
+
+    return SizedBox(
+      height: 94,
+      child: ListView.builder(
+        scrollDirection: Axis.horizontal,
+        physics: const BouncingScrollPhysics(),
+        itemCount: projects.length,
+        itemBuilder: (context, index) {
+          final project = projects[index];
+          final inqCount = project.inquiries.length;
+          final locationText = project.province != null && project.province!.isNotEmpty
+              ? '${project.province}، ${project.city}'
+              : project.city;
+
+          return Container(
+            width: 220,
+            margin: const EdgeInsets.only(left: 12),
+            child: Card(
+              elevation: 0,
+              margin: EdgeInsets.zero,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(16),
+                side: const BorderSide(color: AppColors.borderGrey),
+              ),
+              color: AppColors.white,
+              child: InkWell(
+                borderRadius: BorderRadius.circular(16),
+                onTap: () {
+                  provider.setSelectedExpandedProjectId(project.id);
+                  auth.setEmployerTabIndex(1);
+                },
+                child: Padding(
+                  padding: const EdgeInsets.all(12.0),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Row(
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.all(6),
+                            decoration: BoxDecoration(
+                              color: AppColors.royalBlue.withValues(alpha: 0.1),
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: const Icon(Icons.business_rounded, color: AppColors.royalBlue, size: 16),
+                          ),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Text(
+                              project.title,
+                              style: const TextStyle(
+                                fontSize: 12,
+                                fontWeight: FontWeight.bold,
+                                color: AppColors.textDark,
+                                fontFamily: 'Vazirmatn',
+                              ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                        ],
+                      ),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Row(
+                            children: [
+                              const Icon(Icons.location_on_outlined, size: 12, color: AppColors.textMuted),
+                              const SizedBox(width: 2),
+                              Text(
+                                locationText,
+                                style: const TextStyle(fontSize: 10, color: AppColors.textMuted, fontFamily: 'Vazirmatn'),
+                              ),
+                            ],
+                          ),
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                            decoration: BoxDecoration(
+                              color: AppColors.amberOrange.withValues(alpha: 0.1),
+                              borderRadius: BorderRadius.circular(6),
+                            ),
+                            child: Text(
+                              '$inqCount استعلام',
+                              style: const TextStyle(
+                                fontSize: 9,
+                                fontWeight: FontWeight.bold,
+                                color: AppColors.amberOrange,
+                                fontFamily: 'Vazirmatn',
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          );
+        },
+      ),
+    );
+  }
+
+  Widget _buildRecentList(List<dynamic> list, InquiryProvider provider) {
     final itemsToShow = list.take(3).toList();
 
     return Column(
       children: itemsToShow.map((inquiry) {
         final dateStr = Formatters.toPersianDate(inquiry.createdAt);
+
+        String? projectTitle;
+        if (inquiry.projectId != null && inquiry.projectId!.isNotEmpty) {
+          final match = provider.myProjects.cast<Project?>().firstWhere(
+            (p) => p?.id == inquiry.projectId,
+            orElse: () => null,
+          );
+          if (match != null) projectTitle = match.title;
+        }
 
         return Card(
           elevation: 0,
@@ -541,86 +734,112 @@ class _EmployerDashboardState extends State<EmployerDashboard> {
               },
               child: Padding(
                 padding: const EdgeInsets.all(16.0),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Expanded(
-                      child: Row(
-                        children: [
-                          Container(
-                            padding: const EdgeInsets.all(8),
-                            decoration: BoxDecoration(
-                              color: AppColors.royalBlue.withValues(alpha: 0.08),
-                              borderRadius: BorderRadius.circular(10),
-                            ),
-                            child: const Icon(Icons.description_outlined, color: AppColors.royalBlue, size: 18),
-                          ),
-                          const SizedBox(width: 12),
-                          Expanded(
-                            child: Text(
-                              inquiry.title,
-                              style: const TextStyle(
-                                fontSize: 13,
-                                fontWeight: FontWeight.bold,
-                                color: AppColors.textDark,
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Expanded(
+                          child: Row(
+                            children: [
+                              Container(
+                                padding: const EdgeInsets.all(8),
+                                decoration: BoxDecoration(
+                                  color: AppColors.royalBlue.withValues(alpha: 0.08),
+                                  borderRadius: BorderRadius.circular(10),
+                                ),
+                                child: const Icon(Icons.description_outlined, color: AppColors.royalBlue, size: 18),
                               ),
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: Text(
+                                  inquiry.title,
+                                  style: const TextStyle(
+                                    fontSize: 13,
+                                    fontWeight: FontWeight.bold,
+                                    color: AppColors.textDark,
+                                  ),
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        _buildStatusBadge(inquiry.status),
+                      ],
+                    ),
+                    if (projectTitle != null && projectTitle.isNotEmpty) ...[
+                      const SizedBox(height: 8),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                        decoration: BoxDecoration(
+                          color: AppColors.royalBlue.withValues(alpha: 0.08),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            const Icon(Icons.business_outlined, size: 12, color: AppColors.royalBlue),
+                            const SizedBox(width: 4),
+                            Text(
+                              'مربوط به پروژه: $projectTitle',
+                              style: const TextStyle(
+                                fontSize: 10,
+                                fontWeight: FontWeight.bold,
+                                color: AppColors.royalBlue,
+                                fontFamily: 'Vazirmatn',
+                              ),
                             ),
+                          ],
+                        ),
+                      ),
+                    ],
+                    const SizedBox(height: 12),
+                    Row(
+                      children: [
+                        const Icon(Icons.location_on_outlined, size: 14, color: AppColors.textMuted),
+                        const SizedBox(width: 4),
+                        Text(
+                          inquiry.province != null && inquiry.province!.isNotEmpty
+                              ? '${inquiry.province}، ${inquiry.city}'
+                              : inquiry.city,
+                          style: const TextStyle(color: AppColors.textMuted, fontSize: 11, fontFamily: 'Vazirmatn'),
+                        ),
+                        const SizedBox(width: 16),
+                        const Icon(Icons.calendar_today_outlined, size: 12, color: AppColors.textMuted),
+                        const SizedBox(width: 4),
+                        Text(
+                          dateStr,
+                          style: const TextStyle(color: AppColors.textMuted, fontSize: 11, fontFamily: 'Vazirmatn'),
+                        ),
+                        const SizedBox(width: 16),
+                        const Icon(Icons.layers_outlined, size: 14, color: AppColors.textMuted),
+                        const SizedBox(width: 4),
+                        Text(
+                          '${inquiry.items.length} ردیف نقشه',
+                          style: const TextStyle(color: AppColors.textMuted, fontSize: 11, fontFamily: 'Vazirmatn'),
+                        ),
+                        if (inquiry.status == 'BROADCASTED') ...[
+                          const Spacer(),
+                          const Icon(Icons.people_outline, size: 14, color: Colors.green),
+                          const SizedBox(width: 4),
+                          Text(
+                            '${inquiry.offers?.length ?? 0} پیشنهاد',
+                            style: const TextStyle(color: Colors.green, fontSize: 11, fontWeight: FontWeight.bold, fontFamily: 'Vazirmatn'),
                           ),
                         ],
-                      ),
+                      ],
                     ),
-                    const SizedBox(width: 8),
-                    _buildStatusBadge(inquiry.status),
                   ],
                 ),
-                const SizedBox(height: 12),
-                Row(
-                  children: [
-                    const Icon(Icons.location_on_outlined, size: 14, color: AppColors.textMuted),
-                    const SizedBox(width: 4),
-                    Text(
-                      inquiry.province != null && inquiry.province!.isNotEmpty
-                          ? '${inquiry.province}، ${inquiry.city}'
-                          : inquiry.city,
-                      style: const TextStyle(color: AppColors.textMuted, fontSize: 11, fontFamily: 'Vazirmatn'),
-                    ),
-                    const SizedBox(width: 16),
-                    const Icon(Icons.calendar_today_outlined, size: 12, color: AppColors.textMuted),
-                    const SizedBox(width: 4),
-                    Text(
-                      dateStr,
-                      style: const TextStyle(color: AppColors.textMuted, fontSize: 11, fontFamily: 'Vazirmatn'),
-                    ),
-                    const SizedBox(width: 16),
-                    const Icon(Icons.layers_outlined, size: 14, color: AppColors.textMuted),
-                    const SizedBox(width: 4),
-                    Text(
-                      '${inquiry.items.length} ردیف نقشه',
-                      style: const TextStyle(color: AppColors.textMuted, fontSize: 11, fontFamily: 'Vazirmatn'),
-                    ),
-                    if (inquiry.status == 'BROADCASTED') ...[
-                      const Spacer(),
-                      const Icon(Icons.people_outline, size: 14, color: Colors.green),
-                      const SizedBox(width: 4),
-                    Text(
-                      '${inquiry.offers?.length ?? 0} پیشنهاد',
-                      style: const TextStyle(color: Colors.green, fontSize: 11, fontWeight: FontWeight.bold, fontFamily: 'Vazirmatn'),
-                    ),
-                    ],
-                  ],
-                ),
-              ],
+              ),
             ),
           ),
-        ),
-      ),
-    );
-  }).toList(),
+        );
+      }).toList(),
     );
   }
 

@@ -432,9 +432,11 @@ export class ProfileService implements OnModuleInit {
   async getPendingVerifications(): Promise<any[]> {
     const welders = await this.welderProfileRepository.find({
       where: { profile_picture_status: 'PENDING' },
+      relations: ['user'],
     });
     const employers = await this.employerProfileRepository.find({
       where: { profile_picture_status: 'PENDING' },
+      relations: ['user'],
     });
 
     const pendingWelders = welders.map((w) => {
@@ -447,7 +449,8 @@ export class ProfileService implements OnModuleInit {
         role: 'WELDER',
         pending_url: w.pending_profile_picture_url,
         bio: w.bio || 'توضیحات ندارد.',
-        phone: 'ثبت شده در سیستم',
+        phone: w.user?.phone_number || 'ثبت شده در سیستم',
+        created_at: w.user?.created_at || new Date(),
       };
     });
 
@@ -461,7 +464,8 @@ export class ProfileService implements OnModuleInit {
         role: 'EMPLOYER',
         pending_url: e.pending_profile_picture_url,
         bio: 'ثبت شده به عنوان کارفرما در پلتفرم جفت‌وجور.',
-        phone: 'ثبت شده در سیستم',
+        phone: e.user?.phone_number || 'ثبت شده در سیستم',
+        created_at: e.user?.created_at || new Date(),
       };
     });
 

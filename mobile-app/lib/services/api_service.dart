@@ -24,6 +24,17 @@ class ApiService {
     }
   }
 
+  /// Fetch live tips & guidance settings configured by admin
+  Future<Map<String, dynamic>?> fetchAppTips() async {
+    try {
+      final response = await http.get(Uri.parse('$baseUrl/tips'));
+      if (response.statusCode == 200) {
+        return jsonDecode(response.body) as Map<String, dynamic>;
+      }
+    } catch (_) {}
+    return null;
+  }
+
   /// Request an OTP for a given phone number.
   /// Returns a map containing the message and optionally the otpCode if in debug mode.
   Future<Map<String, dynamic>> sendOtp(String phoneNumber) async {

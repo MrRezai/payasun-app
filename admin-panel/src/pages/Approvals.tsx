@@ -41,6 +41,16 @@ export default function Approvals({
       render: (phone: string) => <Text dir="ltr">{phone}</Text>,
     },
     {
+      title: 'تاریخ ارسال / درخواست',
+      key: 'created_at',
+      render: (_: any, user: any) => {
+        const dateStr = user.created_at || user.updated_at
+          ? new Date(user.created_at || user.updated_at).toLocaleDateString('fa-IR')
+          : 'نامشخص';
+        return <Text type="secondary">{dateStr}</Text>;
+      },
+    },
+    {
       title: 'تصویر ارسالی',
       key: 'pending_url',
       render: (_: any, user: any) => (

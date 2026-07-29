@@ -290,11 +290,25 @@ function AppContent() {
     }
   };
 
+  const reloadSupplyItems = async () => {
+    try {
+      const itemsData = await ApiClient.getSupplyItems().catch(() => []);
+      setSupplyItems(itemsData);
+    } catch (_) {}
+  };
+
+  const reloadSkills = async () => {
+    try {
+      const skillsData = await ApiClient.getSkills().catch(() => []);
+      setSkills(skillsData);
+    } catch (_) {}
+  };
+
   const handleAddSkill = async (name: string) => {
     try {
       await ApiClient.createSkill(name);
       showToast('تخصص جدید با موفقیت به سیستم اضافه شد.', 'success');
-      loadAllData();
+      await reloadSkills();
     } catch (e: any) {
       if (e.message === 'UNAUTHORIZED') {
         setIsAuthenticated(false);
@@ -309,7 +323,7 @@ function AppContent() {
     try {
       await ApiClient.updateSkill(id, name);
       showToast('نام تخصص با موفقیت ویرایش شد.', 'success');
-      loadAllData();
+      await reloadSkills();
     } catch (e: any) {
       if (e.message === 'UNAUTHORIZED') {
         setIsAuthenticated(false);
@@ -325,7 +339,7 @@ function AppContent() {
     try {
       await ApiClient.deleteSkill(id);
       showToast('تخصص مربوطه از سیستم حذف گردید.', 'warning');
-      loadAllData();
+      await reloadSkills();
     } catch (e: any) {
       if (e.message === 'UNAUTHORIZED') {
         setIsAuthenticated(false);
@@ -340,7 +354,7 @@ function AppContent() {
     try {
       await ApiClient.createSupplyItem(title, unit);
       showToast('قلم جدید با موفقیت به سیستم اضافه شد.', 'success');
-      loadAllData();
+      await reloadSupplyItems();
     } catch (e: any) {
       if (e.message === 'UNAUTHORIZED') {
         setIsAuthenticated(false);
@@ -355,7 +369,7 @@ function AppContent() {
     try {
       await ApiClient.updateSupplyItem(id, title, unit);
       showToast('مشخصات قلم با موفقیت ویرایش شد.', 'success');
-      loadAllData();
+      await reloadSupplyItems();
     } catch (e: any) {
       if (e.message === 'UNAUTHORIZED') {
         setIsAuthenticated(false);
@@ -371,7 +385,7 @@ function AppContent() {
     try {
       await ApiClient.deleteSupplyItem(id);
       showToast('قلم مربوطه از سیستم حذف گردید.', 'warning');
-      loadAllData();
+      await reloadSupplyItems();
     } catch (e: any) {
       if (e.message === 'UNAUTHORIZED') {
         setIsAuthenticated(false);

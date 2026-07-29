@@ -508,6 +508,12 @@ body {
   margin-bottom: 8px;
 }
 
+/* Required field asterisk styled with app's 3rd color (Night Bordeaux) */
+.ant-form-item-required::before,
+.required-star {
+  color: var(--tertiary) !important;
+}
+
 .input-control {
   width: 100%;
   padding: 10px 14px;

@@ -686,10 +686,25 @@ class _CreateProjectScreenState extends State<CreateProjectScreen> {
     required VoidCallback onTap,
     required IconData icon,
   }) {
+    final bool hasStar = title.contains('*');
+    final String cleanTitle = title.replaceAll('*', '').trim();
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(title, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: AppColors.textDark, fontFamily: 'Vazirmatn')),
+        RichText(
+          text: TextSpan(
+            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: AppColors.textDark, fontFamily: 'Vazirmatn'),
+            children: [
+              TextSpan(text: cleanTitle),
+              if (hasStar)
+                const TextSpan(
+                  text: ' *',
+                  style: TextStyle(color: AppColors.burgundy, fontWeight: FontWeight.bold, fontFamily: 'Vazirmatn'),
+                ),
+            ],
+          ),
+        ),
         const SizedBox(height: 6),
         InkWell(
           onTap: onTap,
@@ -847,7 +862,18 @@ class _CreateProjectScreenState extends State<CreateProjectScreen> {
                 // Section 1: Main Info
                 _buildSectionTitle('اطلاعات اصلی پروژه', icon: Icons.business_center_outlined),
                 
-                const Text('عنوان پروژه *', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: AppColors.textDark, fontFamily: 'Vazirmatn')),
+                RichText(
+                  text: const TextSpan(
+                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: AppColors.textDark, fontFamily: 'Vazirmatn'),
+                    children: [
+                      TextSpan(text: 'عنوان پروژه'),
+                      TextSpan(
+                        text: ' *',
+                        style: TextStyle(color: AppColors.burgundy, fontWeight: FontWeight.bold, fontFamily: 'Vazirmatn'),
+                      ),
+                    ],
+                  ),
+                ),
                 const SizedBox(height: 6),
                 TextFormField(
                   controller: _titleController,
@@ -929,6 +955,19 @@ class _CreateProjectScreenState extends State<CreateProjectScreen> {
                   controller: _addressController,
                   decoration: _inputDecoration('خیابان، کوچه، پلاک...', prefixIcon: Icons.place_outlined),
                   style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: AppColors.textDark, fontFamily: 'Vazirmatn'),
+                ),
+                const SizedBox(height: 4),
+                const Row(
+                  children: [
+                    Icon(Icons.lock_outline, size: 12, color: AppColors.textMuted),
+                    SizedBox(width: 4),
+                    Expanded(
+                      child: Text(
+                        'نشانی که شما وارد می‌کنید در اختیار هیچ فردی قرار داده نمی‌شود.',
+                        style: TextStyle(fontSize: 11, color: AppColors.textMuted, fontFamily: 'Vazirmatn'),
+                      ),
+                    ),
+                  ],
                 ),
                 const SizedBox(height: 18),
 
