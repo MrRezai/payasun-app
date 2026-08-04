@@ -4,31 +4,28 @@ import { ConfigService } from '@nestjs/config';
 import { firstValueFrom } from 'rxjs';
 
 /**
- * Interface representing the response format from MeliPayamak BaseServiceNumber API.
+ * Response structure from MeliPayamak Console API (both shared pattern and simple send).
  */
-export interface MeliPayamakPatternResponse {
-  Value: string;        // Delivery reference ID (15+ digits) or status code (e.g., "0", "11")
-  RetStatus: number;    // 1 = Success, 0 = Error
-  StrRetStatus: string; // Description from MeliPayamak
+export interface MeliPayamakConsoleResponse {
+  recId?: number | string;
+  status?: string;
 }
 
 /**
- * Service responsible for sending SMS messages through the MeliPayamak
- * REST API using the shared pattern (الگوی اشتراکی / BaseServiceNumber) endpoint.
+ * Service responsible for sending SMS messages through the modern MeliPayamak Console API.
+ *
+ * Endpoints:
+ *  - Pattern SMS: POST https://console.melipayamak.com/api/send/shared/{API_KEY}
+ *  - Simple SMS:  POST https://console.melipayamak.com/api/send/simple/{API_KEY}
  *
  * Supports an offline/debug mode controlled by the SMS_ENABLED environment
- * variable. When SMS_ENABLED=false, OTP codes are logged to the server
- * console instead of hitting the MeliPayamak API — essential for frontend
- * development without burning SMS wallet credit.
- *
- * API Docs: https://www.melipayamak.com
- * Endpoint: POST https://rest.payamak-panel.com/api/SendSMS/BaseServiceNumber
+ * variable. When SMS_ENABLED=false, SMS messages are logged to the server console.
  */
 @Injectable()
 export class SmsService {
   private readonly logger = new Logger(SmsService.name);
-  private readonly BASE_URL =
-    'https://rest.payamak-panel.com/api/SendSMS/BaseServiceNumber';
+  private readonly CONSOLE_SHARED_URL = 'https://console.melipayamak.com/api/send/shared';
+  private readonly CONSOLE_SIMPLE_URL = 'https://console.melipayamak.com/api/send/simple';
 
   constructor(
     private readonly httpService: HttpService,
@@ -74,11 +71,14 @@ export class SmsService {
   }
 
   /**
-   * Sends a pattern-based SMS (الگوی اشتراکی) via MeliPayamak REST API.
+   * Sends a pattern-based SMS (الگوی اشتراکی) via MeliPayamak Console API.
+   *
+   * POST https://console.melipayamak.com/api/send/shared/{API_KEY}
+   * Body: { bodyId: number, to: string, args: string[] }
    *
    * @param to - Target phone number (will be normalized)
    * @param textArgs - Single string or array of arguments matching pattern placeholders ({0}, {1}, ...)
-   * @param bodyIdOverride - Optional custom bodyId/pattern ID to override env MELIPAYAMAK_BODY_ID
+   * @param bodyIdOverride - Optional custom bodyId/pattern ID to override env MELIPAYAMAK_OTP_BODY_ID/MELIPAYAMAK_BODY_ID
    */
   async sendPatternSms(
     to: string,
@@ -92,90 +92,80 @@ export class SmsService {
       throw new BadRequestException('شماره تلفن همراه وارد شده معتبر نیست.');
     }
 
-    const textPayload = Array.isArray(textArgs) ? textArgs.join(';') : textArgs;
+    const argsArray = Array.isArray(textArgs)
+      ? textArgs.map((arg) => String(arg))
+      : [String(textArgs)];
 
     // ── Debug Mode: skip API call, log to console ──────────────────
     if (!this.isSmsEnabled) {
       this.logger.warn(`━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`);
-      this.logger.warn(`🔧 [DEBUG MODE] SMS disabled (SMS_ENABLED=false)`);
-      this.logger.warn(`📱 Phone: ${phoneNumber} | 💬 Text/Pattern Args: ${textPayload}`);
+      this.logger.warn(`🔧 [DEBUG MODE] Shared Pattern SMS disabled (SMS_ENABLED=false)`);
+      this.logger.warn(`📱 Phone: ${phoneNumber} | 💬 Pattern Args: ${JSON.stringify(argsArray)}`);
       this.logger.warn(`━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`);
       return {
         success: true,
-        message: `[DEBUG MODE] SMS simulated to ${phoneNumber}`,
+        message: `[DEBUG MODE] Pattern SMS simulated to ${phoneNumber}`,
       };
     }
 
-    // ── Production Mode: validate credentials & call MeliPayamak ─────
-    const username = this.configService.get<string>('MELIPAYAMAK_USERNAME');
-    const password = this.configService.get<string>('MELIPAYAMAK_PASSWORD');
+    // ── Production Mode: validate credentials & call MeliPayamak Console API ─────
+    const apiKey = this.configService.get<string>('MELIPAYAMAK_API_KEY');
     const defaultBodyId =
       this.configService.get<number>('MELIPAYAMAK_OTP_BODY_ID') ??
       this.configService.get<number>('MELIPAYAMAK_BODY_ID');
     const bodyId = bodyIdOverride ?? defaultBodyId;
 
-    if (!username || !password || !bodyId) {
+    if (!apiKey || !bodyId) {
       this.logger.error(
-        `MeliPayamak credentials missing! Set MELIPAYAMAK_USERNAME, MELIPAYAMAK_PASSWORD, and MELIPAYAMAK_OTP_BODY_ID (or MELIPAYAMAK_BODY_ID).`,
+        `MeliPayamak config missing! MELIPAYAMAK_API_KEY and MELIPAYAMAK_OTP_BODY_ID (or MELIPAYAMAK_BODY_ID) are required.`,
       );
       throw new InternalServerErrorException(
         'پیکربندی سامانه پیامک کامل نیست. لطفاً با پشتیبانی تماس بگیرید.',
       );
     }
 
+    const url = `${this.CONSOLE_SHARED_URL}/${apiKey}`;
     const payload = {
-      username,
-      password,
-      to: phoneNumber,
       bodyId: Number(bodyId),
-      text: textPayload,
+      to: phoneNumber,
+      args: argsArray,
     };
 
     try {
       this.logger.log(
-        `Dispatching pattern SMS to ${phoneNumber} using BodyID ${bodyId}...`,
+        `Dispatching Console Shared Pattern SMS to ${phoneNumber} (BodyID: ${bodyId}, Args: ${JSON.stringify(argsArray)})...`,
       );
 
       const response = await firstValueFrom(
-        this.httpService.post<MeliPayamakPatternResponse>(
-          this.BASE_URL,
-          payload,
-          {
-            headers: { 'Content-Type': 'application/json' },
-            timeout: 10000,
-          },
-        ),
+        this.httpService.post<MeliPayamakConsoleResponse>(url, payload, {
+          headers: { 'Content-Type': 'application/json' },
+          timeout: 10000,
+        }),
       );
 
       const data = response.data;
-      this.logger.log(
-        `MeliPayamak Raw Response: ${JSON.stringify(data)}`,
-      );
+      this.logger.log(`MeliPayamak Shared Response: ${JSON.stringify(data)}`);
 
-      // Check MeliPayamak status response
-      // RetStatus === 1 or Value length > 10 indicates success delivery recId
-      const isSuccess =
-        data &&
-        (data.RetStatus === 1 || (data.Value && data.Value.length >= 10));
+      // Check MeliPayamak Console response: recId present and non-zero/valid
+      const hasRecId = data && data.recId !== undefined && data.recId !== null && Number(data.recId) > 0;
 
-      if (!isSuccess) {
-        const errorDesc = this.mapMeliPayamakError(data?.Value, data?.StrRetStatus);
+      if (!hasRecId) {
         this.logger.error(
-          `MeliPayamak Gateway Error: ${errorDesc} (Value: ${data?.Value}, RetStatus: ${data?.RetStatus})`,
+          `MeliPayamak Shared Gateway Error: ${data?.status || 'No recId returned'}`,
         );
         throw new InternalServerErrorException(
-          `ارسال پیامک نا موفق بود: ${data?.StrRetStatus || 'خطای سامانه پیامک'}`,
+          `ارسال پیامک پترن نا موفق بود: ${data?.status || 'خطای سامانه پیامک'}`,
         );
       }
 
       this.logger.log(
-        `SMS successfully dispatched to ${phoneNumber} | RecID: ${data.Value}`,
+        `Pattern SMS successfully dispatched to ${phoneNumber} | RecID: ${data.recId}`,
       );
 
       return {
         success: true,
-        recId: data.Value,
-        message: data.StrRetStatus || 'پیامک با موفقیت ارسال شد.',
+        recId: String(data.recId),
+        message: data.status || 'پیامک با موفقیت ارسال شد.',
       };
     } catch (error: any) {
       if (error instanceof InternalServerErrorException || error instanceof BadRequestException) {
@@ -183,11 +173,120 @@ export class SmsService {
       }
 
       this.logger.error(
-        `Failed to communicate with MeliPayamak API: ${error?.message || error}`,
+        `Failed to communicate with MeliPayamak Console API: ${error?.message || error}`,
         error?.stack,
       );
       throw new InternalServerErrorException(
         'خطا در برقراری ارتباط با سامانه پیامک. لطفاً مجدداً تلاش کنید.',
+      );
+    }
+  }
+
+  /**
+   * Sends a simple/plain notification SMS via MeliPayamak Console API.
+   *
+   * POST https://console.melipayamak.com/api/send/simple/{API_KEY}
+   * Body: { from: string, to: string, text: string }
+   *
+   * @param to - Target phone number (will be normalized)
+   * @param text - Plain text message content
+   * @param fromNumberOverride - Optional sender line override (defaults to MELIPAYAMAK_FROM_NUMBER)
+   */
+  async sendSimpleSms(
+    to: string,
+    text: string,
+    fromNumberOverride?: string,
+  ): Promise<{ success: boolean; recId?: string; message: string }> {
+    const phoneNumber = this.normalizePhoneNumber(to);
+
+    if (!/^09\d{9}$/.test(phoneNumber)) {
+      this.logger.error(`Invalid mobile number format: "${to}" (normalized: "${phoneNumber}")`);
+      throw new BadRequestException('شماره تلفن همراه وارد شده معتبر نیست.');
+    }
+
+    if (!text || text.trim().length === 0) {
+      throw new BadRequestException('متن پیامک نمی‌تواند خالی باشد.');
+    }
+
+    // ── Debug Mode: skip API call, log to console ──────────────────
+    if (!this.isSmsEnabled) {
+      this.logger.warn(`━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`);
+      this.logger.warn(`🔧 [DEBUG MODE] Simple Notification SMS disabled (SMS_ENABLED=false)`);
+      this.logger.warn(`📱 Phone: ${phoneNumber} | ✉️ Message: ${text}`);
+      this.logger.warn(`━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`);
+      return {
+        success: true,
+        message: `[DEBUG MODE] Simple SMS simulated to ${phoneNumber}`,
+      };
+    }
+
+    // ── Production Mode ──────────────────────────────────────────────
+    const apiKey = this.configService.get<string>('MELIPAYAMAK_API_KEY');
+    const defaultFrom = this.configService.get<string>('MELIPAYAMAK_FROM_NUMBER');
+    const fromNumber = fromNumberOverride || defaultFrom;
+
+    if (!apiKey || !fromNumber) {
+      this.logger.error(
+        `MeliPayamak config missing! Set MELIPAYAMAK_API_KEY and MELIPAYAMAK_FROM_NUMBER in environment.`,
+      );
+      throw new InternalServerErrorException(
+        'پیکربندی خط ارسال پیامک اطلاع‌رسانی کامل نیست.',
+      );
+    }
+
+    const url = `${this.CONSOLE_SIMPLE_URL}/${apiKey}`;
+    const payload = {
+      from: fromNumber,
+      to: phoneNumber,
+      text: text,
+    };
+
+    try {
+      this.logger.log(
+        `Dispatching Console Simple SMS to ${phoneNumber} from line ${fromNumber}...`,
+      );
+
+      const response = await firstValueFrom(
+        this.httpService.post<MeliPayamakConsoleResponse>(url, payload, {
+          headers: { 'Content-Type': 'application/json' },
+          timeout: 10000,
+        }),
+      );
+
+      const data = response.data;
+      this.logger.log(`MeliPayamak Simple SMS Response: ${JSON.stringify(data)}`);
+
+      const hasRecId = data && data.recId !== undefined && data.recId !== null && Number(data.recId) > 0;
+
+      if (!hasRecId) {
+        this.logger.error(
+          `MeliPayamak Simple SMS Error: ${data?.status || 'No recId returned'}`,
+        );
+        throw new InternalServerErrorException(
+          `ارسال پیامک اطلاع‌رسانی نا موفق بود: ${data?.status || 'خطای سامانه پیامک'}`,
+        );
+      }
+
+      this.logger.log(
+        `Simple SMS successfully dispatched to ${phoneNumber} | RecID: ${data.recId}`,
+      );
+
+      return {
+        success: true,
+        recId: String(data.recId),
+        message: data.status || 'پیامک با موفقیت ارسال شد.',
+      };
+    } catch (error: any) {
+      if (error instanceof InternalServerErrorException || error instanceof BadRequestException) {
+        throw error;
+      }
+
+      this.logger.error(
+        `Failed to send Simple SMS via MeliPayamak Console API: ${error?.message || error}`,
+        error?.stack,
+      );
+      throw new InternalServerErrorException(
+        'خطا در ارسال پیامک اطلاع‌رسانی. لطفاً مجدداً تلاش کنید.',
       );
     }
   }
@@ -205,33 +304,10 @@ export class SmsService {
 
     await this.sendPatternSms(
       phoneNumber,
-      code,
+      [code],
       otpBodyId ? Number(otpBodyId) : undefined,
     );
   }
-
-  /**
-   * Maps MeliPayamak numeric error codes to human-readable Iranian Persian descriptions.
-   */
-  private mapMeliPayamakError(value?: string, defaultMsg?: string): string {
-    switch (value) {
-      case '0':
-        return 'نام کاربری یا رمز عبور پنل ملی پیامک اشتباه است.';
-      case '1':
-        return 'اعتبار ریالی/پیامکی پنل کافی نیست.';
-      case '2':
-        return 'محدودیت ارسال روزانه سامانه فعال شده است.';
-      case '6':
-        return 'سامانه ملی پیامک در حال به‌روزرسانی می‌باشد.';
-      case '7':
-        return 'شماره گیرنده نامعتبر است.';
-      case '11':
-        return 'شناسه متن/پترن (Body ID) یافت نشد یا هنوز تایید نشده است.';
-      case '35':
-        return 'شماره گیرنده در لیست سیاه دریافت پیامک تبلیغاتی قرار دارد.';
-      default:
-        return defaultMsg || `خطای کد ${value} از سامانه ملی پیامک`;
-    }
-  }
 }
+
 
