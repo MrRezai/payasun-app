@@ -88,7 +88,7 @@ class _WelderDashboardState extends State<WelderDashboard> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             // Welder Header Profile Card
-            _buildWelderHeaderCard(displayName, homeCity, homeProvince, totalScore, isSetupCompleted, initials, fullPicUrl, auth, skills),
+            _buildWelderHeaderCard(displayName, homeCity, homeProvince, totalScore, isSetupCompleted, initials, fullPicUrl, auth, skills, profile?['tier'] ?? 'A'),
             const SizedBox(height: 25),
 
             // Performance Metrics
@@ -131,7 +131,7 @@ class _WelderDashboardState extends State<WelderDashboard> {
     );
   }
 
-  Widget _buildWelderHeaderCard(String name, String city, String province, double score, bool setupDone, String initials, String? fullPicUrl, AuthProvider auth, List<dynamic> skills) {
+  Widget _buildWelderHeaderCard(String name, String city, String province, double score, bool setupDone, String initials, String? fullPicUrl, AuthProvider auth, List<dynamic> skills, String tier) {
     final locationText = [province, city].where((s) => s.isNotEmpty).join('، ');
 
     return Container(
@@ -276,25 +276,35 @@ class _WelderDashboardState extends State<WelderDashboard> {
                     ],
                   ],
                 ),
-                if (score > 0) ...[
-                  const SizedBox(height: 6),
-                  Row(
-                    children: [
-                      ...List.generate(5, (i) {
-                        return Icon(
-                          i < score.round() ? Icons.star_rounded : Icons.star_border_rounded,
-                          color: AppColors.amberOrange,
-                          size: 14,
-                        );
-                      }),
-                      const SizedBox(width: 4),
-                      Text(
-                        score.toStringAsFixed(1),
-                        style: const TextStyle(color: Colors.white70, fontSize: 10, fontWeight: FontWeight.bold),
+                const SizedBox(height: 6),
+                Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                      decoration: BoxDecoration(
+                        color: AppColors.amberOrange,
+                        borderRadius: BorderRadius.circular(10),
                       ),
-                    ],
-                  ),
-                ],
+                      child: Text(
+                        'گروه $tier',
+                        style: const TextStyle(color: AppColors.royalBlue, fontSize: 10, fontWeight: FontWeight.bold),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    ...List.generate(5, (i) {
+                      return Icon(
+                        i < (score / 4).round() ? Icons.star_rounded : Icons.star_border_rounded,
+                        color: AppColors.amberOrange,
+                        size: 14,
+                      );
+                    }),
+                    const SizedBox(width: 4),
+                    Text(
+                      'امتیاز: ${score.toStringAsFixed(1)}',
+                      style: const TextStyle(color: Colors.white70, fontSize: 10, fontWeight: FontWeight.bold),
+                    ),
+                  ],
+                ),
                 if (skills.isNotEmpty) ...[
                   const SizedBox(height: 8),
                   Wrap(
@@ -501,18 +511,15 @@ class _WelderDashboardState extends State<WelderDashboard> {
             ),
           ],
           if (activeProvince.isEmpty && activeCities.isEmpty)
-            const Center(
-              child: Text(
-                'محدوده فعالیت تعیین نشده است.',
-                style: TextStyle(color: AppColors.textMuted, fontSize: 12),
-              ),
-            ),
+            const SizedBox(height: 8),
+          const Text(
+            'استعلام‌های ارجاع‌شده در تب کارهای موجود نمایش داده می‌شوند.',
+            style: TextStyle(color: AppColors.textMuted, fontSize: 12),
+          ),
         ],
       ),
     );
   }
-
-
 
   Widget _buildPriceListCard(List<dynamic> priceList) {
     return Container(

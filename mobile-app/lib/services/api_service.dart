@@ -80,6 +80,20 @@ class ApiService {
     };
   }
 
+  Future<dynamic> postWithToken(String path, Map<String, dynamic> body, String token) async {
+    final response = await _retry(() => http.post(
+      Uri.parse('$baseUrl$path'),
+      headers: _getHeaders(token),
+      body: jsonEncode(body),
+    ));
+    final data = jsonDecode(response.body);
+    if (response.statusCode >= 200 && response.statusCode < 300) {
+      return data;
+    } else {
+      throw Exception(data['message'] ?? 'خطا در برقراری ارتباط با سرور');
+    }
+  }
+
   /// Fetch only the logged-in Employer's inquiries.
   Future<List<Inquiry>> fetchMyInquiries(String token) async {
     final response = await _retry(() => http.get(

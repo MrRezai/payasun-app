@@ -2,6 +2,7 @@ import { Controller, Get, Patch, Post, Put, Delete, Body, Param, UseGuards } fro
 import { AdminGuard } from './guards/admin.guard';
 import { ProfileService } from '../profile/profile.service';
 import { InquiryService } from '../inquiry/inquiry.service';
+import { WelderScoringService } from '../scoring/welder-scoring.service';
 
 @Controller('admin')
 @UseGuards(AdminGuard)
@@ -9,6 +10,7 @@ export class AdminController {
   constructor(
     private readonly profileService: ProfileService,
     private readonly inquiryService: InquiryService,
+    private readonly scoringService: WelderScoringService,
   ) {}
 
   @Get('welders-count')
@@ -135,6 +137,12 @@ export class AdminController {
   @Put('sms-settings')
   async updateSmsSettings(@Body() body: any) {
     return this.inquiryService.updateSmsSettings(body);
+  }
+
+  @Put('welders/:id/lift-suspension')
+  async liftWelderSuspension(@Param('id') id: string) {
+    const updated = await this.scoringService.liftSuspension(id);
+    return { message: 'تعلیق جوشکار با موفقیت لغو گردید.', profile: updated };
   }
 }
 

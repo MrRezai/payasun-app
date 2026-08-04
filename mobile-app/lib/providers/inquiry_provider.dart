@@ -653,4 +653,91 @@ class InquiryProvider with ChangeNotifier {
       notifyListeners();
     }
   }
+
+  Future<bool> startAgreement({
+    required String token,
+    required String inquiryId,
+    required String welderId,
+  }) async {
+    try {
+      await _apiService.postWithToken('/inquiry/$inquiryId/start-agreement', {'welderId': welderId}, token);
+      notifyListeners();
+      return true;
+    } catch (e) {
+      _errorMessage = e.toString();
+      notifyListeners();
+      return false;
+    }
+  }
+
+  Future<bool> confirmAgreement({
+    required String token,
+    required String inquiryId,
+  }) async {
+    try {
+      await _apiService.postWithToken('/inquiry/$inquiryId/confirm-agreement', {}, token);
+      notifyListeners();
+      return true;
+    } catch (e) {
+      _errorMessage = e.toString();
+      notifyListeners();
+      return false;
+    }
+  }
+
+  Future<bool> finishJob({
+    required String token,
+    required String inquiryId,
+  }) async {
+    try {
+      await _apiService.postWithToken('/inquiry/$inquiryId/finish-job', {}, token);
+      notifyListeners();
+      return true;
+    } catch (e) {
+      _errorMessage = e.toString();
+      notifyListeners();
+      return false;
+    }
+  }
+
+  Future<bool> confirmCompletion({
+    required String token,
+    required String inquiryId,
+    required String welderId,
+    required double qualityScore,
+    required double punctualityScore,
+    required double behaviorScore,
+    String? comment,
+  }) async {
+    try {
+      await _apiService.postWithToken('/inquiry/$inquiryId/confirm-completion', {
+        'welderId': welderId,
+        'qualityScore': qualityScore,
+        'punctualityScore': punctualityScore,
+        'behaviorScore': behaviorScore,
+        'comment': comment,
+      }, token);
+      notifyListeners();
+      return true;
+    } catch (e) {
+      _errorMessage = e.toString();
+      notifyListeners();
+      return false;
+    }
+  }
+
+  Future<bool> reDispatch({
+    required String token,
+    required String inquiryId,
+  }) async {
+    try {
+      await _apiService.postWithToken('/inquiry/$inquiryId/re-dispatch', {}, token);
+      notifyListeners();
+      return true;
+    } catch (e) {
+      _errorMessage = e.toString();
+      notifyListeners();
+      return false;
+    }
+  }
 }

@@ -198,8 +198,46 @@ export default function ViewUserHistoryModal({ userId, onClose }: ViewUserHistor
                   <>
                     <Paragraph style={{ fontSize: '13px' }}>
                       <Text type="secondary">امتیاز کل: </Text>
-                      <Text strong><StarOutlined style={{ color: '#f59e0b' }} /> {data.welderProfile?.total_score || 0} ستاره</Text>
+                      <Text strong><StarOutlined style={{ color: '#f59e0b' }} /> {data.welderProfile?.total_score || 20} (پاسخگویی: {data.welderProfile?.responsiveness_score || 0} ، تجربه: {data.welderProfile?.experience_score || 0})</Text>
                     </Paragraph>
+                    <Paragraph style={{ fontSize: '13px' }}>
+                      <Text type="secondary">رده فعال / میانگین نظرات: </Text>
+                      <Tag color="blue">گروه {data.welderProfile?.tier || 'A'}</Tag>
+                      <Text strong style={{ color: '#10B981', marginRight: 8 }}>امتیاز کارفرما: {data.welderProfile?.employer_rating_avg || '5.0'} / 5</Text>
+                    </Paragraph>
+
+                    {data.welderProfile?.suspension_until && new Date(data.welderProfile.suspension_until).getTime() > Date.now() ? (
+                      <Alert
+                        type="warning"
+                        showIcon
+                        message="حساب کاربری متعلیق شده است"
+                        description={
+                          <div>
+                            <Text type="secondary">زمان پایان محرومیت: {new Date(data.welderProfile.suspension_until).toLocaleDateString('fa-IR')}</Text>
+                            <div style={{ marginTop: 8 }}>
+                              <Button
+                                size="small"
+                                type="primary"
+                                danger
+                                onClick={async () => {
+                                  try {
+                                    await ApiClient.liftWelderSuspension(data.welderProfile.id);
+                                    alert('تعلیق با موفقیت لغو شد.');
+                                    onClose();
+                                  } catch (e: any) {
+                                    alert(e.message);
+                                  }
+                                }}
+                              >
+                                لغو دستی تعلیق (Lift Suspension)
+                              </Button>
+                            </div>
+                          </div>
+                        }
+                        style={{ marginBottom: 12 }}
+                      />
+                    ) : null}
+
                     <Paragraph style={{ fontSize: '13px' }}>
                       <Text type="secondary">پروژه‌های موفق: </Text>
                       <Text strong>{data.welderProfile?.completed_jobs_count || 0} پروژه</Text>

@@ -7,7 +7,10 @@ import { WelderProfile } from '../entities/welder-profile.entity';
 import { Offer } from '../entities/offer.entity';
 import { AppSetting } from '../entities/app-setting.entity';
 import { User } from '../entities/user.entity';
+import { EmployerReview } from '../entities/employer-review.entity';
 import { SmsService } from '../sms/sms.service';
+import { WelderScoringService } from '../scoring/welder-scoring.service';
+import { WelderLevelingService } from '../leveling/welder-leveling.service';
 import { CreateInquiryDto } from './dto/create-inquiry.dto';
 import { EstimateInquiryDto } from './dto/estimate-inquiry.dto';
 import { ConfirmInquiryDto } from './dto/confirm-inquiry.dto';
@@ -31,7 +34,13 @@ export class InquiryService {
     private readonly settingRepository: Repository<AppSetting>,
     @InjectRepository(User)
     private readonly userRepository: Repository<User>,
+    @InjectRepository(WelderProfile)
+    private readonly welderProfileRepository: Repository<WelderProfile>,
+    @InjectRepository(EmployerReview)
+    private readonly reviewRepository: Repository<EmployerReview>,
     private readonly smsService: SmsService,
+    private readonly scoringService: WelderScoringService,
+    private readonly levelingService: WelderLevelingService,
   ) {}
 
   async getSmsSettings(): Promise<any> {
@@ -563,5 +572,142 @@ export class InquiryService {
     if (inquiries.length > 0) {
       await this.inquiryRepository.remove(inquiries);
     }
+  }
+
+  /**
+   * 2-Step Agreement Step 1 (Employer initiates agreement):
+   * Employer selects winning welder -> Status = AGREEMENT_PENDING_WELDER
+   * Calculates deposit = area_sqm * 1000 Tomans.
+   * Sends Simple SMS to Welder.
+   */
+  async startAgreement(inquiryId: string, employerId: string, welderId: string): Promise<Inquiry> {
+    const inquiry = await this.inquiryRepository.findOne({ where: { id: inquiryId } });
+    if (!inquiry) throw new NotFoundException('استعلام مورد نظر یافت نشد.');
+    if (inquiry.employerId !== employerId) throw new ForbiddenException('عدم دسترسی.');
+
+    const welder = await this.welderProfileRepository.findOne({
+      where: { id: welderId },
+      relations: ['user'],
+    });
+    if (!welder) throw new NotFoundException('جوشکار مورد نظر یافت نشد.');
+
+    // Single active job constraint check
+    if (welder.active_jobs_count >= 1) {
+      throw new BadRequestException('این جوشکار در حال حاضر یک پروژه فعال در دست اجرا دارد.');
+    }
+
+    inquiry.status = InquiryStatus.AGREEMENT_PENDING_WELDER;
+    inquiry.deposit_amount = Number(inquiry.area_sqm || 0) * 1000;
+    const savedInquiry = await this.inquiryRepository.save(inquiry);
+
+    // Send Simple SMS to Welder
+    if (welder.user && welder.user.phone_number) {
+      const message = `کارفرما توافق برای شروع پروژه "${inquiry.title}" را ثبت نمود. جهت تایید وارد برنامه شوید.`;
+      this.smsService.sendSimpleSms(welder.user.phone_number, message).catch(() => {});
+    }
+
+    return savedInquiry;
+  }
+
+  /**
+   * 2-Step Agreement Step 2 (Welder accepts agreement):
+   * Welder confirms in panel -> Status = IN_PROGRESS, welder.active_jobs_count += 1
+   */
+  async confirmAgreementByWelder(inquiryId: string, userId: string): Promise<Inquiry> {
+    const inquiry = await this.inquiryRepository.findOne({ where: { id: inquiryId } });
+    if (!inquiry) throw new NotFoundException('استعلام مورد نظر یافت نشد.');
+
+    const welder = await this.welderProfileRepository.findOne({ where: { user_id: userId } });
+    if (!welder) throw new ForbiddenException('فقط جوشکار مجاز است.');
+
+    if (inquiry.status !== InquiryStatus.AGREEMENT_PENDING_WELDER) {
+      throw new BadRequestException('این استعلام در وضعیت انتظار برای تایید جوشکار قرار ندارد.');
+    }
+
+    inquiry.status = InquiryStatus.IN_PROGRESS;
+    welder.active_jobs_count = (welder.active_jobs_count || 0) + 1;
+    await this.welderProfileRepository.save(welder);
+
+    return this.inquiryRepository.save(inquiry);
+  }
+
+  /**
+   * 2-Step Completion Step 1 (Welder finishes job):
+   * Welder marks job finished -> Status = COMPLETED_PENDING_EMPLOYER
+   * Sends Simple SMS to Employer.
+   */
+  async finishJobByWelder(inquiryId: string, userId: string): Promise<Inquiry> {
+    const inquiry = await this.inquiryRepository.findOne({ where: { id: inquiryId } });
+    if (!inquiry) throw new NotFoundException('استعلام مورد نظر یافت نشد.');
+
+    const welder = await this.welderProfileRepository.findOne({ where: { user_id: userId } });
+    if (!welder) throw new ForbiddenException('فقط جوشکار مجاز است.');
+
+    if (inquiry.status !== InquiryStatus.IN_PROGRESS) {
+      throw new BadRequestException('فقط پروژه‌های در حال اجرا قابل اعلام اتمام هستند.');
+    }
+
+    inquiry.status = InquiryStatus.COMPLETED_PENDING_EMPLOYER;
+    const savedInquiry = await this.inquiryRepository.save(inquiry);
+
+    // Send Simple SMS to Employer
+    const employerUser = await this.userRepository.findOne({ where: { id: inquiry.employerId } });
+    if (employerUser && employerUser.phone_number) {
+      const message = `جوشکار پایان کار پروژه "${inquiry.title}" را اعلام کرد. جهت تایید نهایی و ثبت امتیاز وارد برنامه شوید.`;
+      this.smsService.sendSimpleSms(employerUser.phone_number, message).catch(() => {});
+    }
+
+    return savedInquiry;
+  }
+
+  /**
+   * 2-Step Completion Step 2 (Employer confirms & rates):
+   * Employer submits Quality, Punctuality, Behavior scores -> Status = COMPLETED
+   * Welder active_jobs_count -= 1. Recalculates scores & tier promotions.
+   */
+  async confirmCompletionByEmployer(
+    inquiryId: string,
+    employerId: string,
+    welderId: string,
+    qualityScore: number,
+    punctualityScore: number,
+    behaviorScore: number,
+    comment?: string,
+  ): Promise<Inquiry> {
+    const inquiry = await this.inquiryRepository.findOne({ where: { id: inquiryId } });
+    if (!inquiry) throw new NotFoundException('استعلام مورد نظر یافت نشد.');
+    if (inquiry.employerId !== employerId) throw new ForbiddenException('عدم دسترسی.');
+
+    const welder = await this.welderProfileRepository.findOne({ where: { id: welderId } });
+    if (!welder) throw new NotFoundException('جوشکار مورد نظر یافت نشد.');
+
+    // Calculate rating using formula (0.4*Q + 0.35*P + 0.25*B)
+    const rating = this.scoringService.calculateEmployerRating(qualityScore, punctualityScore, behaviorScore);
+
+    // Save EmployerReview
+    const review = this.reviewRepository.create({
+      inquiry_id: inquiryId,
+      welder_id: welderId,
+      employer_id: employerId,
+      quality_score: qualityScore,
+      punctuality_score: punctualityScore,
+      behavior_score: behaviorScore,
+      calculated_rating: rating,
+      comment: comment || null,
+    });
+    await this.reviewRepository.save(review);
+
+    // Update Inquiry status & Welder active jobs
+    inquiry.status = InquiryStatus.COMPLETED;
+    welder.active_jobs_count = Math.max(0, (welder.active_jobs_count || 1) - 1);
+    welder.completed_jobs_count = (welder.completed_jobs_count || 0) + 1;
+    await this.welderProfileRepository.save(welder);
+    const savedInquiry = await this.inquiryRepository.save(inquiry);
+
+    // Recalculate welder score & check tier promotion
+    await this.scoringService.recalculateWelderScore(welderId);
+    await this.levelingService.checkAndUpdateWelderPromotion(welderId, inquiry.tier, rating);
+
+    return savedInquiry;
   }
 }

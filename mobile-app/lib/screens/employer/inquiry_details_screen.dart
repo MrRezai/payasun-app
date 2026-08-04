@@ -129,6 +129,92 @@ class _InquiryDetailsScreenState extends State<InquiryDetailsScreen> {
                 _buildOverviewCard(context, dateStr),
                 const SizedBox(height: 16),
 
+                if (inquiry.status == 'COMPLETED_PENDING_EMPLOYER') ...[
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      color: Colors.orange[50],
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(color: Colors.orange[300]!),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Row(
+                          children: [
+                            Icon(Icons.stars, color: Colors.orange, size: 22),
+                            SizedBox(width: 8),
+                            Text('جوشکار اعلام پایان کار کرده است', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: AppColors.textDark, fontFamily: 'Vazirmatn')),
+                          ],
+                        ),
+                        const SizedBox(height: 8),
+                        const Text('لطفاً پس از بررسی پروژه، جهت ثبت تایید نهایی و امتیازدهی به جوشکار کلیک کنید.', style: TextStyle(fontSize: 11, color: AppColors.textMuted, fontFamily: 'Vazirmatn')),
+                        const SizedBox(height: 12),
+                        SizedBox(
+                          width: double.infinity,
+                          child: ElevatedButton.icon(
+                            onPressed: () {
+                              final offers = Provider.of<InquiryProvider>(context, listen: false).inquiryOffers;
+                              final welderId = offers.isNotEmpty ? (offers.first['welder_id'] ?? '') : '';
+                              _showCompletionRatingDialog(context, welderId);
+                            },
+                            icon: const Icon(Icons.check_circle_outline, size: 18),
+                            label: const Text('تایید اتمام کار و ثبت امتیاز ۳ بخشی', style: TextStyle(fontWeight: FontWeight.bold, fontFamily: 'Vazirmatn')),
+                            style: ElevatedButton.styleFrom(backgroundColor: AppColors.royalBlue, foregroundColor: Colors.white),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                ],
+
+                if (inquiry.status == 'EXPIRED') ...[
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      color: Colors.red[50],
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(color: Colors.red[200]!),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Row(
+                          children: [
+                            Icon(Icons.timer_off_outlined, color: Colors.red, size: 22),
+                            SizedBox(width: 8),
+                            Text('استعلام پس از ۷۲ ساعت منقضی شده است', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: AppColors.textDark, fontFamily: 'Vazirmatn')),
+                          ],
+                        ),
+                        const SizedBox(height: 8),
+                        const Text('می‌توانید با پرداخت هزینه مجدد، استعلام را به ۵ جوشکار جدید ارجاع دهید.', style: TextStyle(fontSize: 11, color: AppColors.textMuted, fontFamily: 'Vazirmatn')),
+                        const SizedBox(height: 12),
+                        SizedBox(
+                          width: double.infinity,
+                          child: ElevatedButton.icon(
+                            onPressed: () async {
+                              final token = Provider.of<AuthProvider>(context, listen: false).token;
+                              await Provider.of<InquiryProvider>(context, listen: false).reDispatch(token: token, inquiryId: inquiry.id);
+                              if (context.mounted) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(content: Text('استعلام با موفقیت به ۵ جوشکار جدید ارجاع داده شد.')),
+                                );
+                              }
+                            },
+                            icon: const Icon(Icons.refresh, size: 18),
+                            label: const Text('پرداخت هزینه و ارجاع به ۵ جوشکار جدید', style: TextStyle(fontWeight: FontWeight.bold, fontFamily: 'Vazirmatn')),
+                            style: ElevatedButton.styleFrom(backgroundColor: Colors.red[700], foregroundColor: Colors.white),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                ],
+
                 // Blueprint / Info Section
                 if (inquiry.hasBlueprint) ...[
                   _buildBlueprintSection(context),
@@ -1640,9 +1726,35 @@ class _InquiryDetailsScreenState extends State<InquiryDetailsScreen> {
         label = 'تایید شده';
         break;
       case 'BROADCASTED':
+      case 'DISPATCHED':
         bgColor = Colors.green[100]!;
         textColor = Colors.green[800]!;
-        label = 'انتشار یافته';
+        label = 'ارجاع به ۵ جوشکار';
+        break;
+      case 'AGREEMENT_PENDING_WELDER':
+        bgColor = Colors.purple[100]!;
+        textColor = Colors.purple[800]!;
+        label = 'در انتظار تایید شروع توسط جوشکار';
+        break;
+      case 'IN_PROGRESS':
+        bgColor = Colors.blue[100]!;
+        textColor = Colors.blue[800]!;
+        label = 'در حال اجرای جوشکاری';
+        break;
+      case 'COMPLETED_PENDING_EMPLOYER':
+        bgColor = Colors.orange[100]!;
+        textColor = Colors.orange[800]!;
+        label = 'اعلام پایان کار - در انتظار تایید شما';
+        break;
+      case 'COMPLETED':
+        bgColor = Colors.teal[100]!;
+        textColor = Colors.teal[800]!;
+        label = 'پروژه تکمیل شده';
+        break;
+      case 'EXPIRED':
+        bgColor = Colors.red[100]!;
+        textColor = Colors.red[800]!;
+        label = 'منقضی شده (۷۲ ساعت)';
         break;
       case 'REJECTED':
         bgColor = Colors.red[100]!;
@@ -1670,6 +1782,134 @@ class _InquiryDetailsScreenState extends State<InquiryDetailsScreen> {
           fontFamily: 'Vazirmatn',
         ),
       ),
+    );
+  }
+
+  void _showCompletionRatingDialog(BuildContext context, String welderId) {
+    double quality = 5.0;
+    double punctuality = 5.0;
+    double behavior = 5.0;
+    final commentController = TextEditingController();
+
+    showDialog(
+      context: context,
+      builder: (ctx) {
+        return StatefulBuilder(
+          builder: (context, setModalState) {
+            final liveScore = (0.4 * quality) + (0.35 * punctuality) + (0.25 * behavior);
+            return Directionality(
+              textDirection: TextDirection.rtl,
+              child: AlertDialog(
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+                title: const Row(
+                  children: [
+                    Icon(Icons.star_rounded, color: Colors.amber, size: 24),
+                    SizedBox(width: 8),
+                    Text('ثبت امتیاز و نظر نهایی کارفرما', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, fontFamily: 'Vazirmatn')),
+                  ],
+                ),
+                content: SingleChildScrollView(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      // Live Score Preview Header Card
+                      Container(
+                        width: double.infinity,
+                        padding: const EdgeInsets.all(14),
+                        decoration: BoxDecoration(
+                          color: AppColors.royalBlue.withValues(alpha: 0.08),
+                          borderRadius: BorderRadius.circular(14),
+                          border: Border.all(color: AppColors.royalBlue.withValues(alpha: 0.2)),
+                        ),
+                        child: Column(
+                          children: [
+                            const Text('پیش‌نمایش میانگین امتیاز نهایی:', style: TextStyle(fontSize: 12, color: AppColors.textDark, fontFamily: 'Vazirmatn')),
+                            const SizedBox(height: 4),
+                            Text(
+                              '${liveScore.toStringAsFixed(2)} از ۵.۰',
+                              style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: AppColors.royalBlue, fontFamily: 'Vazirmatn'),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+
+                      Text('۱. کیفیت کار (وزن ۴۰٪): ${quality.toInt()}', style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold, fontFamily: 'Vazirmatn')),
+                      Slider(
+                        value: quality,
+                        min: 1.0,
+                        max: 5.0,
+                        divisions: 4,
+                        label: quality.toInt().toString(),
+                        onChanged: (val) => setModalState(() => quality = val),
+                      ),
+
+                      Text('۲. خوش‌قولی و زمان‌بندی (وزن ۳۵٪): ${punctuality.toInt()}', style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold, fontFamily: 'Vazirmatn')),
+                      Slider(
+                        value: punctuality,
+                        min: 1.0,
+                        max: 5.0,
+                        divisions: 4,
+                        label: punctuality.toInt().toString(),
+                        onChanged: (val) => setModalState(() => punctuality = val),
+                      ),
+
+                      Text('۳. رفتار حرفه‌ای و اخلاق (وزن ۲۵٪): ${behavior.toInt()}', style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold, fontFamily: 'Vazirmatn')),
+                      Slider(
+                        value: behavior,
+                        min: 1.0,
+                        max: 5.0,
+                        divisions: 4,
+                        label: behavior.toInt().toString(),
+                        onChanged: (val) => setModalState(() => behavior = val),
+                      ),
+                      const SizedBox(height: 12),
+
+                      TextField(
+                        controller: commentController,
+                        maxLines: 2,
+                        decoration: InputDecoration(
+                          hintText: 'توضیحات یا نظر تکمیلی درباره عملکرد جوشکار (اختیاری)...',
+                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                actions: [
+                  TextButton(
+                    onPressed: () => Navigator.pop(ctx),
+                    child: const Text('انصراف', style: TextStyle(fontFamily: 'Vazirmatn')),
+                  ),
+                  ElevatedButton(
+                    onPressed: () async {
+                      Navigator.pop(ctx);
+                      final token = Provider.of<AuthProvider>(context, listen: false).token;
+                      await Provider.of<InquiryProvider>(context, listen: false).confirmCompletion(
+                        token: token,
+                        inquiryId: inquiry.id,
+                        welderId: welderId,
+                        qualityScore: quality,
+                        punctualityScore: punctuality,
+                        behaviorScore: behavior,
+                        comment: commentController.text,
+                      );
+                      if (context.mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(content: Text('پروژه با موفقیت به اتمام رسید و امتیاز نهایی ثبت گردید.')),
+                        );
+                      }
+                    },
+                    style: ElevatedButton.styleFrom(backgroundColor: AppColors.royalBlue),
+                    child: const Text('تایید نهایی و ثبت امتیاز', style: TextStyle(color: Colors.white, fontFamily: 'Vazirmatn')),
+                  ),
+                ],
+              ),
+            );
+          },
+        );
+      },
     );
   }
 }

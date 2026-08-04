@@ -127,6 +127,14 @@ export class ApiClient {
     return data.count;
   }
 
+  public static async liftWelderSuspension(id: string): Promise<any> {
+    const res = await this.request(`${BASE_URL}/admin/welders/${id}/lift-suspension`, {
+      method: 'PUT',
+    });
+    if (!res.ok) throw new Error('خطا در رفع تعلیق جوشکار.');
+    return await res.json();
+  }
+
   public static async getEmployersCount(): Promise<number> {
     const res = await this.request(`${BASE_URL}/admin/employers-count`);
     if (!res.ok) throw new Error('خطا در دریافت آمار کارفرمایان.');

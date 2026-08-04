@@ -21,6 +21,9 @@ import { Offer } from './entities/offer.entity';
 import { SupplyItem } from './entities/item.entity';
 import { Project } from './entities/project.entity';
 import { AppSetting } from './entities/app-setting.entity';
+import { InquiryDispatch } from './entities/inquiry-dispatch.entity';
+import { EmployerReview } from './entities/employer-review.entity';
+import { DataMigrationService } from './migrations/migration.service';
 
 /**
  * Root application module that bootstraps:
@@ -48,7 +51,7 @@ import { AppSetting } from './entities/app-setting.entity';
         username: configService.get<string>('DB_USERNAME', 'postgres'),
         password: configService.get<string>('DB_PASSWORD', 'postgres'),
         database: configService.get<string>('DB_NAME', 'joftojoor_db'),
-        entities: [User, EmployerProfile, WelderProfile, Inquiry, Skill, Offer, SupplyItem, Project, AppSetting],
+        entities: [User, EmployerProfile, WelderProfile, Inquiry, Skill, Offer, SupplyItem, Project, AppSetting, InquiryDispatch, EmployerReview],
         synchronize: true, // Auto-create tables in dev — disable in production!
         logging: ['error', 'warn'],
       }),
@@ -71,5 +74,6 @@ import { AppSetting } from './entities/app-setting.entity';
     ItemsModule,
     ProjectModule,
   ],
+  providers: [DataMigrationService],
 })
 export class AppModule {}

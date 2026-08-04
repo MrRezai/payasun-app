@@ -6,13 +6,20 @@ export enum InquiryStatus {
   PENDING_ESTIMATION = 'PENDING_ESTIMATION',
   ESTIMATED = 'ESTIMATED',
   BROADCASTED = 'BROADCASTED',
+  DISPATCHED = 'DISPATCHED',
+  AGREEMENT_PENDING_WELDER = 'AGREEMENT_PENDING_WELDER',
+  IN_PROGRESS = 'IN_PROGRESS',
+  COMPLETED_PENDING_EMPLOYER = 'COMPLETED_PENDING_EMPLOYER',
+  COMPLETED = 'COMPLETED',
   REJECTED = 'REJECTED',
+  EXPIRED = 'EXPIRED',
 }
 
 export interface InquiryItem {
   title: string;
   unit: string;
   quantity: number;
+  category?: 'GIRESH' | 'OTHER';
 }
 
 /**
@@ -50,6 +57,30 @@ export class Inquiry {
 
   @Column({ type: 'enum', enum: InquiryStatus, default: InquiryStatus.DRAFT })
   status: InquiryStatus;
+
+  @Column({ type: 'varchar', length: 10, default: 'A' })
+  tier: string;
+
+  @Column({ type: 'int', nullable: true })
+  floor_count: number | null;
+
+  @Column({ type: 'decimal', precision: 10, scale: 2, nullable: true })
+  area_sqm: number | null;
+
+  @Column({ type: 'decimal', precision: 12, scale: 2, default: 0 })
+  deposit_amount: number;
+
+  @Column({ type: 'int', default: 0 })
+  giresh_count: number;
+
+  @Column({ type: 'int', default: 0 })
+  other_installs_count: number;
+
+  @Column({ type: 'boolean', default: false })
+  is_re_dispatched: boolean;
+
+  @Column({ type: 'timestamptz', nullable: true })
+  dispatched_at: Date | null;
 
   @Column({ type: 'boolean', default: false })
   has_blueprint: boolean;

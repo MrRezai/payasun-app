@@ -105,6 +105,21 @@ export class ProfileService implements OnModuleInit {
       const welderProfile = profile as WelderProfile;
       (welderProfile as any).full_name =
         `${welderProfile.first_name || ''} ${welderProfile.last_name || ''}`.trim();
+
+      // Safe experience duration calculation handling null dates
+      let expMonths = 0;
+      const startDate = welderProfile.experience_start_date || user.created_at;
+      if (startDate) {
+        const diffMs = Date.now() - new Date(startDate).getTime();
+        expMonths = Math.max(0, Math.floor(diffMs / (1000 * 60 * 60 * 24 * 30.44)));
+      }
+
+      const expDisplay = expMonths >= 12
+        ? `${(expMonths / 12).toFixed(1)} سال`
+        : `${expMonths} ماه`;
+
+      (welderProfile as any).experience_duration_display = expDisplay;
+      (welderProfile as any).active_tier = welderProfile.tier || 'A';
     } else if (role === Role.EMPLOYER) {
       const employerProfile = profile as EmployerProfile;
       (employerProfile as any).full_name =

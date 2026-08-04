@@ -59,6 +59,7 @@ class _WelderSetupScreenState extends State<WelderSetupScreen> {
   bool _isLoadingHomeCities = false;
 
   final List<String> _selectedCities = [];
+  final List<String> _preferredTiers = ['A', 'B', 'C', 'D'];
   
   // Custom list of prices/tariffs
   final List<Map<String, dynamic>> _customPrices = [];
@@ -979,10 +980,62 @@ class _WelderSetupScreenState extends State<WelderSetupScreen> {
         _buildSkillsSelectorCard(),
         const SizedBox(height: 25),
 
+        _buildSectionLabel('گروه‌های ساختمانی جهت دریافت استعلام', isRequired: false),
+        const SizedBox(height: 10),
+        _buildPreferredTiersCard(),
+        const SizedBox(height: 25),
+
         _buildSectionLabel('محدوده خدمات‌رسانی (استان و شهرها)', isRequired: true),
         const SizedBox(height: 10),
         _buildGeoSelectorCard(),
       ],
+    );
+  }
+
+  Widget _buildPreferredTiersCard() {
+    final tierNames = {
+      'A': 'گروه الف (پروژه‌های تا ۲ طبقه / ۲۵۰ متر)',
+      'B': 'گروه ب (پروژه‌های ۳ تا ۵ طبقه / ۷۵۰ متر)',
+      'C': 'گروه ج (پروژه‌های ۶ تا ۹ طبقه / ۱۸۰۰ متر)',
+      'D': 'گروه د (پروژه‌های ۱۰ طبقه به بالا)',
+    };
+
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: AppColors.white,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: AppColors.borderGrey),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text(
+            'گروه‌های ساختمانی مورد علاقه جهت دریافت استعلام (بک‌اند سیستم تا زمان ارتقای رده، پروژه‌های رده پایین‌تر را ارجاع می‌دهد):',
+            style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: AppColors.textDark, fontFamily: 'Vazirmatn'),
+          ),
+          const SizedBox(height: 8),
+          ...tierNames.entries.map((entry) {
+            final isSelected = _preferredTiers.contains(entry.key);
+            return CheckboxListTile(
+              dense: true,
+              contentPadding: EdgeInsets.zero,
+              title: Text(entry.value, style: const TextStyle(fontSize: 12, fontFamily: 'Vazirmatn')),
+              value: isSelected,
+              activeColor: AppColors.royalBlue,
+              onChanged: (val) {
+                setState(() {
+                  if (val == true) {
+                    if (!_preferredTiers.contains(entry.key)) _preferredTiers.add(entry.key);
+                  } else {
+                    if (_preferredTiers.length > 1) _preferredTiers.remove(entry.key);
+                  }
+                });
+              },
+            );
+          }),
+        ],
+      ),
     );
   }
 

@@ -75,11 +75,56 @@ export class WelderProfile {
   @Column({ type: 'jsonb', default: [] })
   base_price_list: BasePriceItem[];
 
-  @Column({ type: 'decimal', precision: 5, scale: 2, default: 0 })
+  @Column({ type: 'decimal', precision: 6, scale: 2, default: 20.0 })
   total_score: number;
+
+  @Column({ type: 'decimal', precision: 6, scale: 2, default: 0.0 })
+  responsiveness_score: number;
+
+  @Column({ type: 'decimal', precision: 6, scale: 2, default: 0.0 })
+  experience_score: number;
+
+  @Column({ type: 'decimal', precision: 4, scale: 2, default: 5.0 })
+  employer_rating_avg: number;
 
   @Column({ type: 'int', default: 0 })
   completed_jobs_count: number;
+
+  @Column({ type: 'varchar', length: 10, default: 'A' })
+  tier: string;
+
+  @Column({ type: 'jsonb', default: ['A', 'B', 'C', 'D'] })
+  preferred_tiers: string[];
+
+  @Column({ type: 'jsonb', default: [] })
+  working_cities: string[];
+
+  @Column({ type: 'timestamptz', nullable: true })
+  experience_start_date: Date | null;
+
+  @Column({ type: 'int', default: 0 })
+  missed_responses_count: number;
+
+  @Column({ type: 'int', default: 0 })
+  low_ratings_count: number;
+
+  @Column({ type: 'timestamptz', nullable: true })
+  suspension_until: Date | null;
+
+  @Column({ type: 'int', default: 0 })
+  active_jobs_count: number;
+
+  @Column({ type: 'int', default: 0 })
+  completed_tier_a_count: number;
+
+  @Column({ type: 'int', default: 0 })
+  completed_tier_b_count: number;
+
+  @Column({ type: 'int', default: 0 })
+  completed_tier_c_count: number;
+
+  @Column({ type: 'boolean', default: false })
+  is_out_of_service: boolean;
 
   @Column({ type: 'boolean', default: false })
   is_setup_completed: boolean;

@@ -30,6 +30,7 @@ import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
 import { AuthenticatedUser } from '../auth/strategies/jwt.strategy';
 import { InquiryService } from './inquiry.service';
+import { InquiryDispatchService } from '../dispatch/inquiry-dispatch.service';
 import { CreateInquiryDto } from './dto/create-inquiry.dto';
 import { EstimateInquiryDto } from './dto/estimate-inquiry.dto';
 import { ConfirmInquiryDto } from './dto/confirm-inquiry.dto';
@@ -47,7 +48,94 @@ if (!existsSync(UPLOAD_DIR)) {
 @UseGuards(JwtAuthGuard)
 @Controller('inquiry')
 export class InquiryController {
-  constructor(private readonly inquiryService: InquiryService) {}
+  constructor(
+    private readonly inquiryService: InquiryService,
+    private readonly dispatchService: InquiryDispatchService,
+  ) {}
+
+  /**
+   * POST /inquiry/:id/start-agreement
+   * Employer initiates agreement with winning welder (Step 1 of Agreement)
+   */
+  @Post(':id/start-agreement')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'ثبت اولیه توافق و انتخاب جوشکار توسط کارفرما' })
+  async startAgreement(
+    @Param('id') id: string,
+    @CurrentUser() user: AuthenticatedUser,
+    @Body('welderId') welderId: string,
+  ): Promise<Inquiry> {
+    if (!welderId) throw new BadRequestException('شناسه جوشکار الزامی است.');
+    return this.inquiryService.startAgreement(id, user.id, welderId);
+  }
+
+  /**
+   * POST /inquiry/:id/confirm-agreement
+   * Welder accepts agreement (Step 2 of Agreement -> IN_PROGRESS)
+   */
+  @Post(':id/confirm-agreement')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'تایید نهایی توافق شروع کار توسط جوشکار' })
+  async confirmAgreementByWelder(
+    @Param('id') id: string,
+    @CurrentUser() user: AuthenticatedUser,
+  ): Promise<Inquiry> {
+    return this.inquiryService.confirmAgreementByWelder(id, user.id);
+  }
+
+  /**
+   * POST /inquiry/:id/finish-job
+   * Welder marks project finished (Step 1 of Completion)
+   */
+  @Post(':id/finish-job')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'اعلام اتمام پروژه توسط جوشکار' })
+  async finishJobByWelder(
+    @Param('id') id: string,
+    @CurrentUser() user: AuthenticatedUser,
+  ): Promise<Inquiry> {
+    return this.inquiryService.finishJobByWelder(id, user.id);
+  }
+
+  /**
+   * POST /inquiry/:id/confirm-completion
+   * Employer confirms completion & submits 3-part rating (Step 2 of Completion)
+   */
+  @Post(':id/confirm-completion')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'تایید اتمام کار و ثبت امتیاز ۳ گانه توسط کارفرما' })
+  async confirmCompletionByEmployer(
+    @Param('id') id: string,
+    @CurrentUser() user: AuthenticatedUser,
+    @Body() body: { welderId: string; qualityScore: number; punctualityScore: number; behaviorScore: number; comment?: string },
+  ): Promise<Inquiry> {
+    if (!body.welderId || !body.qualityScore || !body.punctualityScore || !body.behaviorScore) {
+      throw new BadRequestException('امتیازهای کیفیت، خوش‌قولی و رفتار حرفه‌ای الزامی هستند.');
+    }
+    return this.inquiryService.confirmCompletionByEmployer(
+      id,
+      user.id,
+      body.welderId,
+      body.qualityScore,
+      body.punctualityScore,
+      body.behaviorScore,
+      body.comment,
+    );
+  }
+
+  /**
+   * POST /inquiry/:id/re-dispatch
+   * Employer pays fee to re-dispatch 5 new candidate welders after 72h expiration
+   */
+  @Post(':id/re-dispatch')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'ارسال مجدد استعلام به ۵ جوشکار جدید پس از ۷۲ ساعت انقضا' })
+  async reDispatch(
+    @Param('id') id: string,
+    @CurrentUser() user: AuthenticatedUser,
+  ): Promise<any> {
+    return this.dispatchService.reDispatchInquiry(id, user.id);
+  }
 
   /**
    * POST /inquiry

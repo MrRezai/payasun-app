@@ -1619,6 +1619,36 @@ class _CreateInquiryScreenState extends State<CreateInquiryScreen> {
                       ),
                     ],
                   ),
+                  ValueListenableBuilder<TextEditingValue>(
+                    valueListenable: _areaController,
+                    builder: (context, value, child) {
+                      final clean = Formatters.cleanNumber(value.text);
+                      final area = double.tryParse(clean) ?? 0.0;
+                      final deposit = (area * 1000).toInt();
+                      if (area <= 0) return const SizedBox.shrink();
+                      return Container(
+                        margin: const EdgeInsets.only(top: 8, bottom: 4),
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: AppColors.royalBlue.withValues(alpha: 0.06),
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(color: AppColors.royalBlue.withValues(alpha: 0.2)),
+                        ),
+                        child: Row(
+                          children: [
+                            const Icon(Icons.payments_outlined, color: AppColors.royalBlue, size: 20),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: Text(
+                                'مبلغ بیعانه برآورد شده (متری ۱,۰۰۰ تومان): ${Formatters.formatPrice(deposit)} تومان',
+                                style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: AppColors.royalBlue, fontFamily: 'Vazirmatn'),
+                              ),
+                            ),
+                          ],
+                        ),
+                      );
+                    },
+                  ),
                   const SizedBox(height: 12),
 
                   // Description Field (Optional)
