@@ -900,6 +900,7 @@ regenerate_full_env() {
         cur_jwt_exp=$(grep -E '^JWT_EXPIRATION=' "$ENV_FILE" 2>/dev/null | cut -d= -f2 || echo "$cur_jwt_exp")
         cur_sms_user=$(grep -E '^MELIPAYAMAK_USERNAME=' "$ENV_FILE" 2>/dev/null | cut -d= -f2 || echo "$cur_sms_user")
         cur_sms_pass=$(grep -E '^MELIPAYAMAK_PASSWORD=' "$ENV_FILE" 2>/dev/null | cut -d= -f2 || echo "$cur_sms_pass")
+        cur_sms_otp_body=$(grep -E '^MELIPAYAMAK_OTP_BODY_ID=' "$ENV_FILE" 2>/dev/null | cut -d= -f2 || echo "$cur_sms_body")
         cur_sms_body=$(grep -E '^MELIPAYAMAK_BODY_ID=' "$ENV_FILE" 2>/dev/null | cut -d= -f2 || echo "$cur_sms_body")
         cur_sms_enabled=$(grep -E '^SMS_ENABLED=' "$ENV_FILE" 2>/dev/null | cut -d= -f2 || echo "$cur_sms_enabled")
         cur_app_port=$(grep -E '^APP_PORT=' "$ENV_FILE" 2>/dev/null | cut -d= -f2 || echo "$cur_app_port")
@@ -927,7 +928,8 @@ regenerate_full_env() {
     echo -e "\n  ${BOLD}📱 MeliPayamak SMS Gateway${NC}"
     prompt_input "MeliPayamak Username" "$cur_sms_user" MELIPAYAMAK_USERNAME
     prompt_secret "MeliPayamak Password" "$cur_sms_pass" MELIPAYAMAK_PASSWORD
-    prompt_input "MeliPayamak Body ID"  "$cur_sms_body" MELIPAYAMAK_BODY_ID
+    prompt_input "MeliPayamak OTP Body ID" "$cur_sms_otp_body" MELIPAYAMAK_OTP_BODY_ID
+    prompt_input "MeliPayamak General Body ID"  "$cur_sms_body" MELIPAYAMAK_BODY_ID
 
     # ── SMS Debug ────────────────────────────────────────────────
     echo -e "\n  ${BOLD}🔧 SMS Debug Mode${NC}"
@@ -958,6 +960,7 @@ JWT_EXPIRATION=${JWT_EXPIRATION}
 # ─── MeliPayamak SMS Gateway ─────────────────────────────
 MELIPAYAMAK_USERNAME=${MELIPAYAMAK_USERNAME}
 MELIPAYAMAK_PASSWORD=${MELIPAYAMAK_PASSWORD}
+MELIPAYAMAK_OTP_BODY_ID=${MELIPAYAMAK_OTP_BODY_ID}
 MELIPAYAMAK_BODY_ID=${MELIPAYAMAK_BODY_ID}
 
 # ─── SMS Debug Mode ──────────────────────────────────────
