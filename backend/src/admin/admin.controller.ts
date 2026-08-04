@@ -126,5 +126,15 @@ export class AdminController {
     await this.profileService.deleteUser(id);
     return { message: 'کاربر با موفقیت به همراه تمامی اطلاعات مرتبط حذف شد.' };
   }
+
+  @Get('sms-settings')
+  async getSmsSettings() {
+    return this.inquiryService.getSmsSettings();
+  }
+
+  @Put('sms-settings')
+  async updateSmsSettings(@Body() body: any) {
+    return this.inquiryService.updateSmsSettings(body);
+  }
 }
 

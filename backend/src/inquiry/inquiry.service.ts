@@ -5,6 +5,9 @@ import { Inquiry, InquiryStatus } from '../entities/inquiry.entity';
 import { EmployerProfile } from '../entities/employer-profile.entity';
 import { WelderProfile } from '../entities/welder-profile.entity';
 import { Offer } from '../entities/offer.entity';
+import { AppSetting } from '../entities/app-setting.entity';
+import { User } from '../entities/user.entity';
+import { SmsService } from '../sms/sms.service';
 import { CreateInquiryDto } from './dto/create-inquiry.dto';
 import { EstimateInquiryDto } from './dto/estimate-inquiry.dto';
 import { ConfirmInquiryDto } from './dto/confirm-inquiry.dto';
@@ -12,12 +15,105 @@ import { SubmitOfferDto } from './dto/submit-offer.dto';
 
 @Injectable()
 export class InquiryService {
+  private readonly DEFAULT_SMS_SETTINGS = {
+    admin_phone_numbers: [],
+    sms_tpl_admin_new_inquiry: 'یک استعلام جدید با عنوان "{title}" در شهر {city} ثبت شد و نیازمند بررسی است.',
+    sms_tpl_employer_inquiry_approved: 'کارفرمای گرامی، استعلام "{title}" شما بررسی و برآورد شد. جهت تایید و انتشار وارد برنامه شوید.',
+    sms_tpl_employer_inquiry_rejected: 'کارفرمای گرامی، استعلام "{title}" شما رد شد. علت رد: {reason}',
+  };
+
   constructor(
     @InjectRepository(Inquiry)
     private readonly inquiryRepository: Repository<Inquiry>,
     @InjectRepository(Offer)
     private readonly offerRepository: Repository<Offer>,
+    @InjectRepository(AppSetting)
+    private readonly settingRepository: Repository<AppSetting>,
+    @InjectRepository(User)
+    private readonly userRepository: Repository<User>,
+    private readonly smsService: SmsService,
   ) {}
+
+  async getSmsSettings(): Promise<any> {
+    const setting = await this.settingRepository.findOne({ where: { key: 'sms_notification_settings' } });
+    if (!setting) return this.DEFAULT_SMS_SETTINGS;
+    try {
+      return { ...this.DEFAULT_SMS_SETTINGS, ...JSON.parse(setting.value) };
+    } catch {
+      return this.DEFAULT_SMS_SETTINGS;
+    }
+  }
+
+  async updateSmsSettings(data: any): Promise<any> {
+    let setting = await this.settingRepository.findOne({ where: { key: 'sms_notification_settings' } });
+    const updatedData = { ...this.DEFAULT_SMS_SETTINGS, ...data };
+    if (!setting) {
+      setting = this.settingRepository.create({ key: 'sms_notification_settings', value: JSON.stringify(updatedData) });
+    } else {
+      setting.value = JSON.stringify(updatedData);
+    }
+    await this.settingRepository.save(setting);
+    return updatedData;
+  }
+
+  private async notifyAdminsNewInquiry(inquiry: Inquiry): Promise<void> {
+    try {
+      const settings = await this.getSmsSettings();
+      const adminPhones: string[] = settings.admin_phone_numbers || [];
+      if (!adminPhones || adminPhones.length === 0) return;
+
+      const template: string = settings.sms_tpl_admin_new_inquiry || this.DEFAULT_SMS_SETTINGS.sms_tpl_admin_new_inquiry;
+      const message = template
+        .replace(/{title}/g, inquiry.title || 'استعلام بدون عنوان')
+        .replace(/{city}/g, inquiry.city || 'نامشخص')
+        .replace(/{inquiryId}/g, inquiry.id || '');
+
+      for (const phone of adminPhones) {
+        if (phone && phone.trim()) {
+          await this.smsService.sendSimpleSms(phone.trim(), message).catch((err) => {
+            console.error(`Failed to send Admin new inquiry SMS to ${phone}:`, err?.message);
+          });
+        }
+      }
+    } catch (error) {
+      console.error('Error sending admin notification SMS:', error);
+    }
+  }
+
+  private async notifyEmployerInquiryApproved(inquiry: Inquiry): Promise<void> {
+    try {
+      const user = await this.userRepository.findOne({ where: { id: inquiry.employerId } });
+      if (!user || !user.phone_number) return;
+
+      const settings = await this.getSmsSettings();
+      const template: string = settings.sms_tpl_employer_inquiry_approved || this.DEFAULT_SMS_SETTINGS.sms_tpl_employer_inquiry_approved;
+      const message = template
+        .replace(/{title}/g, inquiry.title || 'استعلام')
+        .replace(/{inquiryId}/g, inquiry.id || '');
+
+      await this.smsService.sendSimpleSms(user.phone_number, message);
+    } catch (error) {
+      console.error('Error sending employer approval notification SMS:', error);
+    }
+  }
+
+  private async notifyEmployerInquiryRejected(inquiry: Inquiry, reason: string): Promise<void> {
+    try {
+      const user = await this.userRepository.findOne({ where: { id: inquiry.employerId } });
+      if (!user || !user.phone_number) return;
+
+      const settings = await this.getSmsSettings();
+      const template: string = settings.sms_tpl_employer_inquiry_rejected || this.DEFAULT_SMS_SETTINGS.sms_tpl_employer_inquiry_rejected;
+      const message = template
+        .replace(/{title}/g, inquiry.title || 'استعلام')
+        .replace(/{reason}/g, reason || 'توسط مدیر سیستم رد گردید.')
+        .replace(/{inquiryId}/g, inquiry.id || '');
+
+      await this.smsService.sendSimpleSms(user.phone_number, message);
+    } catch (error) {
+      console.error('Error sending employer rejection notification SMS:', error);
+    }
+  }
 
   /**
    * Creates a new inquiry.
@@ -50,7 +146,13 @@ export class InquiryService {
       blueprint_url: null,
     });
 
-    return this.inquiryRepository.save(inquiry);
+    const savedInquiry = await this.inquiryRepository.save(inquiry);
+
+    if (savedInquiry.status === InquiryStatus.PENDING_ESTIMATION) {
+      this.notifyAdminsNewInquiry(savedInquiry);
+    }
+
+    return savedInquiry;
   }
 
   /**
@@ -75,11 +177,13 @@ export class InquiryService {
     }
     inquiry.status = InquiryStatus.PENDING_ESTIMATION;
 
-    return this.inquiryRepository.save(inquiry);
+    const savedInquiry = await this.inquiryRepository.save(inquiry);
+    this.notifyAdminsNewInquiry(savedInquiry);
+    return savedInquiry;
   }
 
   /**
-   * Admin-side estimation fulfillment. Fills the items array and changes status to BROADCASTED to deliver items to welders.
+   * Admin-side estimation fulfillment. Fills the items array and changes status to ESTIMATED.
    */
   async estimate(inquiryId: string, dto: EstimateInquiryDto): Promise<Inquiry> {
     const inquiry = await this.inquiryRepository.findOne({ where: { id: inquiryId } });
@@ -95,7 +199,9 @@ export class InquiryService {
     inquiry.items = dto.items;
     inquiry.status = InquiryStatus.ESTIMATED;
 
-    return this.inquiryRepository.save(inquiry);
+    const savedInquiry = await this.inquiryRepository.save(inquiry);
+    this.notifyEmployerInquiryApproved(savedInquiry);
+    return savedInquiry;
   }
 
   /**
@@ -209,7 +315,9 @@ export class InquiryService {
     }
     inquiry.status = InquiryStatus.REJECTED;
     inquiry.rejection_reason = reason;
-    return this.inquiryRepository.save(inquiry);
+    const savedInquiry = await this.inquiryRepository.save(inquiry);
+    this.notifyEmployerInquiryRejected(savedInquiry, reason);
+    return savedInquiry;
   }
 
   /**
@@ -252,7 +360,11 @@ export class InquiryService {
       inquiry.items = dto.items;
     }
 
-    return this.inquiryRepository.save(inquiry);
+    const savedInquiry = await this.inquiryRepository.save(inquiry);
+    if (savedInquiry.status === InquiryStatus.PENDING_ESTIMATION) {
+      this.notifyAdminsNewInquiry(savedInquiry);
+    }
+    return savedInquiry;
   }
 
   /**

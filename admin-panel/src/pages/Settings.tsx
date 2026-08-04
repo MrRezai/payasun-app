@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
-import { Tabs, Row, Col, Card, Form, Input, Button, Table, Space, Typography, Popconfirm, Badge, Alert, Switch } from 'antd';
-import { PlusOutlined, EditOutlined, DeleteOutlined, CheckOutlined, CloseOutlined, SettingOutlined, AppstoreOutlined, BuildOutlined, BulbOutlined, SaveOutlined } from '@ant-design/icons';
+import { Tabs, Row, Col, Card, Form, Input, Button, Table, Space, Typography, Popconfirm, Badge, Alert, Switch, Tag } from 'antd';
+import { PlusOutlined, EditOutlined, DeleteOutlined, CheckOutlined, CloseOutlined, SettingOutlined, AppstoreOutlined, BuildOutlined, BulbOutlined, SaveOutlined, MessageOutlined, PhoneOutlined } from '@ant-design/icons';
 import { Skill, SupplyItem } from '../types';
 import { ApiClient } from '../api';
 
@@ -40,6 +40,15 @@ export default function Settings({
   const [tipAlert, setTipAlert] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
   const [tipSaving, setTipSaving] = useState(false);
 
+  // SMS Notification states
+  const [adminPhoneNumbers, setAdminPhoneNumbers] = useState<string[]>([]);
+  const [newAdminPhone, setNewAdminPhone] = useState('');
+  const [smsTplAdminNewInquiry, setSmsTplAdminNewInquiry] = useState('یک استعلام جدید با عنوان "{title}" در شهر {city} ثبت شد و نیازمند بررسی است.');
+  const [smsTplEmployerInquiryApproved, setSmsTplEmployerInquiryApproved] = useState('کارفرمای گرامی، استعلام "{title}" شما بررسی و برآورد شد. جهت تایید و انتشار وارد برنامه شوید.');
+  const [smsTplEmployerInquiryRejected, setSmsTplEmployerInquiryRejected] = useState('کارفرمای گرامی، استعلام "{title}" شما رد شد. علت رد: {reason}');
+  const [smsAlert, setSmsAlert] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
+  const [smsSaving, setSmsSaving] = useState(false);
+
   useEffect(() => {
     ApiClient.getTips().then((data) => {
       if (data) {
@@ -51,7 +60,48 @@ export default function Settings({
         if (data.welder_text) setWelderTipText(data.welder_text);
       }
     }).catch(() => {});
+
+    ApiClient.getSmsSettings().then((data) => {
+      if (data) {
+        if (data.admin_phone_numbers) setAdminPhoneNumbers(data.admin_phone_numbers);
+        if (data.sms_tpl_admin_new_inquiry) setSmsTplAdminNewInquiry(data.sms_tpl_admin_new_inquiry);
+        if (data.sms_tpl_employer_inquiry_approved) setSmsTplEmployerInquiryApproved(data.sms_tpl_employer_inquiry_approved);
+        if (data.sms_tpl_employer_inquiry_rejected) setSmsTplEmployerInquiryRejected(data.sms_tpl_employer_inquiry_rejected);
+      }
+    }).catch(() => {});
   }, []);
+
+  const handleAddAdminPhone = () => {
+    const trimmed = newAdminPhone.trim();
+    if (!trimmed) return;
+    if (!adminPhoneNumbers.includes(trimmed)) {
+      setAdminPhoneNumbers([...adminPhoneNumbers, trimmed]);
+    }
+    setNewAdminPhone('');
+  };
+
+  const handleRemoveAdminPhone = (phone: string) => {
+    setAdminPhoneNumbers(adminPhoneNumbers.filter(p => p !== phone));
+  };
+
+  const handleSaveSmsSettings = async () => {
+    setSmsSaving(true);
+    const payload = {
+      admin_phone_numbers: adminPhoneNumbers,
+      sms_tpl_admin_new_inquiry: smsTplAdminNewInquiry,
+      sms_tpl_employer_inquiry_approved: smsTplEmployerInquiryApproved,
+      sms_tpl_employer_inquiry_rejected: smsTplEmployerInquiryRejected,
+    };
+    try {
+      await ApiClient.updateSmsSettings(payload);
+      setSmsAlert({ type: 'success', message: 'تنظیمات پیامک‌های اطلاع‌رسانی با موفقیت ذخیره شد.' });
+    } catch (e: any) {
+      setSmsAlert({ type: 'error', message: e.message || 'خطا در ذخیره تنظیمات پیامک.' });
+    } finally {
+      setSmsSaving(false);
+    }
+    setTimeout(() => setSmsAlert(null), 4000);
+  };
 
   const handleSaveTips = async () => {
     setTipSaving(true);
@@ -589,6 +639,144 @@ export default function Settings({
                       scroll={{ x: 'max-content' }}
                       size="middle"
                     />
+                  </Card>
+                </Col>
+              </Row>
+            ),
+          },
+          {
+            key: 'sms',
+            label: (
+              <span>
+                <MessageOutlined /> تنظیمات پیامک اطلاع‌رسانی ({adminPhoneNumbers.length})
+              </span>
+            ),
+            children: (
+              <Row gutter={[24, 24]} align="top" style={{ marginTop: '12px' }}>
+                {smsAlert && (
+                  <Col span={24}>
+                    <Alert message={smsAlert.message} type={smsAlert.type} showIcon closable />
+                  </Col>
+                )}
+                <Col xs={24} lg={10}>
+                  <Card
+                    title={
+                      <Space align="center">
+                        <PhoneOutlined style={{ color: '#4169E1' }} />
+                        <Title level={5} style={{ margin: 0 }}>شماره‌های موبایل ادمین (دریافت هشدارها)</Title>
+                      </Space>
+                    }
+                  >
+                    <Alert
+                      message="هشدار ثبت استعلام جدید"
+                      description="هنگامی که کارفرما استعلام جدیدی ثبت می‌کند یا نقشه بارگذاری می‌کند، به تمامی شماره‌های ثبت‌شده در این لیست پیامک اطلاع‌رسانی ارسال می‌شود."
+                      type="info"
+                      showIcon
+                      style={{ marginBottom: 16 }}
+                    />
+
+                    <div style={{ marginBottom: 16 }}>
+                      <Text type="secondary">شماره‌های فعال ادمین:</Text>
+                      <div style={{ marginTop: 8, display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
+                        {adminPhoneNumbers.length === 0 ? (
+                          <Text type="secondary" italic>هیچ شماره‌ای تعریف نشده است.</Text>
+                        ) : (
+                          adminPhoneNumbers.map((phone) => (
+                            <Tag
+                              key={phone}
+                              color="blue"
+                              closable
+                              onClose={() => handleRemoveAdminPhone(phone)}
+                              style={{ padding: '6px 12px', fontSize: '14px', borderRadius: '6px' }}
+                            >
+                              📱 {phone}
+                            </Tag>
+                          ))
+                        )}
+                      </div>
+                    </div>
+
+                    <Space.Compact style={{ width: '100%', marginTop: 12 }}>
+                      <Input
+                        placeholder="شماره موبایل جدید (مثال: 09121234567)"
+                        value={newAdminPhone}
+                        onChange={(e) => setNewAdminPhone(e.target.value)}
+                        onPressEnter={handleAddAdminPhone}
+                      />
+                      <Button type="primary" icon={<PlusOutlined />} onClick={handleAddAdminPhone}>
+                        افزودن
+                      </Button>
+                    </Space.Compact>
+                  </Card>
+                </Col>
+
+                <Col xs={24} lg={14}>
+                  <Card
+                    title={
+                      <Space align="center">
+                        <MessageOutlined style={{ color: '#10B981' }} />
+                        <Title level={5} style={{ margin: 0 }}>متن متغیر قالب پیامک‌های اطلاع‌رسانی</Title>
+                      </Space>
+                    }
+                  >
+                    <Form layout="vertical">
+                      <Form.Item
+                        label="۱. پیامک اطلاع‌رسانی به ادمین (ثبت استعلام جدید کارفرما)"
+                        help={
+                          <Text type="secondary" style={{ fontSize: '12px' }}>
+                            متغیرهای مجاز: <Tag color="default">{'{title}'}</Tag> <Tag color="default">{'{city}'}</Tag> <Tag color="default">{'{inquiryId}'}</Tag>
+                          </Text>
+                        }
+                      >
+                        <Input.TextArea
+                          rows={2}
+                          value={smsTplAdminNewInquiry}
+                          onChange={(e) => setSmsTplAdminNewInquiry(e.target.value)}
+                        />
+                      </Form.Item>
+
+                      <Form.Item
+                        label="۲. پیامک اطلاع‌رسانی به کارفرما (برآورد و تایید استعلام توسط ادمین)"
+                        help={
+                          <Text type="secondary" style={{ fontSize: '12px' }}>
+                            متغیرهای مجاز: <Tag color="default">{'{title}'}</Tag> <Tag color="default">{'{inquiryId}'}</Tag>
+                          </Text>
+                        }
+                      >
+                        <Input.TextArea
+                          rows={2}
+                          value={smsTplEmployerInquiryApproved}
+                          onChange={(e) => setSmsTplEmployerInquiryApproved(e.target.value)}
+                        />
+                      </Form.Item>
+
+                      <Form.Item
+                        label="۳. پیامک اطلاع‌رسانی به کارفرما (رد شدن استعلام همراه با علت رد)"
+                        help={
+                          <Text type="secondary" style={{ fontSize: '12px' }}>
+                            متغیرهای مجاز: <Tag color="default">{'{title}'}</Tag> <Tag color="default">{'{reason}'}</Tag> <Tag color="default">{'{inquiryId}'}</Tag>
+                          </Text>
+                        }
+                      >
+                        <Input.TextArea
+                          rows={2}
+                          value={smsTplEmployerInquiryRejected}
+                          onChange={(e) => setSmsTplEmployerInquiryRejected(e.target.value)}
+                        />
+                      </Form.Item>
+
+                      <Button
+                        type="primary"
+                        icon={<SaveOutlined />}
+                        loading={smsSaving}
+                        onClick={handleSaveSmsSettings}
+                        size="large"
+                        block
+                        style={{ marginTop: 8, backgroundColor: '#10B981', borderColor: '#10B981' }}
+                      >
+                        ذخیره تغییرات تنظیمات پیامک
+                      </Button>
+                    </Form>
                   </Card>
                 </Col>
               </Row>

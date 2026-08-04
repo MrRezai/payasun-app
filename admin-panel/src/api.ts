@@ -323,4 +323,20 @@ export class ApiClient {
     if (!res.ok) throw new Error('خطا در ثبت تنظیمات راهنماها.');
     return await res.json();
   }
+
+  public static async getSmsSettings(): Promise<any> {
+    const res = await this.request(`${BASE_URL}/admin/sms-settings`);
+    if (!res.ok) throw new Error('خطا در دریافت تنظیمات پیامک.');
+    return await res.json();
+  }
+
+  public static async updateSmsSettings(settings: any): Promise<any> {
+    const res = await this.request(`${BASE_URL}/admin/sms-settings`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(settings),
+    });
+    if (!res.ok) throw new Error('خطا در ثبت تنظیمات پیامک.');
+    return await res.json();
+  }
 }
