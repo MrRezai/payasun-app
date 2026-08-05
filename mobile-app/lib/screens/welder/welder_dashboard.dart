@@ -851,9 +851,9 @@ class _WelderPendingAgreementsSectionState extends State<WelderPendingAgreements
               ),
           ],
         ),
-        const SizedBox(height: 10),
+        const SizedBox(height: 8),
         SizedBox(
-          height: 165,
+          height: 135,
           child: PageView.builder(
             itemCount: widget.pendingInquiries.length,
             onPageChanged: (index) {
@@ -864,61 +864,64 @@ class _WelderPendingAgreementsSectionState extends State<WelderPendingAgreements
             itemBuilder: (context, index) {
               final inquiry = widget.pendingInquiries[index];
               return Container(
-                margin: const EdgeInsets.only(left: 4, right: 4),
-                padding: const EdgeInsets.all(12),
+                margin: const EdgeInsets.symmetric(horizontal: 4),
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
                 decoration: BoxDecoration(
                   color: AppColors.white,
-                  borderRadius: BorderRadius.circular(18),
-                  border: Border.all(color: AppColors.amberOrange.withValues(alpha: 0.4), width: 1.2),
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(color: AppColors.burgundy.withValues(alpha: 0.3), width: 1.2),
                   boxShadow: [
                     BoxShadow(
-                      color: AppColors.amberOrange.withValues(alpha: 0.06),
-                      blurRadius: 10,
-                      offset: const Offset(0, 4),
+                      color: AppColors.burgundy.withValues(alpha: 0.05),
+                      blurRadius: 8,
+                      offset: const Offset(0, 3),
                     ),
                   ],
                 ),
                 child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     Row(
                       children: [
-                        Container(
-                          padding: const EdgeInsets.all(6),
-                          decoration: BoxDecoration(
-                            color: AppColors.amberOrange.withValues(alpha: 0.1),
-                            shape: BoxShape.circle,
-                          ),
-                          child: const Icon(Icons.stars_rounded, color: AppColors.amberOrange, size: 18),
-                        ),
-                        const SizedBox(width: 8),
+                        const Icon(Icons.stars_rounded, color: AppColors.burgundy, size: 18),
+                        const SizedBox(width: 6),
                         Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                inquiry.title,
-                                style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: AppColors.textDark, fontFamily: 'Vazirmatn'),
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                              ),
-                              const SizedBox(height: 2),
-                              Text(
-                                'شهر: ${inquiry.city} | بیعانه: ${(inquiry.depositAmount ?? 0).toInt()} تومان',
-                                style: const TextStyle(fontSize: 10.5, color: AppColors.textMuted, fontFamily: 'Vazirmatn'),
-                              ),
-                            ],
+                          child: Text(
+                            inquiry.title,
+                            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12.5, color: AppColors.textDark, fontFamily: 'Vazirmatn'),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                        const SizedBox(width: 6),
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                          decoration: BoxDecoration(
+                            color: AppColors.burgundy.withValues(alpha: 0.08),
+                            borderRadius: BorderRadius.circular(6),
+                          ),
+                          child: Text(
+                            inquiry.city,
+                            style: const TextStyle(fontSize: 10, color: AppColors.burgundy, fontWeight: FontWeight.bold, fontFamily: 'Vazirmatn'),
                           ),
                         ),
                       ],
                     ),
-                    DispatchCountdownTimer(dispatchedAt: inquiry.updatedAt ?? inquiry.createdAt),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        DispatchCountdownTimer(dispatchedAt: inquiry.updatedAt ?? inquiry.createdAt),
+                        Text(
+                          'بیعانه: ${(inquiry.depositAmount ?? 0).toInt()} تومان',
+                          style: const TextStyle(fontSize: 10.5, color: AppColors.textMuted, fontFamily: 'Vazirmatn'),
+                        ),
+                      ],
+                    ),
                     Row(
                       children: [
                         Expanded(
                           child: SizedBox(
-                            height: 38,
+                            height: 34,
                             child: ElevatedButton.icon(
                               onPressed: () async {
                                 final success = await widget.inquiryProvider.confirmAgreement(
@@ -937,21 +940,21 @@ class _WelderPendingAgreementsSectionState extends State<WelderPendingAgreements
                                   }
                                 }
                               },
-                              icon: const Icon(Icons.check_circle_rounded, size: 16),
-                              label: const Text('تایید توافق و شروع کار', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 11, fontFamily: 'Vazirmatn')),
+                              icon: const Icon(Icons.check_circle_rounded, size: 15),
+                              label: const Text('تایید و شروع کار', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 11, fontFamily: 'Vazirmatn')),
                               style: ElevatedButton.styleFrom(
                                 backgroundColor: AppColors.royalBlue,
                                 foregroundColor: Colors.white,
                                 elevation: 0,
-                                padding: const EdgeInsets.symmetric(horizontal: 8),
-                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                                padding: const EdgeInsets.symmetric(horizontal: 6),
+                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
                               ),
                             ),
                           ),
                         ),
-                        const SizedBox(width: 8),
+                        const SizedBox(width: 6),
                         SizedBox(
-                          height: 38,
+                          height: 34,
                           child: OutlinedButton.icon(
                             onPressed: () {
                               Navigator.push(
@@ -961,12 +964,12 @@ class _WelderPendingAgreementsSectionState extends State<WelderPendingAgreements
                                 ),
                               );
                             },
-                            icon: const Icon(Icons.visibility_outlined, size: 16, color: AppColors.royalBlue),
-                            label: const Text('جزئیات', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 11, color: AppColors.royalBlue, fontFamily: 'Vazirmatn')),
+                            icon: const Icon(Icons.visibility_outlined, size: 15, color: AppColors.royalBlue),
+                            label: const Text('جزئیات', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 10.5, color: AppColors.royalBlue, fontFamily: 'Vazirmatn')),
                             style: OutlinedButton.styleFrom(
-                              padding: const EdgeInsets.symmetric(horizontal: 10),
+                              padding: const EdgeInsets.symmetric(horizontal: 8),
                               side: const BorderSide(color: AppColors.royalBlue),
-                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
                             ),
                           ),
                         ),

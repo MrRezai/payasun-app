@@ -58,6 +58,9 @@ export class Inquiry {
   @Column({ type: 'enum', enum: InquiryStatus, default: InquiryStatus.DRAFT })
   status: InquiryStatus;
 
+  @Column({ type: 'varchar', length: 100, nullable: true })
+  welder_id: string | null;
+
   @Column({ type: 'varchar', length: 10, default: 'A' })
   tier: string;
 

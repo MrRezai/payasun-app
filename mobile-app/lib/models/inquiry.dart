@@ -47,6 +47,7 @@ class Inquiry {
   final double? depositAmount;
   final DateTime? updatedAt;
   final DateTime? dispatchedAt;
+  final String? welderId;
 
   Inquiry({
     required this.id,
@@ -68,6 +69,7 @@ class Inquiry {
     this.depositAmount,
     this.updatedAt,
     this.dispatchedAt,
+    this.welderId,
   });
 
   factory Inquiry.fromJson(Map<String, dynamic> json) {
@@ -94,6 +96,7 @@ class Inquiry {
       depositAmount: double.tryParse(json['deposit_amount']?.toString() ?? ''),
       updatedAt: json['updated_at'] != null ? DateTime.tryParse(json['updated_at'] as String) : null,
       dispatchedAt: json['dispatched_at'] != null ? DateTime.tryParse(json['dispatched_at'] as String) : null,
+      welderId: json['welderId'] as String? ?? json['welder_id'] as String?,
     );
   }
 

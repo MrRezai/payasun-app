@@ -617,6 +617,7 @@ export class InquiryService {
       throw new BadRequestException('این جوشکار در حال حاضر یک پروژه فعال در دست اجرا دارد.');
     }
 
+    inquiry.welder_id = welder.id.toString();
     inquiry.status = InquiryStatus.AGREEMENT_PENDING_WELDER;
     inquiry.deposit_amount = Number(inquiry.area_sqm || 0) * 1000;
     const savedInquiry = await this.inquiryRepository.save(inquiry);

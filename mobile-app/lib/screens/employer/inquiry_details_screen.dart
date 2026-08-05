@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../constants/app_colors.dart';
@@ -37,6 +38,8 @@ class _InquiryDetailsScreenState extends State<InquiryDetailsScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final auth = Provider.of<AuthProvider>(context);
+    final isWelder = auth.currentRole == UserRole.welder;
     final provider = Provider.of<InquiryProvider>(context);
     final Inquiry inquiry = provider.myInquiries.cast<Inquiry?>().firstWhere(
       (i) => i?.id == widget.inquiry.id,
@@ -137,7 +140,131 @@ class _InquiryDetailsScreenState extends State<InquiryDetailsScreen> {
                 _buildOverviewCard(context, dateStr),
                 const SizedBox(height: 16),
 
-                if (inquiry.status == 'AGREEMENT_PENDING_WELDER') ...[
+                // --- WELDER SPECIFIC BANNERS & WORKSPACE ACTIONS ---
+                if (isWelder && inquiry.status == 'AGREEMENT_PENDING_WELDER') ...[
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      color: AppColors.burgundy.withValues(alpha: 0.06),
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(color: AppColors.burgundy.withValues(alpha: 0.25)),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Row(
+                          children: [
+                            Icon(Icons.stars_rounded, color: AppColors.burgundy, size: 22),
+                            SizedBox(width: 8),
+                            Text('شما برای اجرای این پروژه انتخاب شده‌اید!', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: AppColors.textDark, fontFamily: 'Vazirmatn')),
+                          ],
+                        ),
+                        const SizedBox(height: 6),
+                        const Text('کارفرما پیشنهاد شما را پذیرفته است. جهت شروع رسمی پروژه، لطفاً تایید اولیه توافق را ثبت نمایید.', style: TextStyle(fontSize: 11, color: AppColors.textMuted, fontFamily: 'Vazirmatn')),
+                        const SizedBox(height: 10),
+                        AgreementCountdownTimer(updatedAt: inquiry.updatedAt ?? inquiry.createdAt),
+                        const SizedBox(height: 12),
+                        SizedBox(
+                          width: double.infinity,
+                          height: 44,
+                          child: ElevatedButton.icon(
+                            onPressed: () async {
+                              final token = auth.token;
+                              final provider = Provider.of<InquiryProvider>(context, listen: false);
+                              final success = await provider.confirmAgreement(
+                                token: token,
+                                inquiryId: inquiry.id,
+                              );
+                              if (context.mounted) {
+                                if (success) {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    const SnackBar(content: Text('توافق با موفقیت تایید شد. پروژه به حالت «در حال اجرا» تغییر یافت.'), backgroundColor: Colors.green),
+                                  );
+                                } else {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    SnackBar(content: Text(provider.errorMessage ?? 'خطا در تایید توافق'), backgroundColor: Colors.red),
+                                  );
+                                }
+                              }
+                            },
+                            icon: const Icon(Icons.check_circle_rounded, size: 18),
+                            label: const Text('تایید توافق و شروع رسمی کار', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12, fontFamily: 'Vazirmatn')),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: AppColors.royalBlue,
+                              foregroundColor: Colors.white,
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                ],
+
+                if (isWelder && inquiry.status == 'IN_PROGRESS') ...[
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      color: AppColors.royalBlue.withValues(alpha: 0.08),
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(color: AppColors.royalBlue.withValues(alpha: 0.3)),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Row(
+                          children: [
+                            Icon(Icons.construction_rounded, color: AppColors.royalBlue, size: 22),
+                            SizedBox(width: 8),
+                            Text('میز کار پروژه — پروژه در حال اجرا می‌باشد', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: AppColors.textDark, fontFamily: 'Vazirmatn')),
+                          ],
+                        ),
+                        const SizedBox(height: 6),
+                        const Text('عملیات جوشکاری این پروژه در حال اجرا توسط شما است. پس از پایان کامل کار، اعلام پایان کار را جهت تایید کارفرما ثبت کنید.', style: TextStyle(fontSize: 11, color: AppColors.textMuted, fontFamily: 'Vazirmatn')),
+                        const SizedBox(height: 12),
+                        SizedBox(
+                          width: double.infinity,
+                          height: 44,
+                          child: ElevatedButton.icon(
+                            onPressed: () async {
+                              final token = auth.token;
+                              final provider = Provider.of<InquiryProvider>(context, listen: false);
+                              final success = await provider.finishJob(
+                                token: token,
+                                inquiryId: inquiry.id,
+                              );
+                              if (context.mounted) {
+                                if (success) {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    const SnackBar(content: Text('اعلام پایان کار با موفقیت ثبت شد.'), backgroundColor: Colors.green),
+                                  );
+                                } else {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    SnackBar(content: Text(provider.errorMessage ?? 'خطا در اعلام پایان کار'), backgroundColor: Colors.red),
+                                  );
+                                }
+                              }
+                            },
+                            icon: const Icon(Icons.check_circle_rounded, size: 18),
+                            label: const Text('اعلام پایان کار پروژه به کارفرما', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12, fontFamily: 'Vazirmatn')),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: AppColors.royalBlue,
+                              foregroundColor: Colors.white,
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                ],
+
+                // --- EMPLOYER SPECIFIC BANNERS ---
+                if (!isWelder && inquiry.status == 'AGREEMENT_PENDING_WELDER') ...[
                   Container(
                     width: double.infinity,
                     padding: const EdgeInsets.all(16),
@@ -166,14 +293,14 @@ class _InquiryDetailsScreenState extends State<InquiryDetailsScreen> {
                   const SizedBox(height: 16),
                 ],
 
-                if (inquiry.status == 'IN_PROGRESS') ...[
+                if (!isWelder && inquiry.status == 'IN_PROGRESS') ...[
                   Container(
                     width: double.infinity,
                     padding: const EdgeInsets.all(16),
                     decoration: BoxDecoration(
-                      color: Colors.blue[50],
+                      color: AppColors.royalBlue.withValues(alpha: 0.08),
                       borderRadius: BorderRadius.circular(16),
-                      border: Border.all(color: Colors.blue[200]!),
+                      border: Border.all(color: AppColors.royalBlue.withValues(alpha: 0.3)),
                     ),
                     child: const Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
@@ -1073,7 +1200,13 @@ class _InquiryDetailsScreenState extends State<InquiryDetailsScreen> {
   }
 
   Widget _buildOffersSection(BuildContext context) {
-    final showBids = inquiry.status == 'BROADCASTED';
+    final auth = Provider.of<AuthProvider>(context, listen: false);
+    if (auth.currentRole == UserRole.welder) {
+      // Welders must NEVER see other welders' bids
+      return const SizedBox.shrink();
+    }
+
+    final showBids = inquiry.status != 'DRAFT' && inquiry.status != 'PENDING_ESTIMATION' && inquiry.status != 'REJECTED';
     final inquiryProvider = Provider.of<InquiryProvider>(context);
     final offers = inquiryProvider.inquiryOffers;
 
@@ -1175,13 +1308,13 @@ class _InquiryDetailsScreenState extends State<InquiryDetailsScreen> {
       children: [
         for (int index = 0; index < offers.length; index++) ...[
           if (index > 0) const SizedBox(height: 12),
-          _buildBidItem(context, offers[index]),
+          _buildBidItem(context, offers[index], index),
         ]
       ],
     );
   }
 
-  Widget _buildBidItem(BuildContext context, dynamic bid) {
+  Widget _buildBidItem(BuildContext context, dynamic bid, int index) {
     final String? rawAvatarUrl = (bid['profile_picture_url'] ?? bid['avatar_url'] ?? bid['welder_avatar']) as String?;
     final bool hasAvatar = rawAvatarUrl != null && rawAvatarUrl.trim().isNotEmpty;
     final String? fullAvatarUrl = hasAvatar
@@ -1190,11 +1323,30 @@ class _InquiryDetailsScreenState extends State<InquiryDetailsScreen> {
             : 'https://api.joftojoor.com${rawAvatarUrl.startsWith('/') ? '' : '/'}$rawAvatarUrl')
         : null;
 
+    final String? offerWelderId = (bid['welder_id'] ?? bid['welderId'] ?? bid['welder_user_id'] ?? bid['id'])?.toString();
+    final String? selectedWelderId = inquiry.welderId;
+    final bool isSelectedOffer = (inquiry.status != 'BROADCASTED' && inquiry.status != 'ESTIMATED' && inquiry.status != 'PENDING_ESTIMATION') &&
+        (bid['isSelected'] == true ||
+         (offerWelderId != null && selectedWelderId != null && offerWelderId == selectedWelderId) ||
+         (index == 0 && (selectedWelderId == null || selectedWelderId.isEmpty)));
+
     return Container(
       decoration: BoxDecoration(
-        color: AppColors.white,
+        color: isSelectedOffer ? Colors.green.withValues(alpha: 0.02) : AppColors.white,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppColors.borderGrey),
+        border: Border.all(
+          color: isSelectedOffer ? Colors.green : AppColors.borderGrey,
+          width: isSelectedOffer ? 2.0 : 1.0,
+        ),
+        boxShadow: isSelectedOffer
+            ? [
+                BoxShadow(
+                  color: Colors.green.withValues(alpha: 0.12),
+                  blurRadius: 12,
+                  offset: const Offset(0, 4),
+                ),
+              ]
+            : null,
       ),
       child: ClipRRect(
         borderRadius: BorderRadius.circular(16),
@@ -1202,6 +1354,37 @@ class _InquiryDetailsScreenState extends State<InquiryDetailsScreen> {
           padding: const EdgeInsets.all(16.0),
           child: Column(
             children: [
+              if (isSelectedOffer) ...[
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.start,
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: Colors.green,
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: const Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(Icons.check_circle_rounded, color: Colors.white, size: 14),
+                          SizedBox(width: 6),
+                          Text(
+                            'پیشنهاد انتخاب شده توسط شما',
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontSize: 11,
+                              fontWeight: FontWeight.bold,
+                              fontFamily: 'Vazirmatn',
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 12),
+              ],
               Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -1839,8 +2022,8 @@ class _InquiryDetailsScreenState extends State<InquiryDetailsScreen> {
         label = 'ارجاع به ۵ جوشکار';
         break;
       case 'AGREEMENT_PENDING_WELDER':
-        bgColor = Colors.purple[100]!;
-        textColor = Colors.purple[800]!;
+        bgColor = AppColors.burgundy.withValues(alpha: 0.1);
+        textColor = AppColors.burgundy;
         label = 'در انتظار تایید شروع توسط جوشکار';
         break;
       case 'IN_PROGRESS':
@@ -2037,12 +2220,26 @@ class AgreementCountdownTimer extends StatefulWidget {
 }
 
 class _AgreementCountdownTimerState extends State<AgreementCountdownTimer> {
+  Timer? _timer;
   late Duration _remaining;
 
   @override
   void initState() {
     super.initState();
     _calc();
+    _timer = Timer.periodic(const Duration(seconds: 1), (_) {
+      if (mounted) {
+        setState(() {
+          _calc();
+        });
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    _timer?.cancel();
+    super.dispose();
   }
 
   void _calc() {
