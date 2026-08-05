@@ -93,6 +93,101 @@ class _WelderDashboardState extends State<WelderDashboard> {
             _buildWelderHeaderCard(displayName, homeCity, homeProvince, totalScore, isSetupCompleted, initials, fullPicUrl, auth, skills, profile?['tier'] ?? 'A'),
             const SizedBox(height: 25),
 
+            // High Priority Pending Agreement Alert Banner (When Selected by Employer)
+            Builder(
+              builder: (context) {
+                final inquiryProvider = Provider.of<InquiryProvider>(context);
+                final pendingAgreementInquiry = inquiryProvider.allInquiries.cast<Inquiry?>().firstWhere(
+                  (i) => i?.status == 'AGREEMENT_PENDING_WELDER',
+                  orElse: () => null,
+                );
+                if (pendingAgreementInquiry == null) return const SizedBox.shrink();
+
+                return Container(
+                  width: double.infinity,
+                  margin: const EdgeInsets.only(bottom: 25),
+                  padding: const EdgeInsets.all(20),
+                  decoration: BoxDecoration(
+                    gradient: const LinearGradient(
+                      colors: [Color(0xFF8B5CF6), Color(0xFF6D28D9)],
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                    ),
+                    borderRadius: BorderRadius.circular(24),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.purple.withValues(alpha: 0.3),
+                        blurRadius: 15,
+                        offset: const Offset(0, 8),
+                      ),
+                    ],
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Row(
+                        children: [
+                          Icon(Icons.stars_rounded, color: AppColors.amberOrange, size: 28),
+                          SizedBox(width: 10),
+                          Expanded(
+                            child: Text(
+                              '🔔 شما برای اجرای پروژه انتخاب شدید!',
+                              style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 15, fontFamily: 'Vazirmatn'),
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 10),
+                      Text(
+                        'عنوان پروژه: ${pendingAgreementInquiry.title}',
+                        style: const TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.bold, fontFamily: 'Vazirmatn'),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        'شهر: ${pendingAgreementInquiry.city} | بیعانه: ${(pendingAgreementInquiry.depositAmount ?? 0).toInt()} تومان',
+                        style: const TextStyle(color: Colors.white70, fontSize: 12, fontFamily: 'Vazirmatn'),
+                      ),
+                      const SizedBox(height: 12),
+                      DispatchCountdownTimer(dispatchedAt: pendingAgreementInquiry.updatedAt ?? pendingAgreementInquiry.createdAt),
+                      const SizedBox(height: 14),
+                      SizedBox(
+                        width: double.infinity,
+                        child: ElevatedButton.icon(
+                          onPressed: () async {
+                            final success = await inquiryProvider.confirmAgreement(
+                              token: auth.token,
+                              inquiryId: pendingAgreementInquiry.id,
+                            );
+                            if (context.mounted) {
+                              if (success) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(content: Text('توافق با موفقیت تایید گردید. پروژه به حالت «در حال اجرا» تغییر یافت.'), backgroundColor: Colors.green),
+                                );
+                              } else {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(content: Text(inquiryProvider.errorMessage ?? 'خطا در تایید توافق'), backgroundColor: Colors.red),
+                                );
+                              }
+                            }
+                          },
+                          icon: const Icon(Icons.check_circle_rounded, color: AppColors.royalBlue, size: 20),
+                          label: const Text(
+                            'تایید توافق و شروع رسمی کار',
+                            style: TextStyle(color: AppColors.royalBlue, fontWeight: FontWeight.bold, fontSize: 13, fontFamily: 'Vazirmatn'),
+                          ),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: AppColors.amberOrange,
+                            padding: const EdgeInsets.symmetric(vertical: 12),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                );
+              },
+            ),
+
             // Performance Metrics
             _buildSectionHeader('خلاصه عملکرد شما'),
             const SizedBox(height: 14),
@@ -770,6 +865,63 @@ class _WelderDashboardState extends State<WelderDashboard> {
             'از بخش «فرصت‌های کار» می‌توانید استعلام‌های منتشر شده را بررسی کرده و پیشنهاد خود را ثبت کنید.',
             style: TextStyle(color: AppColors.textMuted, fontSize: 11, height: 1.6),
             textAlign: TextAlign.center,
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class DispatchCountdownTimer extends StatefulWidget {
+  final DateTime dispatchedAt;
+  const DispatchCountdownTimer({super.key, required this.dispatchedAt});
+
+  @override
+  State<DispatchCountdownTimer> createState() => _DispatchCountdownTimerState();
+}
+
+class _DispatchCountdownTimerState extends State<DispatchCountdownTimer> {
+  late Duration _remaining;
+
+  @override
+  void initState() {
+    super.initState();
+    _calc();
+  }
+
+  void _calc() {
+    final expire = widget.dispatchedAt.add(const Duration(hours: 24));
+    final diff = expire.difference(DateTime.now());
+    _remaining = diff.isNegative ? Duration.zero : diff;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    _calc();
+    final h = _remaining.inHours;
+    final m = _remaining.inMinutes.remainder(60);
+    final s = _remaining.inSeconds.remainder(60);
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+      decoration: BoxDecoration(
+        color: h < 3 ? Colors.red[50] : Colors.amber[50],
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: h < 3 ? Colors.red[300]! : Colors.amber[400]!),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(Icons.timer_outlined, size: 14, color: h < 3 ? Colors.red : Colors.amber[900]),
+          const SizedBox(width: 4),
+          Text(
+            'مهلت تایید توافق: ${h.toString().padLeft(2, '0')}:${m.toString().padLeft(2, '0')}:${s.toString().padLeft(2, '0')}',
+            style: TextStyle(
+              fontSize: 11,
+              fontWeight: FontWeight.bold,
+              color: h < 3 ? Colors.red : Colors.amber[900],
+              fontFamily: 'Vazirmatn',
+            ),
           ),
         ],
       ),

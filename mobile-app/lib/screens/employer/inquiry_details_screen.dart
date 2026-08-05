@@ -138,18 +138,20 @@ class _InquiryDetailsScreenState extends State<InquiryDetailsScreen> {
                       borderRadius: BorderRadius.circular(16),
                       border: Border.all(color: Colors.purple[200]!),
                     ),
-                    child: const Column(
+                    child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Row(
+                        const Row(
                           children: [
                             Icon(Icons.hourglass_top_outlined, color: Colors.purple, size: 22),
                             SizedBox(width: 8),
                             Text('در انتظار تایید شروع کار توسط جوشکار', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: AppColors.textDark, fontFamily: 'Vazirmatn')),
                           ],
                         ),
-                        SizedBox(height: 6),
-                        Text('پیامک اطلاع‌رسانی برای جوشکار منتخب ارسال شده است. به محض تایید ایشان، پروژه به حالت «در حال اجرا» تغییر خواهد یافت.', style: TextStyle(fontSize: 11, color: AppColors.textMuted, fontFamily: 'Vazirmatn')),
+                        const SizedBox(height: 6),
+                        const Text('پیامک اطلاع‌رسانی برای جوشکار منتخب ارسال شده است. تا زمان پاسخ جوشکار، امکان انتخاب پیشنهاد دیگری وجود ندارد.', style: TextStyle(fontSize: 11, color: AppColors.textMuted, fontFamily: 'Vazirmatn')),
+                        const SizedBox(height: 10),
+                        AgreementCountdownTimer(updatedAt: inquiry.updatedAt ?? inquiry.createdAt),
                       ],
                     ),
                   ),
@@ -1692,44 +1694,56 @@ class _InquiryDetailsScreenState extends State<InquiryDetailsScreen> {
                             child: SizedBox(
                               height: 48,
                               child: ElevatedButton.icon(
-                                onPressed: () async {
-                                  Navigator.pop(ctx);
-                                  final welderId = (
-                                    bid['welder_id'] ??
-                                    bid['welderId'] ??
-                                    bid['welder_user_id'] ??
-                                    bid['user_id'] ??
-                                    bid['userId'] ??
-                                    bid['id'] ??
-                                    ''
-                                  ).toString();
-                                  final token = Provider.of<AuthProvider>(context, listen: false).token;
-                                  final provider = Provider.of<InquiryProvider>(context, listen: false);
-                                  final success = await provider.startAgreement(
-                                    token: token,
-                                    inquiryId: inquiry.id,
-                                    welderId: welderId,
-                                  );
-                                  if (context.mounted) {
-                                    if (success) {
-                                      ScaffoldMessenger.of(context).showSnackBar(
-                                        const SnackBar(
-                                          content: Text('پیشنهاد با موفقیت انتخاب شد. درخواست شروع کار برای جوشکار ارسال گردید.'),
-                                          backgroundColor: Colors.green,
-                                        ),
-                                      );
-                                    } else {
-                                      ScaffoldMessenger.of(context).showSnackBar(
-                                        SnackBar(
-                                          content: Text(provider.errorMessage ?? 'خطا در انتخاب پیشنهاد'),
-                                          backgroundColor: Colors.red,
-                                        ),
-                                      );
-                                    }
-                                  }
-                                },
-                                icon: const Icon(Icons.check_circle_outline, size: 18),
-                                label: const Text('انتخاب این پیشنهاد', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12, fontFamily: 'Vazirmatn')),
+                                onPressed: (inquiry.status != 'BROADCASTED' && inquiry.status != 'ESTIMATED')
+                                    ? null
+                                    : () async {
+                                        Navigator.pop(ctx);
+                                        final welderId = (
+                                          bid['welder_id'] ??
+                                          bid['welderId'] ??
+                                          bid['welder_user_id'] ??
+                                          bid['user_id'] ??
+                                          bid['userId'] ??
+                                          bid['id'] ??
+                                          ''
+                                        ).toString();
+                                        final token = Provider.of<AuthProvider>(context, listen: false).token;
+                                        final provider = Provider.of<InquiryProvider>(context, listen: false);
+                                        final success = await provider.startAgreement(
+                                          token: token,
+                                          inquiryId: inquiry.id,
+                                          welderId: welderId,
+                                        );
+                                        if (context.mounted) {
+                                          if (success) {
+                                            ScaffoldMessenger.of(context).showSnackBar(
+                                              const SnackBar(
+                                                content: Text('پیشنهاد با موفقیت انتخاب شد. درخواست شروع کار برای جوشکار ارسال گردید.'),
+                                                backgroundColor: Colors.green,
+                                              ),
+                                            );
+                                          } else {
+                                            ScaffoldMessenger.of(context).showSnackBar(
+                                              SnackBar(
+                                                content: Text(provider.errorMessage ?? 'خطا در انتخاب پیشنهاد'),
+                                                backgroundColor: Colors.red,
+                                              ),
+                                            );
+                                          }
+                                        }
+                                      },
+                                icon: Icon(
+                                  (inquiry.status != 'BROADCASTED' && inquiry.status != 'ESTIMATED')
+                                      ? Icons.lock_outline
+                                      : Icons.check_circle_outline,
+                                  size: 18,
+                                ),
+                                label: Text(
+                                  (inquiry.status != 'BROADCASTED' && inquiry.status != 'ESTIMATED')
+                                      ? 'پیشنهاد انتخاب شده است'
+                                      : 'انتخاب این پیشنهاد',
+                                  style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12, fontFamily: 'Vazirmatn'),
+                                ),
                                 style: ElevatedButton.styleFrom(
                                   backgroundColor: AppColors.royalBlue,
                                   foregroundColor: AppColors.white,
@@ -2002,6 +2016,62 @@ class _InquiryDetailsScreenState extends State<InquiryDetailsScreen> {
           },
         );
       },
+    );
+  }
+}
+
+class AgreementCountdownTimer extends StatefulWidget {
+  final DateTime updatedAt;
+  const AgreementCountdownTimer({super.key, required this.updatedAt});
+
+  @override
+  State<AgreementCountdownTimer> createState() => _AgreementCountdownTimerState();
+}
+
+class _AgreementCountdownTimerState extends State<AgreementCountdownTimer> {
+  late Duration _remaining;
+
+  @override
+  void initState() {
+    super.initState();
+    _calc();
+  }
+
+  void _calc() {
+    final expire = widget.updatedAt.add(const Duration(hours: 24));
+    final diff = expire.difference(DateTime.now());
+    _remaining = diff.isNegative ? Duration.zero : diff;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    _calc();
+    final h = _remaining.inHours;
+    final m = _remaining.inMinutes.remainder(60);
+    final s = _remaining.inSeconds.remainder(60);
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+      decoration: BoxDecoration(
+        color: Colors.purple[100],
+        borderRadius: BorderRadius.circular(10),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const Icon(Icons.timer_outlined, size: 14, color: Colors.purple),
+          const SizedBox(width: 4),
+          Text(
+            'مهلت تایید جوشکار: ${h.toString().padLeft(2, '0')}:${m.toString().padLeft(2, '0')}:${s.toString().padLeft(2, '0')}',
+            style: const TextStyle(
+              fontSize: 11,
+              fontWeight: FontWeight.bold,
+              color: Colors.purple,
+              fontFamily: 'Vazirmatn',
+            ),
+          ),
+        ],
+      ),
     );
   }
 }

@@ -44,6 +44,9 @@ class Inquiry {
   final DateTime createdAt;
 
   final List<dynamic>? offers;
+  final double? depositAmount;
+  final DateTime? updatedAt;
+  final DateTime? dispatchedAt;
 
   Inquiry({
     required this.id,
@@ -62,6 +65,9 @@ class Inquiry {
     required this.items,
     required this.createdAt,
     this.offers,
+    this.depositAmount,
+    this.updatedAt,
+    this.dispatchedAt,
   });
 
   factory Inquiry.fromJson(Map<String, dynamic> json) {
@@ -85,6 +91,9 @@ class Inquiry {
       items: parsedItems,
       createdAt: DateTime.parse(json['created_at'] as String? ?? DateTime.now().toIso8601String()),
       offers: json['offers'] as List<dynamic>?,
+      depositAmount: double.tryParse(json['deposit_amount']?.toString() ?? ''),
+      updatedAt: json['updated_at'] != null ? DateTime.tryParse(json['updated_at'] as String) : null,
+      dispatchedAt: json['dispatched_at'] != null ? DateTime.tryParse(json['dispatched_at'] as String) : null,
     );
   }
 

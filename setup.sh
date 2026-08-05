@@ -1252,6 +1252,10 @@ update_and_rebuild_backend() {
         return 1
     fi
 
+    # Ignore file mode / permission bit changes and auto-clean lockfiles
+    git config core.filemode false 2>/dev/null || true
+    git checkout -- backend/package-lock.json package-lock.json 2>/dev/null || true
+
     info "Checking for local changes..."
     local local_changes
     local_changes=$(git status --porcelain 2>/dev/null | grep -v '^??' || echo "")
@@ -1333,8 +1337,9 @@ update_and_rebuild_backend() {
 
     # Rebuild and restart backend
     if confirm "Do you want to rebuild node modules and build the backend now?"; then
-        info "Installing backend dependencies (npm i)..."
-        (cd "${BACKEND_DIR}" && npm i)
+        info "Installing backend dependencies (npm ci)..."
+        (cd "${BACKEND_DIR}" && (npm ci || npm i --no-save))
+        git checkout -- backend/package-lock.json 2>/dev/null || true
         if [ $? -ne 0 ]; then
             error "Dependency installation failed."
             pause_continue
@@ -1499,11 +1504,12 @@ deploy_admin_panel() {
 
     # Step 2: Build the React application
     info "Installing admin-panel dependencies..."
-    if ! (cd "$admin_dir" && npm install); then
+    if ! (cd "$admin_dir" && (npm ci || npm i --no-save)); then
         error "npm install failed in admin-panel."
         pause_continue
         return 1
     fi
+    git checkout -- admin-panel/package-lock.json 2>/dev/null || true
 
     info "Building admin-panel static assets..."
     if ! (cd "$admin_dir" && env VITE_API_URL="$api_url" npm run build); then
