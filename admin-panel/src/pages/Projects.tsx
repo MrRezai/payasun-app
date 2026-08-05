@@ -23,9 +23,16 @@ export default function Projects({ inquiries, onEstimateClick, onViewDetailClick
   const [searchText, setSearchText] = useState('');
   const [systemFilter, setSystemFilter] = useState<'all' | 'project' | 'legacy'>('all');
 
-  const pendingInquiries = inquiries.filter(i => i.status === 'PENDING_ESTIMATION');
-  const broadcastedInquiries = inquiries.filter(i => i.status === 'BROADCASTED' || i.status === 'ESTIMATED');
-  const closedInquiries = inquiries.filter(i => i.status === 'CLOSED' || i.status === 'EXPIRED' || i.status === 'REJECTED');
+  const pendingInquiries = inquiries.filter(i => i.status === 'PENDING_ESTIMATION' || i.status === 'DRAFT');
+  const broadcastedInquiries = inquiries.filter(i => 
+    i.status === 'BROADCASTED' || 
+    i.status === 'ESTIMATED' || 
+    i.status === 'DISPATCHED' || 
+    i.status === 'AGREEMENT_PENDING_WELDER' || 
+    i.status === 'IN_PROGRESS' || 
+    i.status === 'COMPLETED_PENDING_EMPLOYER'
+  );
+  const closedInquiries = inquiries.filter(i => i.status === 'COMPLETED' || i.status === 'CLOSED' || i.status === 'EXPIRED' || i.status === 'REJECTED');
 
   const pendingCount = pendingInquiries.length;
   const broadcastedCount = broadcastedInquiries.length;
@@ -153,8 +160,12 @@ export default function Projects({ inquiries, onEstimateClick, onViewDetailClick
         if (inq.status === 'PENDING_ESTIMATION') return <Tag color="warning">در انتظار کارشناسی</Tag>;
         if (inq.status === 'ESTIMATED') return <Tag color="gold">کارشناسی‌شده</Tag>;
         if (inq.status === 'BROADCASTED') return <Tag color="success">انتشار یافته</Tag>;
+        if (inq.status === 'AGREEMENT_PENDING_WELDER') return <Tag color="purple">در انتظار تایید جوشکار</Tag>;
+        if (inq.status === 'IN_PROGRESS') return <Tag color="processing">در حال اجرا</Tag>;
+        if (inq.status === 'COMPLETED_PENDING_EMPLOYER') return <Tag color="magenta">در انتظار تایید کارفرما</Tag>;
+        if (inq.status === 'COMPLETED') return <Tag color="cyan">اتمام یافته و امتیازدهی‌شده</Tag>;
         if (inq.status === 'REJECTED') return <Tag color="error">رد شده</Tag>;
-        return <Tag>خاتمه‌یافته</Tag>;
+        return <Tag>{inq.status}</Tag>;
       },
     },
     {

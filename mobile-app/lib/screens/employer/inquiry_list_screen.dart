@@ -453,6 +453,36 @@ class _InquiryListScreenState extends State<InquiryListScreen> with SingleTicker
         fg = Colors.green;
         label = 'انتشار یافته';
         break;
+      case 'AGREEMENT_PENDING_WELDER':
+        bg = AppColors.amberOrange.withValues(alpha: 0.1);
+        fg = AppColors.amberOrange;
+        label = 'در انتظار تایید جوشکار';
+        break;
+      case 'IN_PROGRESS':
+        bg = AppColors.royalBlue.withValues(alpha: 0.1);
+        fg = AppColors.royalBlue;
+        label = 'در حال اجرا';
+        break;
+      case 'COMPLETED_PENDING_EMPLOYER':
+        bg = Colors.purple.withValues(alpha: 0.1);
+        fg = Colors.purple;
+        label = 'در انتظار تایید اتمام کارفرما';
+        break;
+      case 'COMPLETED':
+        bg = Colors.teal.withValues(alpha: 0.1);
+        fg = Colors.teal;
+        label = 'اتمام یافته و ارزیابی‌شده';
+        break;
+      case 'DISPATCHED':
+        bg = Colors.cyan.withValues(alpha: 0.1);
+        fg = Colors.cyan;
+        label = 'ارجاع به ۵ جوشکار';
+        break;
+      case 'EXPIRED':
+        bg = Colors.grey.withValues(alpha: 0.1);
+        fg = Colors.grey;
+        label = 'منقضی شده';
+        break;
       case 'REJECTED':
         bg = Colors.red.withValues(alpha: 0.1);
         fg = Colors.red;

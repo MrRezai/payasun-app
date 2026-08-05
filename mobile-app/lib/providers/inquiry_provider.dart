@@ -662,6 +662,8 @@ class InquiryProvider with ChangeNotifier {
     try {
       await _apiService.postWithToken('/inquiry/$inquiryId/start-agreement', {'welderId': welderId}, token);
       _errorMessage = null;
+      await loadMyInquiries(token, silent: true);
+      await loadAllInquiries(token, silent: true);
       notifyListeners();
       return true;
     } catch (e) {
@@ -678,6 +680,8 @@ class InquiryProvider with ChangeNotifier {
     try {
       await _apiService.postWithToken('/inquiry/$inquiryId/confirm-agreement', {}, token);
       _errorMessage = null;
+      await loadMyInquiries(token, silent: true);
+      await loadAllInquiries(token, silent: true);
       notifyListeners();
       return true;
     } catch (e) {
@@ -694,6 +698,8 @@ class InquiryProvider with ChangeNotifier {
     try {
       await _apiService.postWithToken('/inquiry/$inquiryId/finish-job', {}, token);
       _errorMessage = null;
+      await loadMyInquiries(token, silent: true);
+      await loadAllInquiries(token, silent: true);
       notifyListeners();
       return true;
     } catch (e) {
@@ -721,6 +727,8 @@ class InquiryProvider with ChangeNotifier {
         'comment': comment,
       }, token);
       _errorMessage = null;
+      await loadMyInquiries(token, silent: true);
+      await loadAllInquiries(token, silent: true);
       notifyListeners();
       return true;
     } catch (e) {
@@ -737,6 +745,8 @@ class InquiryProvider with ChangeNotifier {
     try {
       await _apiService.postWithToken('/inquiry/$inquiryId/re-dispatch', {}, token);
       _errorMessage = null;
+      await loadMyInquiries(token, silent: true);
+      await loadAllInquiries(token, silent: true);
       notifyListeners();
       return true;
     } catch (e) {

@@ -37,8 +37,16 @@ class _InquiryDetailsScreenState extends State<InquiryDetailsScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final dateStr = Formatters.toPersianDate(inquiry.createdAt);
     final provider = Provider.of<InquiryProvider>(context);
+    final Inquiry inquiry = provider.myInquiries.cast<Inquiry?>().firstWhere(
+      (i) => i?.id == widget.inquiry.id,
+      orElse: () => provider.allInquiries.cast<Inquiry?>().firstWhere(
+        (i) => i?.id == widget.inquiry.id,
+        orElse: () => widget.inquiry,
+      ),
+    ) ?? widget.inquiry;
+
+    final dateStr = Formatters.toPersianDate(inquiry.createdAt);
 
     Project? parentProject;
     if (inquiry.projectId != null && inquiry.projectId!.isNotEmpty) {
@@ -134,22 +142,22 @@ class _InquiryDetailsScreenState extends State<InquiryDetailsScreen> {
                     width: double.infinity,
                     padding: const EdgeInsets.all(16),
                     decoration: BoxDecoration(
-                      color: Colors.purple[50],
+                      color: AppColors.burgundy.withValues(alpha: 0.06),
                       borderRadius: BorderRadius.circular(16),
-                      border: Border.all(color: Colors.purple[200]!),
+                      border: Border.all(color: AppColors.burgundy.withValues(alpha: 0.25)),
                     ),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         const Row(
                           children: [
-                            Icon(Icons.hourglass_top_outlined, color: Colors.purple, size: 22),
+                            Icon(Icons.hourglass_top_outlined, color: AppColors.burgundy, size: 22),
                             SizedBox(width: 8),
                             Text('در انتظار تایید شروع کار توسط جوشکار', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: AppColors.textDark, fontFamily: 'Vazirmatn')),
                           ],
                         ),
                         const SizedBox(height: 6),
-                        const Text('پیامک اطلاع‌رسانی برای جوشکار منتخب ارسال شده است. تا زمان پاسخ جوشکار، امکان انتخاب پیشنهاد دیگری وجود ندارد.', style: TextStyle(fontSize: 11, color: AppColors.textMuted, fontFamily: 'Vazirmatn')),
+                        const Text('پیامک اطلاع‌رسانی برای جوشکار منتخب ارسال شد. تا زمان تایید ایشان، امکان انتخاب پیشنهاد دیگری وجود ندارد.', style: TextStyle(fontSize: 11, color: AppColors.textMuted, fontFamily: 'Vazirmatn')),
                         const SizedBox(height: 10),
                         AgreementCountdownTimer(updatedAt: inquiry.updatedAt ?? inquiry.createdAt),
                       ],
@@ -2053,20 +2061,21 @@ class _AgreementCountdownTimerState extends State<AgreementCountdownTimer> {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
       decoration: BoxDecoration(
-        color: Colors.purple[100],
+        color: AppColors.burgundy.withValues(alpha: 0.08),
         borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: AppColors.burgundy.withValues(alpha: 0.25)),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          const Icon(Icons.timer_outlined, size: 14, color: Colors.purple),
+          const Icon(Icons.timer_outlined, size: 14, color: AppColors.burgundy),
           const SizedBox(width: 4),
           Text(
             'مهلت تایید جوشکار: ${h.toString().padLeft(2, '0')}:${m.toString().padLeft(2, '0')}:${s.toString().padLeft(2, '0')}',
             style: const TextStyle(
               fontSize: 11,
               fontWeight: FontWeight.bold,
-              color: Colors.purple,
+              color: AppColors.burgundy,
               fontFamily: 'Vazirmatn',
             ),
           ),

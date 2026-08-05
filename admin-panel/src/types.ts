@@ -2,7 +2,19 @@ export type UserRole = 'EMPLOYER' | 'WELDER';
 
 export type ProfilePictureStatus = 'PENDING' | 'APPROVED' | 'REJECTED' | 'NONE';
 
-export type InquiryStatus = 'PENDING_ESTIMATION' | 'ESTIMATED' | 'BROADCASTED' | 'CLOSED' | 'EXPIRED' | 'REJECTED';
+export type InquiryStatus =
+  | 'DRAFT'
+  | 'PENDING_ESTIMATION'
+  | 'ESTIMATED'
+  | 'BROADCASTED'
+  | 'DISPATCHED'
+  | 'AGREEMENT_PENDING_WELDER'
+  | 'IN_PROGRESS'
+  | 'COMPLETED_PENDING_EMPLOYER'
+  | 'COMPLETED'
+  | 'CLOSED'
+  | 'EXPIRED'
+  | 'REJECTED';
 
 export interface Skill {
   id: number;

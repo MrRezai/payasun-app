@@ -867,7 +867,7 @@ class _EmployerDashboardState extends State<EmployerDashboard> {
       case 'PENDING_ESTIMATION':
         bg = AppColors.amberOrange.withValues(alpha: 0.08);
         fg = AppColors.amberOrange;
-        label = 'انتظار تایید';
+        label = 'در انتظار تایید مدیریت';
         break;
       case 'ESTIMATED':
         bg = AppColors.royalBlue.withValues(alpha: 0.08);
@@ -878,6 +878,41 @@ class _EmployerDashboardState extends State<EmployerDashboard> {
         bg = Colors.green.withValues(alpha: 0.08);
         fg = Colors.green;
         label = 'انتشار یافته';
+        break;
+      case 'AGREEMENT_PENDING_WELDER':
+        bg = AppColors.amberOrange.withValues(alpha: 0.08);
+        fg = AppColors.amberOrange;
+        label = 'در انتظار تایید جوشکار';
+        break;
+      case 'IN_PROGRESS':
+        bg = AppColors.royalBlue.withValues(alpha: 0.08);
+        fg = AppColors.royalBlue;
+        label = 'در حال اجرا';
+        break;
+      case 'COMPLETED_PENDING_EMPLOYER':
+        bg = AppColors.burgundy.withValues(alpha: 0.08);
+        fg = AppColors.burgundy;
+        label = 'در انتظار تایید اتمام';
+        break;
+      case 'COMPLETED':
+        bg = Colors.teal.withValues(alpha: 0.08);
+        fg = Colors.teal;
+        label = 'اتمام یافته';
+        break;
+      case 'DISPATCHED':
+        bg = Colors.cyan.withValues(alpha: 0.08);
+        fg = Colors.cyan;
+        label = 'ارجاع به ۵ جوشکار';
+        break;
+      case 'EXPIRED':
+        bg = Colors.grey.withValues(alpha: 0.08);
+        fg = Colors.grey;
+        label = 'منقضی شده';
+        break;
+      case 'REJECTED':
+        bg = Colors.red.withValues(alpha: 0.08);
+        fg = Colors.red;
+        label = 'رد شده';
         break;
       default:
         bg = Colors.grey.withValues(alpha: 0.08);
