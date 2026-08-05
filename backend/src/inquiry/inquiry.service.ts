@@ -492,6 +492,9 @@ export class InquiryService {
 
       return {
         id: o.id,
+        welder_id: o.welder_id,
+        welderId: o.welder_id,
+        welder_user_id: w?.user_id,
         name: fullName,
         rating: Number(w?.total_score ?? 0),
         projects: Number(w?.completed_jobs_count ?? 0),
@@ -588,10 +591,25 @@ export class InquiryService {
     if (!inquiry) throw new NotFoundException('استعلام مورد نظر یافت نشد.');
     if (inquiry.employerId !== employerId) throw new ForbiddenException('عدم دسترسی.');
 
-    const welder = await this.welderProfileRepository.findOne({
+    let welder = await this.welderProfileRepository.findOne({
       where: { id: welderId },
       relations: ['user'],
     });
+    if (!welder) {
+      welder = await this.welderProfileRepository.findOne({
+        where: { user_id: welderId },
+        relations: ['user'],
+      });
+    }
+    if (!welder) {
+      const offer = await this.offerRepository.findOne({ where: { id: welderId } });
+      if (offer) {
+        welder = await this.welderProfileRepository.findOne({
+          where: { id: offer.welder_id },
+          relations: ['user'],
+        });
+      }
+    }
     if (!welder) throw new NotFoundException('جوشکار مورد نظر یافت نشد.');
 
     // Single active job constraint check
@@ -681,7 +699,16 @@ export class InquiryService {
     if (!inquiry) throw new NotFoundException('استعلام مورد نظر یافت نشد.');
     if (inquiry.employerId !== employerId) throw new ForbiddenException('عدم دسترسی.');
 
-    const welder = await this.welderProfileRepository.findOne({ where: { id: welderId } });
+    let welder = await this.welderProfileRepository.findOne({ where: { id: welderId } });
+    if (!welder) {
+      welder = await this.welderProfileRepository.findOne({ where: { user_id: welderId } });
+    }
+    if (!welder) {
+      const offer = await this.offerRepository.findOne({ where: { id: welderId } });
+      if (offer) {
+        welder = await this.welderProfileRepository.findOne({ where: { id: offer.welder_id } });
+      }
+    }
     if (!welder) throw new NotFoundException('جوشکار مورد نظر یافت نشد.');
 
     // Calculate rating using formula (0.4*Q + 0.35*P + 0.25*B)

@@ -1694,8 +1694,16 @@ class _InquiryDetailsScreenState extends State<InquiryDetailsScreen> {
                               child: ElevatedButton.icon(
                                 onPressed: () async {
                                   Navigator.pop(ctx);
+                                  final welderId = (
+                                    bid['welder_id'] ??
+                                    bid['welderId'] ??
+                                    bid['welder_user_id'] ??
+                                    bid['user_id'] ??
+                                    bid['userId'] ??
+                                    bid['id'] ??
+                                    ''
+                                  ).toString();
                                   final token = Provider.of<AuthProvider>(context, listen: false).token;
-                                  final welderId = (bid['welder_id'] ?? bid['welderId'] ?? '').toString();
                                   final provider = Provider.of<InquiryProvider>(context, listen: false);
                                   final success = await provider.startAgreement(
                                     token: token,
