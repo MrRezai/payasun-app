@@ -661,10 +661,11 @@ class InquiryProvider with ChangeNotifier {
   }) async {
     try {
       await _apiService.postWithToken('/inquiry/$inquiryId/start-agreement', {'welderId': welderId}, token);
+      _errorMessage = null;
       notifyListeners();
       return true;
     } catch (e) {
-      _errorMessage = e.toString();
+      _errorMessage = e.toString().replaceAll('Exception: ', '');
       notifyListeners();
       return false;
     }
@@ -676,10 +677,11 @@ class InquiryProvider with ChangeNotifier {
   }) async {
     try {
       await _apiService.postWithToken('/inquiry/$inquiryId/confirm-agreement', {}, token);
+      _errorMessage = null;
       notifyListeners();
       return true;
     } catch (e) {
-      _errorMessage = e.toString();
+      _errorMessage = e.toString().replaceAll('Exception: ', '');
       notifyListeners();
       return false;
     }
@@ -691,10 +693,11 @@ class InquiryProvider with ChangeNotifier {
   }) async {
     try {
       await _apiService.postWithToken('/inquiry/$inquiryId/finish-job', {}, token);
+      _errorMessage = null;
       notifyListeners();
       return true;
     } catch (e) {
-      _errorMessage = e.toString();
+      _errorMessage = e.toString().replaceAll('Exception: ', '');
       notifyListeners();
       return false;
     }
@@ -717,10 +720,11 @@ class InquiryProvider with ChangeNotifier {
         'behaviorScore': behaviorScore,
         'comment': comment,
       }, token);
+      _errorMessage = null;
       notifyListeners();
       return true;
     } catch (e) {
-      _errorMessage = e.toString();
+      _errorMessage = e.toString().replaceAll('Exception: ', '');
       notifyListeners();
       return false;
     }
@@ -732,10 +736,11 @@ class InquiryProvider with ChangeNotifier {
   }) async {
     try {
       await _apiService.postWithToken('/inquiry/$inquiryId/re-dispatch', {}, token);
+      _errorMessage = null;
       notifyListeners();
       return true;
     } catch (e) {
-      _errorMessage = e.toString();
+      _errorMessage = e.toString().replaceAll('Exception: ', '');
       notifyListeners();
       return false;
     }

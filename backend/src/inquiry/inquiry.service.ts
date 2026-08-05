@@ -8,6 +8,7 @@ import { Offer } from '../entities/offer.entity';
 import { AppSetting } from '../entities/app-setting.entity';
 import { User } from '../entities/user.entity';
 import { EmployerReview } from '../entities/employer-review.entity';
+import { InquiryDispatch } from '../entities/inquiry-dispatch.entity';
 import { SmsService } from '../sms/sms.service';
 import { WelderScoringService } from '../scoring/welder-scoring.service';
 import { WelderLevelingService } from '../leveling/welder-leveling.service';
@@ -38,6 +39,8 @@ export class InquiryService {
     private readonly welderProfileRepository: Repository<WelderProfile>,
     @InjectRepository(EmployerReview)
     private readonly reviewRepository: Repository<EmployerReview>,
+    @InjectRepository(InquiryDispatch)
+    private readonly dispatchRepository: Repository<InquiryDispatch>,
     private readonly smsService: SmsService,
     private readonly scoringService: WelderScoringService,
     private readonly levelingService: WelderLevelingService,
@@ -709,5 +712,59 @@ export class InquiryService {
     await this.levelingService.checkAndUpdateWelderPromotion(welderId, inquiry.tier, rating);
 
     return savedInquiry;
+  }
+
+  /**
+   * Admin Inspector Data Retrieval: Returns full timeline log, dispatches, offers, and reviews.
+   */
+  async getInspectorDetails(inquiryId: string): Promise<any> {
+    const inquiry = await this.inquiryRepository.findOne({ where: { id: inquiryId } });
+    if (!inquiry) throw new NotFoundException('استعلام یافت نشد.');
+
+    const employer = await this.userRepository.findOne({ where: { id: inquiry.employerId } });
+    const dispatches = await this.dispatchRepository.find({
+      where: { inquiry_id: inquiryId },
+      relations: ['welder', 'welder.user'],
+      order: { dispatched_at: 'ASC' },
+    });
+    const offers = await this.offerRepository.find({ where: { inquiry_id: inquiryId } });
+    const review = await this.reviewRepository.findOne({ where: { inquiry_id: inquiryId } });
+
+    return {
+      inquiry,
+      employer: employer ? { id: employer.id, phone_number: employer.phone_number } : null,
+      dispatches: dispatches.map((d) => ({
+        id: d.id,
+        welder_id: d.welder_id,
+        welder_name: `${d.welder?.first_name || ''} ${d.welder?.last_name || ''}`.trim() || 'جوشکار',
+        welder_phone: d.welder?.user?.phone_number || '',
+        welder_tier: d.welder?.tier || 'A',
+        welder_score: d.welder?.total_score || 20,
+        dispatch_type: d.dispatch_type,
+        dispatch_round: d.dispatch_round,
+        status: d.status,
+        dispatched_at: d.dispatched_at,
+        responded_at: d.responded_at,
+      })),
+      offers_count: offers.length,
+      review: review ? {
+        quality_score: review.quality_score,
+        punctuality_score: review.punctuality_score,
+        behavior_score: review.behavior_score,
+        calculated_rating: review.calculated_rating,
+        comment: review.comment,
+        created_at: review.created_at,
+      } : null,
+    };
+  }
+
+  /**
+   * Admin Intervention Override: Manually changes inquiry status.
+   */
+  async overrideStatus(inquiryId: string, newStatus: InquiryStatus): Promise<Inquiry> {
+    const inquiry = await this.inquiryRepository.findOne({ where: { id: inquiryId } });
+    if (!inquiry) throw new NotFoundException('استعلام یافت نشد.');
+    inquiry.status = newStatus;
+    return this.inquiryRepository.save(inquiry);
   }
 }

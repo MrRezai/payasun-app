@@ -261,7 +261,23 @@ export class ApiClient {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ reason }),
     });
-    if (!res.ok) throw new Error('خطا در رد کردن پروژه.');
+    if (!res.ok) throw new Error('خطا در رد استعلام.');
+    return await res.json();
+  }
+
+  public static async getInquiryInspector(id: string): Promise<any> {
+    const res = await this.request(`${BASE_URL}/admin/inquiry/${id}/inspector`);
+    if (!res.ok) throw new Error('خطا در دریافت اطلاعات بازرسی استعلام.');
+    return await res.json();
+  }
+
+  public static async overrideInquiryStatus(id: string, status: string): Promise<Inquiry> {
+    const res = await this.request(`${BASE_URL}/admin/inquiry/${id}/override-status`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ status }),
+    });
+    if (!res.ok) throw new Error('خطا در تغییر دستی وضعیت استعلام.');
     return await res.json();
   }
 

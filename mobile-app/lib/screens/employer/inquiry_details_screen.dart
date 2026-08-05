@@ -129,6 +129,60 @@ class _InquiryDetailsScreenState extends State<InquiryDetailsScreen> {
                 _buildOverviewCard(context, dateStr),
                 const SizedBox(height: 16),
 
+                if (inquiry.status == 'AGREEMENT_PENDING_WELDER') ...[
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      color: Colors.purple[50],
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(color: Colors.purple[200]!),
+                    ),
+                    child: const Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            Icon(Icons.hourglass_top_outlined, color: Colors.purple, size: 22),
+                            SizedBox(width: 8),
+                            Text('در انتظار تایید شروع کار توسط جوشکار', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: AppColors.textDark, fontFamily: 'Vazirmatn')),
+                          ],
+                        ),
+                        SizedBox(height: 6),
+                        Text('پیامک اطلاع‌رسانی برای جوشکار منتخب ارسال شده است. به محض تایید ایشان، پروژه به حالت «در حال اجرا» تغییر خواهد یافت.', style: TextStyle(fontSize: 11, color: AppColors.textMuted, fontFamily: 'Vazirmatn')),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                ],
+
+                if (inquiry.status == 'IN_PROGRESS') ...[
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      color: Colors.blue[50],
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(color: Colors.blue[200]!),
+                    ),
+                    child: const Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            Icon(Icons.construction_outlined, color: AppColors.royalBlue, size: 22),
+                            SizedBox(width: 8),
+                            Text('پروژه جوشکاری در حال اجرا می‌باشد', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: AppColors.textDark, fontFamily: 'Vazirmatn')),
+                          ],
+                        ),
+                        SizedBox(height: 6),
+                        Text('جوشکار منتخب در حال اجرای عملیات می‌باشد. پس از اتمام کار، جوشکار اعلام پایان کار خواهد نمود.', style: TextStyle(fontSize: 11, color: AppColors.textMuted, fontFamily: 'Vazirmatn')),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                ],
+
                 if (inquiry.status == 'COMPLETED_PENDING_EMPLOYER') ...[
                   Container(
                     width: double.infinity,
@@ -197,11 +251,18 @@ class _InquiryDetailsScreenState extends State<InquiryDetailsScreen> {
                           child: ElevatedButton.icon(
                             onPressed: () async {
                               final token = Provider.of<AuthProvider>(context, listen: false).token;
-                              await Provider.of<InquiryProvider>(context, listen: false).reDispatch(token: token, inquiryId: inquiry.id);
+                              final provider = Provider.of<InquiryProvider>(context, listen: false);
+                              final success = await provider.reDispatch(token: token, inquiryId: inquiry.id);
                               if (context.mounted) {
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  const SnackBar(content: Text('استعلام با موفقیت به ۵ جوشکار جدید ارجاع داده شد.')),
-                                );
+                                if (success) {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    const SnackBar(content: Text('استعلام با موفقیت به ۵ جوشکار جدید ارجاع داده شد.'), backgroundColor: Colors.green),
+                                  );
+                                } else {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    SnackBar(content: Text(provider.errorMessage ?? 'خطا در ارجاع مجدد استعلام'), backgroundColor: Colors.red),
+                                  );
+                                }
                               }
                             },
                             icon: const Icon(Icons.refresh, size: 18),
@@ -1631,17 +1692,33 @@ class _InquiryDetailsScreenState extends State<InquiryDetailsScreen> {
                             child: SizedBox(
                               height: 48,
                               child: ElevatedButton.icon(
-                                onPressed: () {
-                                  ScaffoldMessenger.of(context).showSnackBar(
-                                    const SnackBar(
-                                      content: Text(
-                                        'امکان پذیرش مستقیم پیشنهاد جوشکار به زودی فعال خواهد شد.',
-                                        style: TextStyle(fontFamily: 'Vazirmatn'),
-                                      ),
-                                      backgroundColor: AppColors.royalBlue,
-                                      duration: Duration(seconds: 3),
-                                    ),
+                                onPressed: () async {
+                                  Navigator.pop(ctx);
+                                  final token = Provider.of<AuthProvider>(context, listen: false).token;
+                                  final welderId = (bid['welder_id'] ?? bid['welderId'] ?? '').toString();
+                                  final provider = Provider.of<InquiryProvider>(context, listen: false);
+                                  final success = await provider.startAgreement(
+                                    token: token,
+                                    inquiryId: inquiry.id,
+                                    welderId: welderId,
                                   );
+                                  if (context.mounted) {
+                                    if (success) {
+                                      ScaffoldMessenger.of(context).showSnackBar(
+                                        const SnackBar(
+                                          content: Text('پیشنهاد با موفقیت انتخاب شد. درخواست شروع کار برای جوشکار ارسال گردید.'),
+                                          backgroundColor: Colors.green,
+                                        ),
+                                      );
+                                    } else {
+                                      ScaffoldMessenger.of(context).showSnackBar(
+                                        SnackBar(
+                                          content: Text(provider.errorMessage ?? 'خطا در انتخاب پیشنهاد'),
+                                          backgroundColor: Colors.red,
+                                        ),
+                                      );
+                                    }
+                                  }
                                 },
                                 icon: const Icon(Icons.check_circle_outline, size: 18),
                                 label: const Text('انتخاب این پیشنهاد', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12, fontFamily: 'Vazirmatn')),
@@ -1886,7 +1963,8 @@ class _InquiryDetailsScreenState extends State<InquiryDetailsScreen> {
                     onPressed: () async {
                       Navigator.pop(ctx);
                       final token = Provider.of<AuthProvider>(context, listen: false).token;
-                      await Provider.of<InquiryProvider>(context, listen: false).confirmCompletion(
+                      final provider = Provider.of<InquiryProvider>(context, listen: false);
+                      final success = await provider.confirmCompletion(
                         token: token,
                         inquiryId: inquiry.id,
                         welderId: welderId,
@@ -1896,9 +1974,15 @@ class _InquiryDetailsScreenState extends State<InquiryDetailsScreen> {
                         comment: commentController.text,
                       );
                       if (context.mounted) {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(content: Text('پروژه با موفقیت به اتمام رسید و امتیاز نهایی ثبت گردید.')),
-                        );
+                        if (success) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(content: Text('پروژه با موفقیت به اتمام رسید و امتیاز نهایی ثبت گردید.'), backgroundColor: Colors.green),
+                          );
+                        } else {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(content: Text(provider.errorMessage ?? 'خطا در ثبت امتیاز و اتمام کار'), backgroundColor: Colors.red),
+                          );
+                        }
                       }
                     },
                     style: ElevatedButton.styleFrom(backgroundColor: AppColors.royalBlue),

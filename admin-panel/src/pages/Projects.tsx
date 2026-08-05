@@ -4,6 +4,7 @@ import { EyeOutlined, FormOutlined, SearchOutlined, BuildOutlined } from '@ant-d
 import { Inquiry } from '../types';
 import ViewUserHistoryModal from '../modals/ViewUserHistoryModal';
 import ViewParentProjectModal, { ProjectData } from '../modals/ViewParentProjectModal';
+import InquiryInspectorDrawer from '../modals/InquiryInspectorDrawer';
 
 const { Title, Text } = Typography;
 
@@ -11,12 +12,14 @@ interface ProjectsProps {
   inquiries: Inquiry[];
   onEstimateClick: (inq: Inquiry) => void;
   onViewDetailClick: (inq: Inquiry) => void;
+  onRefreshInquiries?: () => void;
 }
 
-export default function Projects({ inquiries, onEstimateClick, onViewDetailClick }: ProjectsProps) {
+export default function Projects({ inquiries, onEstimateClick, onViewDetailClick, onRefreshInquiries }: ProjectsProps) {
   const [projectSubTab, setProjectSubTab] = useState<'pending' | 'broadcasted' | 'closed'>('pending');
   const [selectedEmployerId, setSelectedEmployerId] = useState<string | null>(null);
   const [selectedProject, setSelectedProject] = useState<ProjectData | null>(null);
+  const [inspectorInquiryId, setInspectorInquiryId] = useState<string | null>(null);
   const [searchText, setSearchText] = useState('');
   const [systemFilter, setSystemFilter] = useState<'all' | 'project' | 'legacy'>('all');
 
@@ -169,25 +172,36 @@ export default function Projects({ inquiries, onEstimateClick, onViewDetailClick
       key: 'actions',
       align: 'left' as const,
       render: (_: any, inq: Inquiry) => (
-        inq.status === 'PENDING_ESTIMATION' ? (
+        <Space size={6}>
+          {inq.status === 'PENDING_ESTIMATION' ? (
+            <Button
+              type="primary"
+              size="small"
+              icon={<FormOutlined />}
+              onClick={() => onEstimateClick(inq)}
+              style={{ fontWeight: 'bold' }}
+            >
+              افزودن اقلام و انتشار
+            </Button>
+          ) : (
+            <Button
+              size="small"
+              icon={<EyeOutlined />}
+              onClick={() => onViewDetailClick(inq)}
+            >
+              مشاهده جزئیات
+            </Button>
+          )}
+
           <Button
-            type="primary"
             size="small"
-            icon={<FormOutlined />}
-            onClick={() => onEstimateClick(inq)}
-            style={{ fontWeight: 'bold' }}
+            type="dashed"
+            onClick={() => setInspectorInquiryId(inq.id)}
+            style={{ color: '#8B5CF6', borderColor: '#C4B5FD' }}
           >
-            افزودن اقلام و انتشار
+            نظارت و چرخه حیات
           </Button>
-        ) : (
-          <Button
-            size="small"
-            icon={<EyeOutlined />}
-            onClick={() => onViewDetailClick(inq)}
-          >
-            مشاهده جزئیات
-          </Button>
-        )
+        </Space>
       ),
     },
   ];
@@ -289,6 +303,14 @@ export default function Projects({ inquiries, onEstimateClick, onViewDetailClick
           }}
         />
       )}
+
+      <InquiryInspectorDrawer
+        inquiryId={inspectorInquiryId}
+        onClose={() => setInspectorInquiryId(null)}
+        onRefresh={() => {
+          if (onRefreshInquiries) onRefreshInquiries();
+        }}
+      />
     </Card>
   );
 }

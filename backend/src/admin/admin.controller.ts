@@ -1,8 +1,9 @@
-import { Controller, Get, Patch, Post, Put, Delete, Body, Param, UseGuards } from '@nestjs/common';
+import { Controller, Get, Patch, Post, Put, Delete, Body, Param, UseGuards, BadRequestException } from '@nestjs/common';
 import { AdminGuard } from './guards/admin.guard';
 import { ProfileService } from '../profile/profile.service';
 import { InquiryService } from '../inquiry/inquiry.service';
 import { WelderScoringService } from '../scoring/welder-scoring.service';
+import { InquiryStatus } from '../entities/inquiry.entity';
 
 @Controller('admin')
 @UseGuards(AdminGuard)
@@ -143,6 +144,19 @@ export class AdminController {
   async liftWelderSuspension(@Param('id') id: string) {
     const updated = await this.scoringService.liftSuspension(id);
     return { message: 'تعلیق جوشکار با موفقیت لغو گردید.', profile: updated };
+  }
+
+  @Get('inquiry/:id/inspector')
+  async getInquiryInspector(@Param('id') id: string) {
+    return this.inquiryService.getInspectorDetails(id);
+  }
+
+  @Patch('inquiry/:id/override-status')
+  async overrideInquiryStatus(@Param('id') id: string, @Body('status') status: any) {
+    if (!status || !Object.values(InquiryStatus).includes(status)) {
+      throw new BadRequestException('وضعیت درخواستی معتبر نمی‌باشد.');
+    }
+    return this.inquiryService.overrideStatus(id, status as InquiryStatus);
   }
 }
 

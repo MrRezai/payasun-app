@@ -109,8 +109,21 @@ export class InquiryController {
     @CurrentUser() user: AuthenticatedUser,
     @Body() body: { welderId: string; qualityScore: number; punctualityScore: number; behaviorScore: number; comment?: string },
   ): Promise<Inquiry> {
-    if (!body.welderId || !body.qualityScore || !body.punctualityScore || !body.behaviorScore) {
+    if (
+      !body.welderId ||
+      typeof body.qualityScore !== 'number' ||
+      typeof body.punctualityScore !== 'number' ||
+      typeof body.behaviorScore !== 'number'
+    ) {
       throw new BadRequestException('امتیازهای کیفیت، خوش‌قولی و رفتار حرفه‌ای الزامی هستند.');
+    }
+
+    if (
+      body.qualityScore < 1 || body.qualityScore > 5 ||
+      body.punctualityScore < 1 || body.punctualityScore > 5 ||
+      body.behaviorScore < 1 || body.behaviorScore > 5
+    ) {
+      throw new BadRequestException('امتیازها باید عددی بین ۱ تا ۵ باشند.');
     }
     return this.inquiryService.confirmCompletionByEmployer(
       id,

@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../constants/app_colors.dart';
+import '../../models/inquiry.dart';
 import '../../providers/auth_provider.dart';
+import '../../providers/inquiry_provider.dart';
 import '../../services/api_service.dart';
 
 class WelderDashboard extends StatefulWidget {
@@ -124,7 +126,7 @@ class _WelderDashboardState extends State<WelderDashboard> {
             // Current projects
             _buildSectionHeader('پروژه‌های جاری'),
             const SizedBox(height: 14),
-            _buildCurrentContractsSection(),
+            _buildCurrentContractsSection(Provider.of<InquiryProvider>(context), auth),
           ],
         ),
       ),
@@ -656,7 +658,79 @@ class _WelderDashboardState extends State<WelderDashboard> {
     );
   }
 
-  Widget _buildCurrentContractsSection() {
+  Widget _buildCurrentContractsSection(InquiryProvider inquiryProvider, AuthProvider authProvider) {
+    final activeJobsCount = (authProvider.profileData?['profile']?['active_jobs_count'] as int?) ?? 0;
+    
+    if (activeJobsCount > 0) {
+      return Container(
+        width: double.infinity,
+        padding: const EdgeInsets.all(20),
+        decoration: BoxDecoration(
+          color: Colors.blue[50],
+          borderRadius: BorderRadius.circular(24),
+          border: Border.all(color: Colors.blue[200]!),
+        ),
+        child: Column(
+          children: [
+            const Row(
+              children: [
+                Icon(Icons.construction_outlined, color: AppColors.royalBlue, size: 24),
+                SizedBox(width: 10),
+                Expanded(
+                  child: Text(
+                    'شما ۱ پروژه فعال در حال اجرا دارید',
+                    style: TextStyle(color: AppColors.textDark, fontSize: 14, fontWeight: FontWeight.bold, fontFamily: 'Vazirmatn'),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 8),
+            const Text(
+              'پس از به اتمام رسیدن عملیات جوشکاری پروژه، دکمه زیر را جهت اطلاع‌رسانی به کارفرما و ثبت تاییدیه نهایی بفشارید.',
+              style: TextStyle(color: AppColors.textMuted, fontSize: 11, fontFamily: 'Vazirmatn'),
+            ),
+            const SizedBox(height: 14),
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton.icon(
+                onPressed: () async {
+                  final inquiries = inquiryProvider.allInquiries;
+                  final activeInquiry = inquiries.cast<Inquiry?>().firstWhere(
+                    (i) => i?.status == 'IN_PROGRESS' || i?.status == 'AGREEMENT_PENDING_WELDER',
+                    orElse: () => null,
+                  );
+                  if (activeInquiry != null) {
+                    final success = await inquiryProvider.finishJob(
+                      token: authProvider.token,
+                      inquiryId: activeInquiry.id,
+                    );
+                    if (mounted) {
+                      if (success) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(content: Text('اعلام پایان کار با موفقیت ثبت شد و پیامک تایید برای کارفرما ارسال گردید.'), backgroundColor: Colors.green),
+                        );
+                      } else {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(content: Text(inquiryProvider.errorMessage ?? 'خطا در اعلام اتمام کار'), backgroundColor: Colors.red),
+                        );
+                      }
+                    }
+                  } else {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('پروژه فعال در حالت اجرا یافت نشد.')),
+                    );
+                  }
+                },
+                icon: const Icon(Icons.check_circle, size: 18),
+                label: const Text('اعلام پایان کار پروژه به کارفرما', style: TextStyle(fontWeight: FontWeight.bold, fontFamily: 'Vazirmatn')),
+                style: ElevatedButton.styleFrom(backgroundColor: AppColors.royalBlue, foregroundColor: Colors.white),
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.symmetric(vertical: 36, horizontal: 20),
